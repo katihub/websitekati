@@ -1,0 +1,66 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+# Le modele des variables, sans aucune valeur, se versionne.
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# visual QA output
+/qa/shots/
+
+# throwaway inspection scripts (qa/capture.mjs and qa/audit.mjs are the kept ones)
+/qa/_*.mjs
+
+# The designer's source artwork, kept on disk and out of the repository.
+# `public/branding/banner-*.jpg` are the five pieces the site actually serves;
+# the originals they were copied from, plus three files that are not banners,
+# all arrived as `.jpeg` and are 30 MB of duplicates nothing reads.
+#
+# Matched on the EXTENSION and not on the name. `Banner*` looked like the
+# obvious rule and silently excluded the five served files as well: git honours
+# core.ignorecase on macOS, so the pattern matched `banner-1-cuisine.jpg` too
+# and the site would have been pushed without a single banner in it.
+/public/branding/*.jpeg
+
+# bannieres mobiles brutes du designer, redimensionnees dans public/branding/mobile
+/public/branding/mobile banner/
+
+# Vestiges locaux du catalogue compile, retire : le backend est la seule source.
+# Plus rien ne les ecrit ni ne les lit, mais un poste qui a fait tourner l'ancien
+# pipeline les garde sur disque (export/ y pese 400 Mo, images comprises). Sans
+# ces lignes, le premier `git add -A` apres la fusion les embarquerait. Ils se
+# suppriment a la main.
+/src/data/generated/
+/data/source/sync-report.txt
+/export/
+/public/media
+
+# livrables commerciaux, regenerables
+/documents/

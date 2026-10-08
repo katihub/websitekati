@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutoriel de la vitrine NowTech Center</title>
+<!--
+  LE TUTORIEL DE LA VITRINE, SOURCE DU PDF.
+
+  Le PDF se regenere depuis ce fichier, sans rien telecharger :
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+      --no-pdf-header-footer --user-data-dir="$(mktemp -d)" \
+      --print-to-pdf=documentation/tutoriel-vitrine.pdf documentation/tutoriel-vitrine.html
+  (Chrome ne rend pas toujours la main : arretez-le une fois le PDF ecrit.)
+
+  Il complete le guide d'installation du backend (livraison/guide-installation.pdf
+  dans le depot de l'API), dont l'etape 10 met la vitrine en ligne.
+-->
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 17mm 20mm;
+    @bottom-left { content: "NowTech Center — Tutoriel de la vitrine"; font: 8pt "Avenir Next", "Helvetica Neue", Arial, sans-serif; color: #6b7a71; }
+    @bottom-right { content: counter(page) " / " counter(pages); font: 8pt "Avenir Next", "Helvetica Neue", Arial, sans-serif; color: #6b7a71; }
+  }
+  @page couverture { @bottom-left { content: none; } @bottom-right { content: none; } }
+
+  :root {
+    --encre: #17221c;
+    --doux: #55665c;
+    --vert: #0b5d1e;
+    --vert-clair: #e7f1ea;
+    --trait: #d2dcd5;
+    --fond-code: #f1f5f2;
+    --attention: #6e4600;
+    --fond-attention: #fff3d6;
+    --titres: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+    --texte: Charter, "Iowan Old Style", Georgia, serif;
+    --code: Menlo, "DejaVu Sans Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #ffffff; color: var(--encre); font: 10.2pt/1.5 var(--texte); hyphens: auto; }
+
+  h1, h2, h3, .surtitre, th, .etiquette { font-family: var(--titres); }
+  h2, h3 { text-wrap: balance; }
+  p { margin: 0 0 2.2mm; }
+  a { color: var(--vert); text-decoration: none; }
+
+  code, pre, kbd { font-family: var(--code); font-size: 8.4pt; }
+  code { background: var(--fond-code); padding: 0.2mm 1.2mm; border-radius: 1mm; white-space: nowrap; }
+  pre { background: var(--fond-code); border-left: 1mm solid var(--vert); padding: 2.6mm 3.2mm; margin: 1.6mm 0 2.6mm; white-space: pre-wrap; break-inside: avoid; line-height: 1.45; }
+  pre code { background: none; padding: 0; white-space: pre-wrap; }
+  .com { color: #6b7a71; }
+
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 9pt; }
+  tr { break-inside: avoid; }
+  th { text-align: left; font-size: 7.6pt; letter-spacing: 0.06em; text-transform: uppercase; color: var(--doux); font-weight: 600; border-bottom: 0.35mm solid var(--encre); padding: 1.2mm 2mm; }
+  td { border-bottom: 0.2mm solid var(--trait); padding: 1.4mm 2mm; vertical-align: top; }
+  td code { white-space: nowrap; }
+
+  .couverture { page: couverture; break-after: page; padding-top: 14mm; }
+  .surtitre { font-size: 8.5pt; letter-spacing: 0.16em; text-transform: uppercase; color: var(--vert); font-weight: 600; margin-bottom: 4mm; }
+  .couverture h1 { font-size: 30pt; line-height: 1.08; font-weight: 700; margin: 0 0 4mm; letter-spacing: -0.01em; max-width: 150mm; }
+  .couverture .chapeau { font-size: 12pt; color: var(--doux); max-width: 140mm; margin-bottom: 10mm; }
+
+  .schema { border: 0.3mm solid var(--trait); border-radius: 2mm; padding: 5mm; margin-bottom: 9mm; }
+  .schema .rangee { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .schema .zone { font-family: var(--titres); font-size: 7.4pt; letter-spacing: 0.12em; text-transform: uppercase; color: var(--doux); font-weight: 600; margin: 0 0 2mm; }
+  .bloc { border: 0.3mm solid var(--encre); border-radius: 1.5mm; padding: 2.6mm 3.2mm; background: #fff; }
+  .bloc b { font-family: var(--titres); font-size: 10.5pt; display: block; }
+  .bloc span { font-size: 8.6pt; color: var(--doux); display: block; }
+  .bloc.vitrine { border-color: var(--vert); background: var(--vert-clair); }
+  .fleche { text-align: center; font-family: var(--titres); font-size: 8pt; color: var(--doux); margin: 2.4mm 0; }
+
+  .sommaire { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2mm 8mm; font-size: 9.2pt; }
+  .sommaire div { display: grid; grid-template-columns: 7mm 1fr; align-items: baseline; border-bottom: 0.2mm solid var(--trait); padding: 1.1mm 0; }
+  .sommaire .n { font-family: var(--titres); font-weight: 700; color: var(--vert); }
+  .sommaire i { color: var(--doux); font-style: normal; font-size: 8.4pt; }
+
+  .partie { break-before: page; }
+  .etape { margin: 0 0 7mm; }
+  .etape > header { display: grid; grid-template-columns: 13mm 1fr; align-items: start; border-top: 0.5mm solid var(--encre); padding-top: 2.6mm; margin-bottom: 2.4mm; break-after: avoid; }
+  .etape .numero { font-family: var(--titres); font-size: 22pt; line-height: 1; font-weight: 700; color: var(--vert); }
+  .etape h2 { font-size: 14pt; margin: 0.4mm 0 0.8mm; }
+  .etape .but { color: var(--doux); margin: 0; font-size: 9.6pt; }
+  h3 { font-size: 10.5pt; margin: 4mm 0 1.5mm; }
+
+  ol.actions { margin: 0 0 2mm; padding-left: 5.5mm; }
+  ol.actions > li { margin-bottom: 1.8mm; padding-left: 1mm; }
+  ol.actions > li::marker { font-family: var(--titres); font-weight: 700; color: var(--vert); }
+
+  .encadre { border: 0.3mm solid var(--trait); border-radius: 1.5mm; padding: 2.4mm 3.2mm; margin: 2.4mm 0; break-inside: avoid; font-size: 9.4pt; }
+  .encadre .etiquette { display: block; font-size: 7.4pt; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; color: var(--doux); margin-bottom: 0.8mm; }
+  .encadre p:last-child { margin-bottom: 0; }
+  .attention { background: var(--fond-attention); border-color: #f0d79a; }
+  .attention .etiquette { color: var(--attention); }
+  .verifier { border-color: var(--vert); background: var(--vert-clair); }
+  .verifier .etiquette { color: var(--vert); }
+
+  ul.coches { list-style: none; padding: 0; margin: 0; }
+  ul.coches li { display: grid; grid-template-columns: 6mm 1fr; padding: 1.5mm 0; border-bottom: 0.2mm solid var(--trait); break-inside: avoid; }
+  ul.coches li::before { content: ""; width: 3.2mm; height: 3.2mm; border: 0.35mm solid var(--vert); border-radius: 0.6mm; margin-top: 0.9mm; }
+
+  table.ou td:first-child { width: 52mm; }
+  table.ou td:nth-child(3) { width: 34mm; }
+  table.variables td:first-child { width: 62mm; }
+  table.depannage td:first-child { width: 50mm; }
+</style>
+</head>
+<body>
+
+<section class="couverture">
+  <div class="surtitre">NowTech Center · Tutoriel</div>
+  <h1>La vitrine : la mettre en ligne et la faire vivre</h1>
+  <p class="chapeau">Le site public de la boutique : ce qui s'y modifie depuis le panel, ce qui demande une nouvelle version, comment le publier sur Vercel, et que faire quand quelque chose ne s'affiche pas.</p>
+
+  <div class="schema">
+    <div class="rangee">
+      <div class="bloc vitrine"><b>La vitrine</b><span>Le site public : catalogue, recherche, fiches, panier, devis, commande, paiement, suivi. Hébergée sur Vercel.</span></div>
+      <div class="bloc"><b>Le panel</b><span>L'administration : produits, prix, stock, bannières, comptoirs, commandes. L'équipe y travaille.</span></div>
+    </div>
+    <div class="fleche">↓ lisent et écrivent par ↓</div>
+    <div class="rangee">
+      <div class="bloc"><b>L'API</b><span>La seule source des données. Elle prévient la vitrine dès qu'un produit change.</span></div>
+      <div class="bloc"><b>Supabase</b><span>Les comptes des clients, et le stockage des photos.</span></div>
+    </div>
+  </div>
+
+  <div class="sommaire">
+    <div><span class="n">1</span><span>Ce qui se change, et où</span></div>
+    <div><span class="n">5</span><span>Vérifier la mise en ligne</span></div>
+    <div><span class="n">2</span><span>Les variables <i>· cinq, dont une facultative</i></span></div>
+    <div><span class="n">6</span><span>Publier une nouvelle version</span></div>
+    <div><span class="n">3</span><span>Mettre en ligne sur Vercel</span></div>
+    <div><span class="n">7</span><span>Travailler sur le code</span></div>
+    <div><span class="n">4</span><span>Comment un changement arrive sur le site</span></div>
+    <div><span class="n">8</span><span>En cas de problème</span></div>
+  </div>
+</section>
+
+<section>
+  <article class="etape">
+    <header><span class="numero">1</span><div><h2>Ce qui se change, et où</h2><p class="but">La vitrine n'a presque rien en propre : elle affiche ce que l'API lui donne.</p></div></header>
+    <table class="ou">
+      <thead><tr><th>Ce que vous voulez changer</th><th>Où</th><th>Visible sur le site</th></tr></thead>
+      <tbody>
+        <tr><td>Un produit : nom, prix, promotion, photos, description, fiche technique</td><td>Panel → Produits</td><td>En quelques secondes</td></tr>
+        <tr><td>Le stock, ou le statut de vente d'un produit</td><td>Panel → Produits → la fiche du produit, onglet Stock</td><td>En quelques secondes ; un produit en rupture disparaît du site</td></tr>
+        <tr><td>Les rayons, familles et marques</td><td>Panel → Taxonomie</td><td>En quelques secondes</td></tr>
+        <tr><td>Les bannières de l'accueil</td><td>Panel → Contenu → Bannières</td><td>En quelques secondes</td></tr>
+        <tr><td>Les comptoirs : adresse, horaires, téléphone</td><td>Panel → Contenu → Points de vente</td><td>En quelques secondes</td></tr>
+        <tr><td>Les délais de livraison</td><td>Par la direction, dans l'API : le panel n'a pas encore d'écran pour eux</td><td>Sur les fiches et les devis</td></tr>
+        <tr><td>Les titres des sections de l'accueil, les pages À propos, Services et Contact, le logo, les couleurs</td><td>Le code de la vitrine (son dépôt GitHub)</td><td>Après une nouvelle version (partie 6)</td></tr>
+      </tbody>
+    </table>
+    <p>La règle tient en une phrase : <strong>ce qui est une donnée de la boutique se change dans le panel ; ce qui est la mise en page ou la rédaction du site se change dans le code.</strong></p>
+  </article>
+
+  <article class="etape">
+    <header><span class="numero">2</span><div><h2>Les variables</h2><p class="but">Cinq réglages relient la vitrine au reste de la boutique.</p></div></header>
+    <p>Vous n'avez pas à les composer : le générateur du kit d'installation de l'API les écrit toutes dans <code>livraison/sortie/3-vitrine-vercel.env</code> (guide d'installation, étape 7). Le modèle commenté est <code>.env.example</code>, à la racine du dépôt de la vitrine.</p>
+    <table class="variables">
+      <thead><tr><th>Variable</th><th>Rôle</th></tr></thead>
+      <tbody>
+        <tr><td><code>NEXT_PUBLIC_API_URL</code></td><td>L'adresse de l'API, par exemple <code>https://api.&lt;domaine&gt;</code>, sans barre finale.</td></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>L'adresse de Supabase : les comptes des clients s'y connectent.</td></tr>
+        <tr><td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td><td>La clé publique de Supabase (« anon »). Jamais la clé <em>service_role</em> : tout ce qui commence par <code>NEXT_PUBLIC_</code> est envoyé aux navigateurs.</td></tr>
+        <tr><td><code>REVALIDATION_SECRET</code></td><td>Le secret partagé avec l'API. Il ouvre la route par laquelle l'API prévient la vitrine d'un changement, et il fait reconnaître le serveur de la vitrine par l'API, qui ne le bride pas. <strong>Il doit être identique des deux côtés.</strong></td></tr>
+        <tr><td><code>IMAGES_ORIGINES</code> <em>(facultatif)</em></td><td>D'autres adresses d'images à autoriser, séparées par des virgules. Normalement inutile (voir partie 3).</td></tr>
+      </tbody>
+    </table>
+    <div class="encadre attention"><span class="etiquette">Figées à la construction</span><p>Les variables <code>NEXT_PUBLIC_…</code> sont inscrites dans le site au moment où Vercel le construit. Après en avoir changé une, il faut <strong>redéployer</strong> pour qu'elle s'applique.</p></div>
+  </article>
+
+  <article class="etape">
+    <header><span class="numero">3</span><div><h2>Mettre en ligne sur Vercel</h2><p class="but">Une fois l'API en ligne et ses données installées (guide d'installation, étapes 8 et 9).</p></div></header>
+    <ol class="actions">
+      <li>Vercel : <strong>Add New → Project</strong>, puis importez le dépôt de la vitrine depuis GitHub. Vercel reconnaît Next.js : ne changez ni la commande de construction ni le dossier de sortie.</li>
+      <li>Avant de cliquer <strong>Deploy</strong>, ouvrez <strong>Environment Variables</strong> et collez tout le contenu de <code>3-vitrine-vercel.env</code> : Vercel accepte un bloc collé d'un coup. Environnement : <em>Production</em>.</li>
+      <li><strong>Deploy.</strong> La construction prend quelques minutes.</li>
+      <li><strong>Settings → Domains</strong> : ajoutez <code>www.&lt;domaine&gt;</code>, puis <code>&lt;domaine&gt;</code>, que Vercel propose de rediriger vers le premier : acceptez. Ajoutez chez votre registraire les enregistrements DNS que Vercel affiche (un CNAME vers <code>cname.vercel-dns.com</code> pour <code>www</code>, un A vers <code>76.76.21.21</code> pour le domaine nu).</li>
+    </ol>
+    <div class="encadre"><span class="etiquette">Pourquoi l'API d'abord</span><p>À la construction, la vitrine demande à l'API où sont rangées les photos, et n'autorise que ces adresses : c'est ce qui permet au site de tourner chez vous sans qu'aucune adresse soit écrite dans le code. Si l'API ne répond pas à ce moment-là, la construction aboutit quand même, mais seules les photos du Supabase de <code>NEXT_PUBLIC_SUPABASE_URL</code> et de <code>IMAGES_ORIGINES</code> s'afficheront. Redéployez une fois l'API joignable.</p></div>
+    <div class="encadre"><span class="etiquette">L'offre Vercel</span><p>L'offre gratuite (Hobby) est réservée à un usage non commercial : une boutique relève de l'offre Pro.</p></div>
+  </article>
+
+  <article class="etape">
+    <header><span class="numero">4</span><div><h2>Comment un changement arrive sur le site</h2><p class="but">Pourquoi un prix corrigé dans le panel apparaît en quelques secondes, et ce qui se passe si le lien est coupé.</p></div></header>
+    <p>La vitrine garde ses lectures en cache pour rester rapide. Quand l'équipe modifie un produit dans le panel, l'API appelle aussitôt la vitrine sur <code>/api/revalider</code>, avec le secret <code>REVALIDATION_SECRET</code> ; la vitrine oublie alors les pages concernées, et le visiteur suivant voit la nouvelle valeur.</p>
+    <p>Si cet appel se perd (réseau coupé, secret différent des deux côtés), un filet rattrape tout : chaque lecture expire d'elle-même au bout de <strong>60 secondes</strong>. Un changement qui met une minute à apparaître signale donc un problème de secret ou d'adresse (partie 8), pas une panne.</p>
+    <div class="encadre"><span class="etiquette">Côté API</span><p>L'API trouve la vitrine par sa variable <code>URL_VITRINE</code>. Les deux variables viennent du même fichier de paramètres : si vous changez l'adresse de la vitrine, régénérez et recollez la configuration de l'API aussi.</p></div>
+  </article>
+
+  <article class="etape">
+    <header><span class="numero">5</span><div><h2>Vérifier la mise en ligne</h2><p class="but">Le parcours d'un client, de l'accueil au suivi de sa commande.</p></div></header>
+    <ul class="coches">
+      <li><span>L'accueil affiche ses bannières, ses sélections de produits et les rayons.</span></li>
+      <li><span>La recherche trouve « onduleur », et propose des suggestions pendant la frappe.</span></li>
+      <li><span>Une fiche produit montre ses photos, son prix, son délai de livraison et ses produits liés.</span></li>
+      <li><span>Le panier se remplit, et le devis reprend ses lignes avec les conditions de garantie et de livraison.</span></li>
+      <li><span>Une commande passée sans compte aboutit, et son lien de suivi s'ouvre.</span></li>
+      <li><span>Un compte client se crée, se déconnecte et se reconnecte sans refaire sa fiche.</span></li>
+      <li><span>Un prix changé dans le panel apparaît sur la fiche au rechargement suivant, en quelques secondes.</span></li>
+    </ul>
+  </article>
+
+  <article class="etape">
+    <header><span class="numero">6</span><div><h2>Publier une nouvelle version</h2><p class="but">Pour ce qui vit dans le code : textes des pages, mise en page, logo, couleurs.</p></div></header>
+    <p>Vercel construit et publie le site à chaque modification poussée sur la branche principale (<code>main</code>) du dépôt. Une modification poussée sur une autre branche donne une <strong>prévisualisation</strong> à son adresse propre, sans toucher au site en ligne : c'est l'endroit pour relire avant de publier. La méthode conseillée :</p>
+    <ol class="actions">
+      <li>Travaillez sur une branche, et ouvrez une <em>pull request</em> vers <code>main</code>.</li>
+      <li>Relisez la prévisualisation que Vercel attache à la pull request.</li>
+      <li>Fusionnez : Vercel publie la nouvelle version en quelques minutes.</li>
+    </ol>
+    <p>Une version qui pose problème se retire en un clic : <strong>Deployments</strong>, choisissez la version précédente, <strong>Promote to Production</strong>.</p>
+  </article>
+
+  <article class="etape">
+    <header><span class="numero">7</span><div><h2>Travailler sur le code</h2><p class="but">Pour la personne qui modifie le site sur son ordinateur.</p></div></header>
+    <p>Il faut Node.js 20.9 ou plus récent, et Git.</p>
+    <pre><code>git clone https://github.com/&lt;votre-compte&gt;/&lt;dépôt-de-la-vitrine&gt;.git
+cd &lt;dépôt-de-la-vitrine&gt;
+npm install
+cp .env.example .env.local    <span class="com"># puis le remplir : l'API et le Supabase de production conviennent</span>
+npm run dev                   <span class="com"># http://localhost:3000</span></code></pre>
+    <p>Avant de pousser : <code>npm run typecheck</code> (types), <code>npm run lint</code> (style) et <code>npm run build</code> (la construction que Vercel fera).</p>
+    <div class="encadre"><span class="etiquette">Avec une API sur le même poste</span><p>Pour développer contre une API locale, démarrée sans Supabase : <code>NEXT_PUBLIC_API_URL=http://localhost:3001</code> et <code>NEXT_PUBLIC_CONNEXION_LOCALE=1</code>. Les clients se connectent alors par l'API locale, avec son mot de passe de développement. Ce mode n'existe pas sur un déploiement de production.</p></div>
+  </article>
+</section>
+
+<section class="partie">
+  <article class="etape">
+    <header><span class="numero">8</span><div><h2>En cas de problème</h2><p class="but">Ce que vous voyez, sa cause probable, et que faire.</p></div></header>
+    <table class="depannage">
+      <thead><tr><th>Ce que vous voyez</th><th>Cause probable, et que faire</th></tr></thead>
+      <tbody>
+        <tr><td>Les photos ne s'affichent pas ; les autres textes oui.</td><td>L'API ne répondait pas quand Vercel a construit le site, ou l'adresse du stockage a changé depuis. Vérifiez <code>https://api.&lt;domaine&gt;/sante</code>, puis <strong>Redeploy</strong>. Pour une adresse d'images que l'API ne cite pas, ajoutez-la à <code>IMAGES_ORIGINES</code>.</td></tr>
+        <tr><td>Un changement du panel met une minute à apparaître.</td><td>L'API n'arrive pas à prévenir la vitrine : <code>REVALIDATION_SECRET</code> diffère des deux côtés, ou <code>URL_VITRINE</code> de l'API ne désigne pas ce site. Les journaux de la vitrine (Vercel → Logs) disent « revalidation non configuree » si le secret manque.</td></tr>
+        <tr><td>Des pages répondent « trop de requêtes » aux heures chargées.</td><td><code>REVALIDATION_SECRET</code> manque ou diffère : l'API ne reconnaît plus le serveur de la vitrine et lui applique la limite d'un visiteur ordinaire. Recollez la variable, puis redéployez.</td></tr>
+        <tr><td>La vitrine affiche des rayons vides, ou « aucun produit ».</td><td>L'API tourne sans catalogue : les données ne sont pas installées, ou l'API n'a pas été redémarrée après leur installation (guide d'installation, étape 9).</td></tr>
+        <tr><td>Un client ne peut pas se connecter, ou le lien « mot de passe oublié » ramène sur une erreur.</td><td><code>NEXT_PUBLIC_SUPABASE_URL</code> ou <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> ne correspondent pas au Supabase de l'API, ou l'adresse du site manque dans les redirections autorisées de Supabase (<code>ADDITIONAL_REDIRECT_URLS</code>, posée par le générateur).</td></tr>
+        <tr><td>Le paiement mobile échoue, ou une commande payée reste « à payer ».</td><td>Ce n'est pas la vitrine : la configuration Fapshi est dans l'API (guide d'installation, étape 11).</td></tr>
+        <tr><td>Un visiteur voit une page « hors ligne » qui donne le numéro du comptoir.</td><td>C'est voulu : c'est la page que le site affiche quand la connexion du visiteur tombe. Rien à corriger côté serveur.</td></tr>
+      </tbody>
+    </table>
+  </article>
+</section>
+
+</body>
+</html>

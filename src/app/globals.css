@@ -1,0 +1,1569 @@
+@import 'tailwindcss';
+
+/* ============================================================================
+   NOWTECH CENTER — DESIGN TOKENS
+
+   One accent. One radius system. One neutral family. Nothing in a component is
+   allowed to invent a colour, a duration or a corner: if it is not a token
+   below, it does not exist.
+   ========================================================================= */
+
+:root {
+  /* --- Ground -------------------------------------------------------------
+     The page is white, and so is every surface a photograph touches. That is
+     not a style preference, it is what the material demands: all 4,215
+     packshots in this library were shot on white, so any tint behind one draws
+     a rectangle around the product. With one ground everywhere, the photograph
+     has no edge at all.
+     Structure is then carried by hairlines and by space, which is also the more
+     honest register for a catalogue of racks, switches and cabling. */
+  --paper: #ffffff;
+  --space: #f1f3ef; /* spec chips, empty states, quiet fills */
+  /* Where a photograph is going to be and is not yet. Two per cent off white:
+     a frame the eye passes over, never an object it stops on. One value, used
+     by `.shimmer` and by the banner's mount box, so the two can never drift. */
+  --placeholder: #f6f7f5;
+  --space-2: #e8ebe5;
+  /* Kept as its own token even though it equals --paper today: a well is a
+     role, and the day one needs to lift off the page it changes here and
+     nowhere else. */
+  --surface: #ffffff;
+  /* Ink for anything printed ON a packshot's surface, which is white in both
+     themes. It is the one colour in the system that must NOT flip: a discount
+     stamp built from --ink and --paper reads black-on-white in the light theme
+     and light-on-white in the dark one, where it disappears. */
+  --on-surface: #141715;
+
+  /* --- Ink ----------------------------------------------------------------
+     Near-black with a green cast, never #000. Measured on white:
+     ink 18.1:1, ink-2 6.7:1, ink-3 5.5:1. ink-3 was #7f847e and measured
+     4.1:1, which failed AA on every reference count and stock label on the
+     page; it is darkened to clear 4.5:1 with room to spare. */
+  --ink: #141715;
+  --ink-2: #585d59;
+  --ink-3: #656a64;
+
+  /* --- Primary ------------------------------------------------------------
+     UN SEUL VERT, #0B5D1E, LA COULEUR PRIMAIRE DE LA CHARTE DU PROPRIETAIRE
+     (vert #0B5D1E, encre #212227, orange #EA771F, blanc).
+
+     Il y en avait une echelle : #009d17 pour la marque, #008013 pour les
+     liens et les boutons, #00610f pour leur survol, #d6f5da pour les fonds
+     clairs, et d'autres sur le bandeau vert. Comme pour l'orange, le
+     proprietaire a demande une couleur unique : tout ce qui etait `brand`,
+     `accent` ou `accent-ink` s'appelle desormais `primary`, en symetrie avec
+     `secondary`. Une variante reintroduite referait le defaut qu'on vient de
+     corriger.
+
+     #0B5D1E est plus sombre que les anciens verts : sur blanc il mesure
+     environ 8.1:1, et le blanc sur lui aussi, donc tout texte et tout bouton
+     vert est lisible, a toute taille. */
+  --primary: #0b5d1e;
+
+  /* LA PLAQUE QUI PIVOTE AU SURVOL DES CARTES PRODUIT GARDE SA COULEUR, A LA
+     DEMANDE EXPRESSE DU PROPRIETAIRE. C'est le vert clair d'avant (27,5 % de
+     l'ancien #009d17 sur le fond), fige ici sous son propre nom : sans cela,
+     elle suivrait `--primary` et deviendrait sombre. C'est la seule exception
+     au vert unique, et elle est voulue. */
+  --plaque-carte: color-mix(in srgb, #009d17 27.5%, var(--paper));
+
+  /* --- Secondary ----------------------------------------------------------
+     UN SEUL ORANGE, #EA771F, CELUI DE LA CHARTE DU PROPRIETAIRE (vert #0B5D1E,
+     encre #212227, orange #EA771F, blanc).
+
+     Il y en avait trois : #f89a20 pour les fonds, #a86105 pour le texte sur
+     blanc et #fdeccd pour les fonds selectionnes. A l'ecran, cela se lisait
+     comme un orange dont l'opacite changeait d'un endroit a l'autre, et le
+     proprietaire a demande une couleur secondaire unique. Toute la vitrine
+     utilise donc `secondary`, et il n'existe plus de variante `-ink` ni
+     `-wash` : une variante reintroduite referait exactement ce defaut.
+
+     CE QUE CE CHOIX COUTE, DIT UNE FOIS POUR QUE PERSONNE NE LE DECOUVRE PAR
+     HASARD. #EA771F sur blanc mesure environ 2.9:1, sous les 4.5:1 exiges pour
+     le texte courant et juste sous les 3:1 du grand texte gras. Un texte orange
+     sur fond blanc est donc peu lisible pour une partie des visiteurs. Sur un
+     fond orange, l'encre sombre reste lisible (environ 6.6:1) et le blanc ne
+     l'est pas. */
+  --secondary: #ea771f;
+
+  /* --- Rail ---------------------------------------------------------------
+     The one dark surface, and it appears exactly twice: the department bar
+     under the masthead and the footer. Those two bands close the page top and
+     bottom, which is what lets everything between them stay white without the
+     layout losing its edges.
+
+     LE BANDEAU EST LA COULEUR PRIMAIRE, ET TOUT CE QUI S'Y ECRIT EST BLANC.
+     Il etait #007a12, avec deux verts clairs dessus : #d0f1d5 pour le texte
+     secondaire du pied de page et des compteurs, #9dfaae pour le soulignement
+     de la section courante et l'anneau de focus. Avec un vert unique (#0B5D1E),
+     ces deux teintes auraient ete deux verts de plus. Elles passent au blanc,
+     qui mesure environ 8.1:1 sur le bandeau : lisible pour le texte courant,
+     et bien au-dessus des 3:1 que WCAG 1.4.11 exige d'un indicateur de focus.
+     Les jetons restent separes parce qu'ils portent des roles distincts. */
+  --rail: var(--primary);
+  --rail-ink: #ffffff;
+  --rail-ink-2: var(--rail-ink);
+  --rail-rule: rgb(255 255 255 / 0.26);
+  --rail-accent: var(--rail-ink);
+
+  /* --- Structure ---------------------------------------------------------- */
+  /* On a white page the hairline is the only thing drawing structure, so it is
+     a touch darker than a decorative rule would be. */
+  --rule: #e2e5e0;
+  --rule-2: #ccd0c9;
+
+  /* --- Semantic -----------------------------------------------------------
+     Exactly one state colour, and it is spent on the only scarce, honest,
+     decision-relevant signal in the dataset: 338 products are out of stock.
+     96.5% of the catalog is flagged "on sale", so discount is not a signal and
+     gets no colour at all. */
+  /* LE MEME ORANGE QUE --secondary, SUR DEMANDE EXPLICITE DU PROPRIETAIRE. Il
+     valait #8a4a12, un orange brun qui se lisait comme une deuxieme couleur
+     secondaire a cote de #EA771F. Il reste un jeton a part parce qu'il porte un
+     role different (un avertissement, pas un appel a l'action) : le jour ou la
+     charte recevra une couleur d'alerte, elle changera ici et nulle part
+     ailleurs. */
+  --warn: var(--secondary);
+
+  /* --- Shape --------------------------------------------------------------
+     Three radii, assigned by role and never mixed: a department tile, a
+     product well, a control. */
+  --r-space: 18px;
+  --r-well: 12px;
+  --r-control: 8px;
+  --r-pill: 999px;
+
+  /* --- Motion -------------------------------------------------------------
+     Short. The audience is on a mid-range Android over a metered connection,
+     and above 300ms a transition reads as lag rather than as quality. */
+  --t-fast: 120ms;
+  --t-base: 220ms;
+  --t-slow: 320ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- Type scale ---------------------------------------------------------
+     Six steps, and the page uses only these. Neighbours a single pixel apart
+     mean nothing reads as a level, so everything reads as the same level. Wide
+     gaps are what make a hierarchy visible without borders.
+
+     The scale is set fine on purpose. Air, not size, is what carries this page:
+     the bands between sections are up to 160 pixels and the grids are separated
+     by space alone, so a heading does not also have to be 50 pixels tall to read
+     as a heading. Type that large next to that much space reads as a poster
+     rather than as a shop, and it pushes the merchandise off the screen.
+
+     Body sits at 15px with generous leading, section titles top out at 32px,
+     and the ladder between the six steps is wide enough that each one is
+     obviously a different level. Weight and space do the ranking; scale only
+     confirms it. */
+  /* `display` is spent in one place, the opening headline, and it is sized to
+     the column it lives in rather than to the page. Measured: at 44px in Poppins
+     a twenty-character line wants 500 pixels, the column gave it 440, and every
+     one of the twelve headlines came out on four lines instead of the two they
+     are written as. The column is widened and the ceiling comes down to 40, so
+     twenty-four characters fit on one line at every size from 1280 up. */
+  --t-display: clamp(1.75rem, 2.8vw, 2.5rem);
+  --t-title: clamp(1.5rem, 2.2vw, 2rem);
+  --t-sub: clamp(1.125rem, 1.3vw, 1.25rem);
+  --t-lead: 1.0625rem;
+  --t-body: 0.9375rem;
+  --t-small: 0.8125rem;
+  --t-micro: 0.75rem;
+
+  /* --- Space scale --------------------------------------------------------
+     Named by the job, not by the number. `band` is the silence between two
+     major sections.
+
+     The page carries a marketplace structure and a gallery rhythm, and holding
+     both at once is the whole design. The structure is what a customer needs to
+     find a switch in a catalogue of 4 254; the rhythm is what stops that
+     structure reading as a price list. So the sections stay in the dense order a
+     shop uses, and the silence between them is large enough that each arrives
+     alone.
+
+     `stack` is the distance inside a section, between its head and its
+     merchandise. `tight` binds a label to the thing it labels. Nothing on this
+     site uses a vertical value that is not one of the three.
+
+     IT IS NAMED `stack` AND NOT `block`, WHICH IS NOT A PREFERENCE. Tailwind
+     builds a utility from every `--spacing-*` key against every spacing
+     namespace, and one of those namespaces is `inline-`. A key called `block`
+     therefore generates `.inline-block { inline-size: var(--spacing-block) }`,
+     which is emitted after the display utility of the same name and wins: every
+     `inline-block` on the site silently became a 57-pixel-wide inline-size and
+     no display change at all. Found by measuring a 6px status dot that rendered
+     57.59 x 6. Any key added here must be checked against the utility names
+     Tailwind already owns.
+
+     UN TIERS D'AIR EN MOINS, PARCE QUE LE PROPRIETAIRE A DIT « ENORMEMENT TROP
+     GRANDS ». Les trois mesures de rythme de la page — la bande entre deux
+     sections, la pile a l'interieur d'une section, la gouttiere — valaient
+     respectivement clamp(6rem, 8.5vw, 10rem), clamp(2.5rem, 4vw, 4rem) et
+     clamp(1.25rem, 7.5vw, 9rem). Mesure a 1440 : 122 px entre deux sections,
+     58 a l'interieur, 108 de chaque cote. Sur un ecran de portable la premiere
+     bande faisait a elle seule un sixieme de hauteur de fenetre, et l'accueil
+     mesurait 7 371 px pour sept sections.
+
+     Les nouvelles valeurs retirent un tiers a chacune, jamais la moitie : a
+     1440 la bande tombe a 81, la pile a 39, la gouttiere a 72. Le rapport entre
+     les trois est conserve (bande = 2 x pile, a peu pres), donc la hierarchie
+     que ces mesures dessinent ne bouge pas ; c'est la meme page, moins etalee.
+     Le plancher descend avec le reste pour que le telephone en profite aussi :
+     96 -> 64 entre deux sections, 40 -> 28 a l'interieur.
+
+     CE QUI EST CHANGE ICI ET PAS AILLEURS. Presque tout le site mesure son air
+     avec `band` et `stack`, donc ces deux lignes suffisent pour la majorite des
+     pages. Les rares blocs qui portent un rembourrage ecrit a la main — la
+     bande des services, celle des comptoirs, les panneaux promo, le pied de
+     page, l'en-tete des pages interieures — sont ramenes dans la meme
+     proportion chez eux, parce qu'ils n'ont jamais lu ces jetons. */
+  --s-band: clamp(4rem, 5.6vw, 6.5rem);
+  --s-stack: clamp(1.75rem, 2.7vw, 2.75rem);
+  --s-tight: 1rem;
+
+  /* --- Layout -------------------------------------------------------------
+     The shell caps the CONTENT, not itself, and the gutter is a share of the
+     viewport. That distinction is the whole fix.
+
+     Capping the shell and padding it from inside looks equivalent and is not.
+     Once the cap bites, the leftover viewport turns into centring margin that
+     stacks on top of the gutter, so the side space jumps the moment the screen
+     crosses the cap: at 1440 the page showed 66px of margin and at 1680 it
+     showed 177, a 2.7x step across one common resolution change. The content
+     measure held still and the framing did not, which reads as the layout
+     losing its composure rather than as a bigger screen.
+
+     Written as `content + 2 x gutter`, the shell only reaches its cap when the
+     screen is genuinely wider than the design needs. Below that the gutter is
+     a fixed share of the viewport at every size, so the framing is identical at
+     1440 and at 1680 and the content simply grows with the screen.
+
+     LA PART EST PASSEE DE 7,5 % A 5 %, DANS LE MEME MOUVEMENT QUE LES DEUX
+     MESURES VERTICALES AU-DESSUS : un tiers de marge en moins de chaque cote.
+     C'est la moitie du grief du proprietaire — l'autre moitie etait verticale —
+     et c'est aussi ce qui rend le reste possible, parce que la gouttiere est ce
+     qui decide de la largeur d'une carte produit sur un telephone. A 360 la
+     cellule passe de 141 a 150 px, et ces neuf pixels sont exactement ce qu'il
+     faut pour que le prix, agrandi d'un cran, tienne encore sur une ligne.
+
+       largeur   avant                    apres
+       360       gutter 27   content 306  gutter 18   content 324
+       390       gutter 29   content 332  gutter 20   content 350
+       768       gutter 58   content 652  gutter 38   content 692
+       1024      gutter 77   content 870  gutter 51   content 922
+       1280      gutter 96   content 1088 gutter 64   content 1152
+       1440      gutter 108  content 1224 gutter 72   content 1296
+       1680      gutter 126  content 1428 gutter 84   content 1460  cap atteint
+       1920      gutter 144  content 1460 gutter 96   content 1460
+
+     Le plafond du contenu ne bouge pas : `--shell` vaut toujours 1460, donc la
+     ligne de texte la plus longue du site est la meme qu'avant et c'est
+     seulement le cadre autour qui se resserre. Le plafond est atteint plus tot
+     (1604 au lieu de 1748), ce qui est la consequence voulue.
+
+     Nothing on the page is measured in ch against this, so no reading measure
+     moves when the content does. */
+  --shell: 1460px;
+  --gutter: clamp(1rem, 5vw, 6rem);
+
+  /* --- Z scale, documented so it is never invented at the call site --------
+     The department nav scrolls under the sticky header, so the header outranks
+     it. The cart drawer covers everything and brings its own close control. */
+  --z-base: 0;
+  --z-sticky: 20;
+  --z-header: 40;
+  /* Above the page and the sticky masthead, below the basket: when the drawer
+     is open it owns the screen, and a chat launcher floating over it would be a
+     second thing asking for the same attention. */
+  --z-assistant: 60;
+  --z-drawer: 70;
+  /* The account dialog is the only true modal on the site: it traps focus and
+     locks the page behind it, so nothing may be painted over it. The basket
+     drawer is dismissible furniture and the chat launcher floats; both give way
+     to the one surface that is waiting on an answer. */
+  --z-modal: 80;
+
+  /* --- Panel -------------------------------------------------------------
+     A dropdown separates itself from the page by a shadow on white and cannot
+     in the dark, where the panel and the page are the same colour and a shadow
+     falls on nothing. The role is "detach this panel"; the means changes with
+     the theme, so both live here rather than in the component. */
+  --shadow-panel: 0 28px 56px -36px rgb(20 23 21 / 0.45);
+  --rule-panel: var(--rule);
+
+  /* Declared so the browser paints its own surfaces to match: scrollbars inside
+     the department panel, the native dropdown of the search scope, form
+     autofill. Without it every one of those stays light on a dark page. */
+  color-scheme: light;
+}
+
+
+/* THE PAGE IS LIGHT, AND ONLY LIGHT.
+
+   The dark theme is gone, on the client's decision. What it cost to keep was
+   not the tokens, it was the exceptions: every packshot in this library is shot
+   on white, so every surface a photograph touches had to stay white in both
+   themes, which meant a white well on a near-black page, a discount stamp that
+   could not use the page's ink, a rail accent that had to hold on two grounds,
+   and a search field that could not be filled with the page's own colour. Half
+   the awkward decisions in this file existed to serve a theme nobody asked for.
+
+   `color-scheme: light` stays declared in :root above. It is what stops the
+   browser painting its own surfaces dark, the native scrollbars and form
+   autofill, when the reader's system is set to dark. Without it the page is
+   light and its scrollbars are not.
+   ========================================================================= */
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-space: var(--space);
+  --color-space-2: var(--space-2);
+  --color-surface: var(--surface);
+  --color-on-surface: var(--on-surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-rail: var(--rail);
+  --color-rail-ink: var(--rail-ink);
+  --color-rail-ink-2: var(--rail-ink-2);
+  --color-rail-rule: var(--rail-rule);
+  --color-rail-accent: var(--rail-accent);
+  --color-rule: var(--rule);
+  --color-rule-2: var(--rule-2);
+  --color-rule-panel: var(--rule-panel);
+  --color-warn: var(--warn);
+
+  --radius-space: var(--r-space);
+  --radius-well: var(--r-well);
+  --radius-control: var(--r-control);
+  --radius-pill: var(--r-pill);
+
+  --text-display: var(--t-display);
+  --text-title: var(--t-title);
+  --text-sub: var(--t-sub);
+  --text-lead: var(--t-lead);
+  --text-body: var(--t-body);
+  --text-small: var(--t-small);
+  --text-micro: var(--t-micro);
+
+  --spacing-band: var(--s-band);
+  --spacing-stack: var(--s-stack);
+
+  --font-sans: var(--font-poppins), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================================
+   BASE
+   ========================================================================= */
+
+/*
+ * THE DEFAULT HAIRLINE, AND IT USED TO BEAT EVERY BORDER UTILITY ON THE SITE.
+ *
+ * This rule sets the border colour once so no component has to name it, which is
+ * right: almost every border here is the hairline. It was written unlayered, and
+ * unlayered CSS beats anything inside a cascade layer NO MATTER ITS SPECIFICITY,
+ * so a `*` selector with the lowest specificity in the language was overriding
+ * Tailwind's `border-ink` and `border-primary`, which live in `@layer utilities`.
+ *
+ * Measured before this fix: `border-ink` computed rgb(226, 229, 224) and so did
+ * `border-primary`, which is this hairline rather than either of them. Counted
+ * across the source, 37 border colours in 18 files had never once been drawn:
+ * 20 `border-ink`, 9 `border-primary`, 5 `border-rail-rule`, 2 `border-ink-3` and
+ * 1 `border-warn`. Every one of them rendered as a pale grey line, and nobody
+ * caught it because a pale grey line is what most of them should have been
+ * anyway. The ones that mattered were the loud ones: a bordered button meant to
+ * read as ink was drawing at the weight of a table rule.
+ *
+ * `@layer base` puts it back under the utilities, where a default belongs. It is
+ * the third time this stylesheet has lost an argument to its own unlayered rules
+ * (see `.shimmer` and `.route-bar`), and the lesson is the same each time: plain
+ * CSS in this file outranks every utility, so anything written here has to be
+ * something no component should ever be able to override.
+ */
+@layer base {
+  * {
+    border-color: var(--rule);
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+
+  /* NO `scroll-behavior: smooth` HERE, AND THAT IS A MEASUREMENT.
+     It was added to copy E-shop, where navigating away from a scrolled page
+     makes it travel back to the top instead of jumping. On this site it breaks
+     navigation outright: Next resets the scroll position on every route change,
+     the declaration turns that reset into an animation, and the new page's
+     render interrupts the animation before it lands. Measured from 4 000px down
+     /catalogue, three runs out of three: the reader arrives on the product page
+     at 169 pixels, not at the top.
+
+     E-shop gets away with it because its pages are short and its reset finishes
+     inside a frame. /catalogue here is 18 500 pixels tall.
+
+     Having the travel would mean taking scrolling away from the browser on every
+     link on the site, which is a scroll library in all but name. The page
+     transition in src/app/template.tsx carries the same message for the cost of
+     one component: the page arrives rather than appearing. */
+}
+
+html,
+body {
+  overflow-x: clip;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--primary);
+  color: var(--paper);
+}
+
+/* Focus is never removed, only restyled. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* The search field states its own focus.
+
+   The document ring is drawn 3px outside the element it belongs to, and the
+   element here is the input inside a 48px frame: the ring lands outside that
+   frame and the whole control reads as having grown when it takes focus. The
+   frame answers instead, turning accent and doubling inward, which is a
+   two-pixel indicator at 7.9:1 that changes no geometry at all. */
+.field:focus-within {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.field :where(input, select):focus-visible {
+  outline: none;
+}
+
+/* ON A PHONE THE PLACEHOLDER IS 14 PIXELS, WHILE THE TYPED TEXT STAYS AT 16.
+
+   Every field is 16px below `md` because Safari on iOS zooms the whole page
+   when a field under 16px takes focus. The placeholder inherited that size,
+   and it is what a phone shows most of the time: « Votre nom »,
+   « Onduleur, caméra, switch… » and the rest read larger than the labels
+   and the text around them. The zoom is decided by the field's font size,
+   not the placeholder's, so the placeholder can come down on its own. One
+   rule, here, rather than the same utility in eleven class lists. From `md`
+   every field is 13px and this rule does not apply. */
+@media (max-width: 767.98px) {
+  :where(input, textarea)::placeholder {
+    font-size: 0.875rem;
+  }
+}
+
+/* On the rail the accent is deep pine on deep pine, so the ring was drawn and
+   invisible: a keyboard pass through the department bar and the footer looked
+   like focus had been removed. Anything on that surface switches to the rail's
+   own accent, and the offset drops to 2px because these controls sit tight
+   against one another. */
+.on-rail :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline-color: var(--rail-accent);
+  outline-offset: 2px;
+}
+
+/* LA MEME EXCEPTION, SUR LA BANDE ORANGE DU COMPTOIR, ET POUR LA MEME RAISON.
+   L'anneau du document est `--primary`. Sur `--secondary` il mesure 2,75:1, en
+   dessous des 3:1 que WCAG 1.4.11 exige d'un indicateur de focus : il serait
+   dessine et pratiquement pas vu, exactement le defaut que `.on-rail` corrige
+   sur le bandeau vert. L'encre de la page y mesure 6,15:1. L'ecart tombe a 2px
+   parce que la bande fait 32 a 36 pixels de haut et qu'un anneau pose 3 pixels
+   plus loin en deborderait. */
+.on-secondary :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline-color: var(--ink);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   TYPOGRAPHY PRIMITIVES
+   ========================================================================= */
+
+/* Every numeral the customer compares — price, port count, VA rating,
+   reference — is set in mono with tabular figures, so a column of prices from
+   1 000 to 11 800 000 FCFA stays readable as a column. */
+.t-num {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reserved for labels that are the only text in their group: a footer column
+   head, a form legend. Never stacked above a heading as a kicker. */
+.t-label {
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ============================================================================
+   MOTION — LE TRACÉ
+
+   One idea, and every moving thing on the site is a case of it: the page draws
+   itself the way a workshop drawing is drawn. The datum line is struck first,
+   the part is uncovered against it, then the dimensions are written alongside.
+   Nothing appears, nothing bounces, nothing is lifted on a shadow.
+
+   THE ORDER IS THE POINT. A section does not animate as one block; its parts
+   arrive in the order a reader needs them, and the offsets below are what make
+   that legible: the rule at 0, the heading at 90ms rising from behind that
+   rule, the sentence at 170ms resolving out of blur, the merchandise from
+   240ms, uncovered cell by cell. Four gestures spaced 80ms apart read as one
+   composed movement; the same four fired together read as a page settling.
+
+   BLUR IS DOING WORK, NOT DECORATION. A paragraph that fades in is a paragraph
+   the page has no opinion about. Resolving it from a 6px blur is how a lens
+   finds focus, and at this type size it is the difference between text that
+   appears and text that becomes readable. It costs one composited filter on an
+   element that animates once.
+
+   THE WAVE IS CAPPED. A ten-cell grid staggered without a cap becomes a
+   progress bar, and the reader waits for it. Six steps of 42ms is 250ms from
+   first cell to last, which reads as one gesture crossing the grid.
+
+   THE HOVER LANGUAGE IS THE SAME LANGUAGE. A rule drawn across a label, an
+   underline drawn from the leading edge, a bar drawn down the side of a rail
+   row: the interface answers a pointer the way it introduced itself. The only
+   translation anywhere is 4px, and it is always on a picture, never on a panel.
+
+   FAILURE MODES. The entrance states are gated on `scripting: enabled`, so with
+   JavaScript off nothing is ever hidden and the page simply renders. Under
+   `prefers-reduced-motion` every duration collapses and every hidden state is
+   dropped, leaving colour transitions only. Nothing here animates a property
+   that triggers layout.
+   ========================================================================= */
+
+:root {
+  --e-rule: 560ms; /* a hairline drawing itself */
+  --e-line: 660ms; /* a line of type rising from behind its baseline */
+  --e-text: 500ms; /* a sentence resolving out of blur */
+  --e-media: 720ms; /* a shutter opening on a photograph */
+  --e-item: 460ms; /* a chip, a pill, a small object */
+  --e-switch: 620ms; /* one card in the opening deck replacing another */
+  --e-bounce: 760ms; /* a band of banners arriving at its next page */
+
+  /* Decelerating and never overshooting: this shop sells rack rails, and a
+     rack rail does not spring. */
+  --ease-draw: cubic-bezier(0.22, 1, 0.28, 1);
+  /* Fast off the mark, long settle: a shutter has weight. */
+  --ease-shutter: cubic-bezier(0.66, 0, 0.2, 1);
+  --ease-press: cubic-bezier(0.3, 0, 0.2, 1);
+  /* The banner band is the one overshoot on the site, and it is a briefed
+     exception rather than a habit: everything else here decelerates and stops
+     exactly, which is right for a rack rail and wrong for a poster. The control
+     point is held at 1.12, roughly three per cent past the mark and back, so the
+     page lands with weight rather than springing. The mechanical design check
+     flags any bounce on sight; this one is answered here, not silenced. */
+  --ease-bounce: cubic-bezier(0.32, 1.12, 0.5, 1);
+}
+
+/* --- Entrances ------------------------------------------------------------
+   `.enter` marks the observed container; the document-level observer stamps
+   `data-enter="in"` on it once. The roles below are what actually move. */
+
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+  .enter {
+    --wave: calc(min(var(--enter-index, 0), 6) * 42ms);
+  }
+
+  /* 1. The datum. A hairline struck from the leading edge. */
+  .enter .e-rule {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--e-rule) var(--ease-draw) var(--wave);
+  }
+  .enter[data-enter='in'] .e-rule {
+    transform: none;
+  }
+
+  /* 2. The heading. Each line rises from behind its own baseline, inside the
+        mask its wrapper provides. */
+  .enter .e-line {
+    display: block;
+    transform: translateY(106%);
+    transition: transform var(--e-line) var(--ease-shutter) calc(var(--wave) + 90ms);
+  }
+  .enter[data-enter='in'] .e-line {
+    transform: none;
+  }
+
+  /* 3. The sentence, resolving. */
+  .enter .e-text {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(8px);
+    transition:
+      opacity var(--e-text) var(--ease-draw) calc(var(--wave) + 170ms),
+      filter var(--e-text) var(--ease-draw) calc(var(--wave) + 170ms),
+      transform var(--e-text) var(--ease-draw) calc(var(--wave) + 170ms);
+  }
+  .enter[data-enter='in'] .e-text {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+
+  /* 4. The part, uncovered by a shutter travelling up from the surface it
+        stands on, and settling the last 3% of its scale as it lands. */
+  .enter .e-media {
+    clip-path: inset(100% 0 0 0);
+    transform: scale(1.03);
+    transition:
+      clip-path var(--e-media) var(--ease-shutter) calc(var(--wave) + 240ms),
+      transform var(--e-media) var(--ease-draw) calc(var(--wave) + 240ms);
+  }
+  .enter[data-enter='in'] .e-media {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+
+  /* 5. Small objects: a spec chip, a filter pill, a brand cell. */
+  .enter .e-item,
+  .enter.e-item {
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+      opacity var(--e-item) var(--ease-draw) calc(var(--wave) + 240ms),
+      transform var(--e-item) var(--ease-draw) calc(var(--wave) + 240ms);
+  }
+  .enter[data-enter='in'] .e-item,
+  .enter.e-item[data-enter='in'] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   The sheen.
+
+   A band of light crossing a block once, just after it has finished arriving.
+   Taken from the Djulah client app, where a `LinearGradient` of
+   base -> highlight -> base at stops 0.3 / 0.5 / 0.7 is dragged across twice the
+   element's width. The same gradient and the same travel are used here, with two
+   differences that matter.
+
+   IT FIRES ONCE, NOT FOREVER. In Djulah the sweep is a loading skeleton and has
+   to repeat, because it is standing in for content that has not arrived. Here
+   the content has arrived, and the light is the last beat of its arrival: a
+   loop would turn twelve product cards into twelve things still loading.
+
+   IT CROSSES THE PICTURE, NOT THE BLOCK. In Djulah the sweep runs over the image
+   tile and stops there; the text under it is never lit. Same here: the light
+   travels the photographic well and leaves the name, the specs and the price
+   alone. A band of light passing over a price is a different and much stranger
+   idea than a reflection moving across a print.
+
+   IT IS DJULAH'S LIGHT, NOT A COLOUR. The gradient is that component's own two
+   values, #ebebf4 to #f4f4f4 and back, at the same 0.3 / 0.5 / 0.7 stops. It
+   carried a wash of brand green for a while and that was wrong twice over: it
+   made the light green, which no light is, and it put the shop's colour on top
+   of the merchandise, which is the one place on this page the brand has no
+   business being.
+
+   White over white is nothing, and that is the point. The band is invisible over
+   the well's own ground and shows only where it crosses the product, so what
+   travels is a reflection moving over the object rather than a rectangle moving
+   over the card.
+
+   The delay is the card's own entrance delay plus the time that entrance takes:
+   240ms before the shutter starts plus its own 720, so 960 and not a rounder
+   number. It was 620 for a while, which is the end of no gesture at all, and at
+   that value the band crossed the packshot while the shutter was still
+   uncovering it: measured frame by frame, sixteen per cent of the product was
+   still missing when the light was at full strength, on twelve of the eighteen
+   wells on the page. A light passing over a photograph that has not finished
+   arriving reads as a rendering fault, not as a reflection.
+
+   The wave is what makes it follow each block individually rather than crossing
+   the whole grid at once. */
+.sheen {
+  position: relative;
+}
+.sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    100deg,
+    rgb(235 235 244 / 0) 30%,
+    rgb(244 244 244 / 0.9) 50%,
+    rgb(235 235 244 / 0) 70%
+  );
+  background-size: 220% 100%;
+  background-position: 130% 0;
+}
+
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+  .enter[data-enter='in'] .sheen::after,
+  .enter.sheen[data-enter='in']::after {
+    animation: sheen-pass 900ms var(--ease-draw) calc(var(--wave) + 960ms) 1 both;
+  }
+}
+
+@keyframes sheen-pass {
+  0% {
+    opacity: 0;
+    background-position: 130% 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    background-position: -30% 0;
+  }
+}
+
+/* --- The switch -----------------------------------------------------------
+   One card replacing another in the opening deck, when the rail beside it is
+   pointed at a different department.
+
+   Same four gestures as an arrival, same offsets, same order, plus the card's
+   own wipe from the leading edge, which is what makes a replacement read as a
+   replacement rather than as a page arriving twice.
+
+   A horizontal track was tried instead and taken back out: with twelve slides
+   the whole strip travels, so a jump from the second department to the eleventh
+   sweeps nine cards past the reader at speed, and the card they were reading is
+   thrown off screen rather than replaced. Redrawing in place is the quieter and
+   the more accurate description of what actually happened.
+
+   Keyframes and not transitions, because the card is remounted on every change
+   and a remounted element has no previous state to transition from. Everything
+   below is the animation form of the four entrance rules above; if one of them
+   changes, both forms change. */
+
+@keyframes e-card-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes e-line-rise {
+  from {
+    transform: translateY(106%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes e-text-resolve {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}
+@keyframes e-media-shutter {
+  from {
+    clip-path: inset(100% 0 0 0);
+    transform: scale(1.03);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+@keyframes e-item-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .switch-in {
+    animation: e-card-wipe var(--e-switch) var(--ease-shutter) both;
+  }
+  .switch-in .e-line {
+    display: block;
+    animation: e-line-rise var(--e-line) var(--ease-shutter) 90ms both;
+  }
+  .switch-in .e-text {
+    animation: e-text-resolve var(--e-text) var(--ease-draw) 170ms both;
+  }
+  .switch-in .e-media {
+    animation: e-media-shutter var(--e-media) var(--ease-shutter) 240ms both;
+  }
+  .switch-in .e-item {
+    animation: e-item-rise-in var(--e-item) var(--ease-draw) 240ms both;
+  }
+}
+
+/* --- The masthead arriving ------------------------------------------------
+   The one saturated band on the page is painted across it on load, from the
+   leading edge, in the same gesture every rule on the site uses. It is the only
+   entrance that is not tied to scrolling, because the header is never scrolled
+   to: it is already there when the page opens, and a header that simply exists
+   while everything below it is drawn reads as furniture rather than as part of
+   the same object.
+
+   The links follow it rather than arriving with it, so the eye reads the band
+   first and its contents second, which is the order they matter in. */
+
+@keyframes band-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes band-content {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* `backwards`, never `both`, and that applies to the rows as well as to the
+     band.
+
+     A clip-path left on the band after the animation ends goes on clipping its
+     descendants, and the department panel is one of them: the menu opened
+     correctly and was cropped to the 48px of green it hangs from.
+
+     The rows had the same class of bug for a different reason. `both` keeps an
+     animation in its after-phase forever, so the row goes on having an animated
+     `transform` even once it has settled on none, and an element with an
+     animated transform is a stacking context for as long as that lasts. Both
+     header rows therefore became sealed stacking contexts at z-index auto, and
+     the search-scope listbox, which is z-40 INSIDE its row, could no longer be
+     raised above the green band that comes after it in the document: the menu
+     opened and the "Tous les rayons" button was painted over the top of it.
+
+     `backwards` applies the from-state before the run and leaves nothing behind
+     after it, so the stacking contexts dissolve the moment the entrance ends. */
+  .band-in {
+    animation: band-draw 760ms var(--ease-shutter) backwards;
+  }
+  .band-in > * {
+    animation: band-content 420ms var(--ease-draw) 300ms backwards;
+  }
+  .masthead-in > * {
+    animation: band-content 460ms var(--ease-draw) backwards;
+  }
+  .masthead-in > *:nth-child(2) {
+    animation-delay: 70ms;
+  }
+  .masthead-in > *:nth-child(3) {
+    animation-delay: 130ms;
+  }
+}
+
+/* --- Pointer --------------------------------------------------------------
+   The measure: a tick under a label that is drawn across the whole label when
+   the pointer arrives, the way a dimension line is drawn across a part.
+
+   Two rules, not one growing rule. The tick is always struck; the remainder is
+   a second rule pinned from the tick's end to the label's edge, scaled to
+   nothing until asked. Animating `width` from 2.25rem to 100% produced the same
+   picture and relaid out the element on every frame of every hover, on a page
+   that can hold forty of these at once. */
+
+.measure {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.35em;
+}
+.measure::before,
+.measure::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  height: 1.5px;
+  background: currentColor;
+}
+.measure::before {
+  inset-inline-start: 0;
+  width: 2.25rem;
+}
+.measure::after {
+  inset-inline-start: 2.25rem;
+  inset-inline-end: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--e-rule) var(--ease-draw);
+}
+.group:hover .measure::after,
+.group:focus-visible .measure::after {
+  transform: none;
+}
+
+/* An underline drawn from the leading edge, for a link inside a card. */
+/* --- A link answering the pointer ----------------------------------------
+   IT CHANGES COLOUR. IT USED TO DRAW ITSELF A LINE, AND THE LINE HAD TO GO.
+
+   The gesture was a rule growing left to right under the words, on the site's
+   own drawing curve, and it was used on every product name, every family, every
+   brand and every quiet link: several hundred of them on a listing page. Seen
+   once it reads as craft. Seen on every text on the site it reads as a tic, and
+   the client named it for what it had become.
+
+   A colour change says the same thing in less: this is a link, the pointer is on
+   it. It is also the only answer that survives being everywhere, because it adds
+   no geometry to a page built out of hairlines that already mean structure. The
+   class is kept rather than removed from three hundred call sites, and it now
+   carries the transition every other control on the site uses.
+
+   `currentColor` is deliberately not touched here: a link inside the green rail,
+   inside a card, or on paper each has its own hover colour declared where it
+   lives, and this rule only makes the change smooth. */
+.draw-under {
+  transition: color var(--t-base) var(--ease-brand);
+}
+.group:hover .draw-under,
+.draw-under:hover,
+.draw-under:focus-visible {
+  color: var(--primary);
+}
+
+/* ----------------------------------------------------------------------------
+   The plate.
+
+   A coloured board behind a product's well that turns two degrees when the card
+   is pointed at, so the photograph reads as a print resting on it rather than as
+   a picture in a box. The technique is borrowed, with its numbers, from the news
+   cards on carfad-website.
+
+   Four degrees and the full accent, not two degrees and a wash. The reference
+   this is taken from turns a 160px plate; ours is behind a 250px well, and at
+   two degrees on a pale green the corners that emerged were eight pixels of a
+   colour three per cent off white, which is to say nothing at all. Four degrees
+   puts seventeen pixels of deep pine at each corner and the effect finally reads
+   as what it is: a print resting on a board.
+
+   The board can be that saturated because only one is ever turned. It is a
+   hover, so the grid shows twelve white wells and, under the pointer, one green.
+
+   IT IS THE MARK'S GREEN AT 55 PER CENT, AND THE ANGLE IS WHAT WAS BOUGHT WITH
+   THE DIFFERENCE. At full strength #009d17 on white, the seventeen pixels
+   showing at each corner were the loudest thing in a grid of white wells, and
+   the effect stopped reading as a board under a print and started reading as a
+   green flash. Mixed to 55 per cent it resolves to #73c97f, which still names
+   the brand, still separates from --surface at every corner, and lets the four
+   degrees be the thing the eye reports. It is a mix rather than an `opacity`
+   because a pseudo-element carrying opacity is a compositing layer this hover
+   does not need, and because the resulting value is a colour that can be read
+   in the source and checked.
+
+   The board is never under type. It is a shape, which is exactly and only what
+   --brand is allowed to be.
+
+   It is animation and not transition on purpose, so the return is animated too;
+   a transition on `transform` would snap back the moment the pointer left.
+
+   The well itself must stay opaque, which it already is: every packshot sits on
+   --surface, so the plate is only ever visible at the four corners it exposes. */
+.plate {
+  position: relative;
+}
+.plate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: var(--r-well);
+  /* MOITIE MOINS DE VERT QU'AVANT, ET C'EST LE JOUR OU L'ORANGE EST ARRIVE.
+     La plaque etait a 55 % du vert de marque : juste ce qu'il faut pour se
+     voir tourner derriere une photographie, quand le vert etait la seule
+     couleur de la page. Depuis que les boutons, les liens et le tampon de
+     remise sont orange, ces vingt-quatre plaques vertes derriere une grille
+     de produits tirent l'oeil vers un fond decoratif au lieu du prix. A
+     27,5 % le geste se lit encore et ne concurrence plus rien. */
+  background: var(--plaque-carte);
+  /* A TRANSITION, NOT TWO KEYFRAMES, AND THAT IS A BUG FIX BEFORE IT IS A
+     SIMPLIFICATION. The plate used to declare `animation: plate-return` as its
+     RESTING state and swap to `plate-turn` on hover. An animation declared on an
+     element runs the moment that element exists, so on every load and every
+     refresh the whole grid played the return: twenty-four plates rotating up
+     from -4 degrees to zero, in unison, for something nobody had pointed at.
+     The card's hover was performing itself to an empty room.
+
+     Both keyframes eased identically, so a transition is exactly equivalent in
+     motion and correct at rest: nothing happens until a pointer arrives, and the
+     way back is the way out reversed. */
+  transition: transform 260ms ease-in;
+}
+.plate > * {
+  position: relative;
+  z-index: 1;
+}
+.group:hover .plate::after,
+.group:focus-within .plate::after {
+  transform: rotate(-4deg);
+}
+
+/* ----------------------------------------------------------------------------
+   The magnifier.
+
+   THIS ONE IS A TOOL, NOT AN EFFECT. Half of what this shop sells is a black
+   box, and everything that distinguishes one black box from the next is printed
+   small on it: the port count along the front, the indicator legend, the model
+   reference silkscreened on the fascia. The supplier packshots hold that
+   detail; the 560px frame on the product page does not show it. Pointing at the
+   picture magnifies it around the pointer, which is the one gesture that turns
+   a photograph back into a document you can read.
+
+   THE POINTER IS THE ORIGIN, AND THAT IS THE WHOLE MECHANISM. The frame writes
+   the pointer's position into --zoom-x / --zoom-y as percentages and the
+   picture takes them as its `transform-origin`. Origin is not transitioned, so
+   the picture tracks the hand with no lag at all; only the scale eases, on the
+   way in and on the way out, which is where the weight belongs. Nothing here
+   goes through React state: a pointermove stream through a `useState` would
+   re-render the gallery sixty times a second to move a picture the compositor
+   can move on its own.
+
+   IT IS ON `scale`, NOT ON `transform`, for the same reason the grid's lean is:
+   the main image is uncovered by `e-media-shutter`, which animates `transform`
+   with `both` fill and would overwrite any transform this rule set, forever.
+
+   FINE POINTERS ONLY, AND THE MEDIA QUERY IS THE GUARD, NOT A PREFERENCE. On a
+   touch screen there is no pointer to follow, and a finger that magnifies what
+   it lands on is a finger that can no longer scroll the page: the effect would
+   turn the largest object on a phone screen into a trap. The `pointer: fine`
+   gate is what the effect exists behind; on a phone the picture simply stays a
+   picture, which is an honest answer and not a missing feature.
+
+   `zoom-in` is the cursor, because it is what the cursor is for, and it appears
+   only where the behaviour does. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .magnify {
+    cursor: zoom-in;
+  }
+  .magnify .magnify-subject {
+    scale: var(--zoom-scale, 1);
+    transform-origin: var(--zoom-x, 50%) var(--zoom-y, 50%);
+    transition: scale var(--t-base) var(--ease-brand);
+  }
+}
+
+/* A link on the dark band, answering with the same drawn line. The bar sits on
+   the row's own baseline rather than under the text, so twelve links of
+   different lengths all draw the same shape. */
+.rail-link {
+  position: relative;
+}
+.rail-link::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--rail-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--t-base) var(--ease-draw);
+}
+.rail-link:hover::after,
+.rail-link:focus-visible::after,
+.rail-link[aria-current='page']::after {
+  transform: none;
+}
+
+/* ----------------------------------------------------------------------------
+   The button.
+
+   Every other hover on this site is a line being drawn from the edge the reader
+   came from: the measure under a label, the underline under a link, the rule
+   above a photograph. The buttons were the one exception, swapping one flat
+   green for a slightly darker one, which is what a button does when nobody
+   decided anything about it.
+
+   They now answer in the same language. A second fill is laid over the first and
+   scaled from nothing along the leading edge, so the darker green is drawn
+   across the button rather than switched on. The label and its arrow ride above
+   it, the arrow travels four pixels, and the whole thing is one composited
+   transform.
+
+   Focus gets it too, not only hover: a reader on a keyboard should see the same
+   answer a reader on a mouse gets, and `:focus-visible` is the only way they
+   ever will.
+
+   `:active` still presses. That is `.press`, and it is separate on purpose: the
+   draw says "this is the one", the press says "I heard you". */
+.fill {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--fill-to, var(--primary));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--e-rule) var(--ease-draw);
+}
+.fill:hover::before,
+.fill:focus-visible::before {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill::before {
+    transition: none;
+  }
+}
+
+/* A picture answering a pointer. The only translation in the system, and it is
+   never applied to a panel: 4px on a photograph reads as attention, 4px on a
+   card reads as a card lifting, which is a stock effect this page refuses. */
+.lift {
+  transition:
+    transform var(--t-base) var(--ease-draw);
+}
+.group:hover .lift {
+  transform: translateY(-4px) scale(1.015);
+}
+
+/* An arrow that travels when its own link is pointed at. */
+.travel {
+  transition: transform var(--t-base) var(--ease-draw);
+}
+.group:hover .travel {
+  transform: translateX(4px);
+}
+
+/* Every control acknowledges a press. Physical, tiny, and on transform only. */
+.press {
+  transition: transform var(--t-fast) var(--ease-press);
+}
+.press:active {
+  transform: scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .measure::after {
+    transform: none;
+  }
+  .draw-under {
+    transition: none;
+  }
+  .lift,
+  .travel,
+  .press,
+  .plate::after,
+  .switch-in,
+  .switch-in .e-line,
+  .switch-in .e-text,
+  .switch-in .e-media,
+  .switch-in .e-item {
+    transition: none;
+    animation: none;
+    transform: none;
+  }
+  .group:hover .lift,
+  .group:hover .travel,
+  .press:active {
+    transform: none;
+  }
+}
+
+/* ============================================================================
+   UTILITIES
+   ========================================================================= */
+
+.shell {
+  width: 100%;
+  max-width: calc(var(--shell) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Clamp a product name to exactly two lines and reserve the height, so a grid
+   of mixed-length names never shifts as images decode. */
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ----------------------------------------------------------------------------
+   A manufacturer's mark.
+
+   The SVG is a mask rather than an image, so one file paints the brand's own
+   colour with no second asset and no filter. Height is fixed and width is free:
+   these marks range from a square (Seagate) to a long horizontal (Panasonic),
+   and normalising the height is what makes a row of them sit on one optical
+   line.
+
+   LA COULEUR EST LA DES LE DEPART, ET IL N'Y A PLUS DE TRANSITION DE COULEUR.
+   La marque etait peinte en `--ink-2` et ne passait a `--mark-hover` que sous
+   le pointeur. Deux choses clochaient. La premiere est qu'un telephone n'a pas
+   de pointeur : ce mur n'a jamais ete en couleur pour la majorite de ce public,
+   et sur `/marques`, ou il y a cent une marques, pas une seule ne l'etait. La
+   seconde est qu'une couleur qui n'apparait qu'au survol est une information
+   cachee derriere un geste que rien n'annonce. Le proprietaire a demande des
+   marques en couleur ; `--mark-ink` est cette couleur, posee par le composant,
+   et le repli reste `--ink-2` pour un appelant qui n'en fournirait pas.
+
+   Le survol garde son agrandissement de six pour cent. Ce n'est pas une
+   couleur, c'est la reponse au pointeur que toute vignette cliquable du site
+   donne, et la retirer aurait rendu ces cellules muettes. La transition ne
+   porte donc plus que sur `transform`. */
+.brand-mark {
+  display: block;
+  width: 100%;
+  height: 2rem;
+  background-color: var(--mark-ink, var(--ink-2));
+  mask-image: var(--mark-src);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  transition: transform var(--t-base) var(--ease-draw);
+}
+.group:hover .brand-mark {
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .brand-mark {
+    transform: none;
+  }
+}
+
+.clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --- The skeleton under a photograph that has not arrived -----------------
+   4 215 packshots on a metered connection. Until one lands its cell is white
+   paper on a white page, so a card reads as broken rather than as loading, and
+   a grid of 24 reads as a page that failed.
+
+   THE MECHANISM IS NVC'S, AND IT IS BETTER THAN THE ONE IT REPLACES. The first
+   version animated `background-position` across an oversized gradient, which is
+   a paint on the main thread every frame. This lays a solid tint down and slides
+   a band of light across it on `transform`, which the compositor owns: it costs
+   nothing on the entry-level Android this shop is browsed on, and it is visibly
+   smoother. -100% to 200% over 1.5s, the same numbers as the reference.
+
+   THE TINT IS --rule-2, AND THE FIRST CHOICE WAS TOO POLITE. It was --space-2,
+   #e8ebe5, on the argument that a dark rectangle waiting in a grid of white
+   cells reads as an error state. That argument is sound and the value was still
+   wrong: against paper it is four points of lightness, which on a phone in
+   daylight is white, and the shop reported seeing a white card twice. --rule-2
+   is the site's own strongest hairline, #ccd0c9, so it is a colour this page
+   already draws with; it is unmistakably not paper, and it is still a tint
+   rather than the stone NVC sweeps over.
+
+   It stops for a reader who asked for less motion and becomes a flat tint: a
+   surface that pulses forever is exactly what that preference is about. */
+
+/*
+ * THE PLACEHOLDER, AND IT HAS BEEN WRONG IN BOTH DIRECTIONS.
+ *
+ * First it was invisible: `.shimmer` declares `position: relative` here, plain
+ * CSS beat the `absolute` utility on the same element, and 36 shimmers sat in
+ * the document at zero height. The fix for that was a darker tint and a second
+ * element, and it overshot completely. `--rule-2` is #ccd0c9, a mid grey chosen
+ * for hairlines, and a hairline colour is not a fill colour: on the catalogue
+ * that painted 300 pixel squares of solid mid grey onto a white page, twelve of
+ * them at once, and the shop called it catastrophic. It was right. The page read
+ * as a wireframe, and the sweep was invisible on top of it because a white band
+ * over #ccd0c9 has almost nowhere to travel.
+ *
+ * SO IT IS NOW A FRAME RATHER THAN A HOLE, and the reference is the one the shop
+ * pointed at. cm.oraimo.com, measured, does not animate anything: it paints
+ * rgb(249, 249, 249) behind every unloaded image and leaves it there. That is
+ * two per cent away from white, so a reader reads it as an empty space where a
+ * picture goes, which is exactly what it is, rather than as a grey object that
+ * has arrived.
+ *
+ * The sweep is kept but taken right down: at 0.55 alpha over a near-white tint
+ * it is a breath rather than a stripe, and it is what separates "not yet" from
+ * "empty". A slower cycle for the same reason, since the thing it has to say is
+ * "still coming", not "something is happening".
+ */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--placeholder);
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 0) 0%,
+    rgb(255 255 255 / 0.55) 50%,
+    rgb(255 255 255 / 0) 100%
+  );
+  transform: translateX(-100%);
+  animation: shimmer-sweep 2200ms infinite;
+}
+
+@keyframes shimmer-sweep {
+  to {
+    transform: translateX(200%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* --- The bar that says a page is on its way -------------------------------
+   Next replaces a segment with its `loading.tsx` while the next one is being
+   fetched, which on a fast connection is a flash and on a Cameroonian mobile
+   one is several seconds of nothing. The bar travels rather than filling,
+   because a filling bar claims to know a proportion nobody measured. */
+
+/*
+ * IT MUST NOT DECLARE A POSITION, AND DECLARING ONE PUT IT AT THE FOOT OF THE
+ * PAGE. This rule carried `position: relative`, so that its travelling `::after`
+ * had something to resolve against. Plain CSS outside Tailwind's layers beats a
+ * utility, so `relative` overrode the `fixed` the component asks for, and the
+ * bar stopped being pinned to the top of the window and became an ordinary 3px
+ * strip in normal flow at the very end of the body. Measured while a navigation
+ * was actually running: top 1700px on a 900px-tall desktop window, top 7553px on
+ * a phone. It was rendering, it was the right colour, it was animating, and no
+ * reader has ever seen it. This is the second time the same collision has cost
+ * this site a feature; `.shimmer` was the first.
+ *
+ * `fixed` is itself a positioning scheme, so the `::after` has its containing
+ * block either way and nothing here needs to say so.
+ */
+/*
+ * NO TRACK BEHIND IT, AND THE TRACK WAS WHY IT LOOKED GREY. This carried
+ * `background: var(--rule)`, so a full-width pale grey rule was painted across
+ * the top of every page the instant a link was pressed, and the brand green sat
+ * on eight per cent of it. The colour was right the whole time and the reader
+ * saw the other ninety-two per cent. NProgress has never drawn a track, and
+ * neither does the `nextjs-toploader` the reference site uses: there is only the
+ * coloured bar, growing out of nothing. That is also the more honest picture,
+ * because a track states a total, and nothing here knows one.
+ */
+.route-bar {
+  overflow: hidden;
+  background: transparent;
+}
+
+/*
+ * IT FILLS NOW, AND IT USED TO ONLY TRAVEL. The segment slid across the track on
+ * a loop and then the whole bar was removed, so the bar never ARRIVED anywhere:
+ * it was there, and then it was not. The shop read that as the indicator giving
+ * up part way through, which is exactly what it looked like. A bar that runs to
+ * the end and closes says the page got here; a bar that vanishes mid-stride says
+ * something went wrong. NVC's reference does the same thing through
+ * `nextjs-toploader`, which is NProgress: start at 8 per cent, creep while the
+ * wait lasts, then take the last of it in one move and fade.
+ *
+ * The glow is NVC's too, at a quarter of the strength. Three pixels of flat
+ * green on a white masthead is easy to miss; three pixels with a little light
+ * under them is not, and this is the one element on the site whose whole job is
+ * to be noticed from the corner of an eye.
+ */
+.route-bar > span {
+  display: block;
+  block-size: 100%;
+  inline-size: 100%;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: var(--primary);
+  box-shadow:
+    0 0 10px rgb(0 128 19 / 0.5),
+    0 0 4px rgb(0 128 19 / 0.4);
+  transition: transform 220ms var(--ease-draw);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-bar > span {
+    transition-duration: 0ms;
+    box-shadow: none;
+  }
+}
+
+
+/* ============================================================================
+   LA PAGE DEVIS
+
+   THE TOTAL GOES ABOVE THE LIST ON A PHONE, AND THAT IS NOT A PREFERENCE.
+   The desktop layout is a list on the left and a column of three cards on the
+   right, which stacks on a phone into list-then-cards: the customer scrolls
+   eleven rows of material before meeting the figure the whole page exists to
+   produce. On a 390 screen with eleven references that is 2 900 pixels of
+   scrolling before the total. So the phone reads total, list, the rest.
+
+   Named areas rather than `order`, because `order` would need the three blocks
+   to be siblings of the same flex container AND would leave the reading order
+   for a screen reader following the DOM rather than the design. With areas the
+   DOM stays in the order that makes sense read aloud (the list, then its
+   figures, then the channels) and only the paint moves.
+   ========================================================================= */
+.devis-grid {
+  display: grid;
+  grid-template-areas: 'chiffrage' 'liste' 'reste';
+}
+.devis-chiffrage {
+  grid-area: chiffrage;
+}
+.devis-liste {
+  grid-area: liste;
+}
+.devis-reste {
+  grid-area: reste;
+}
+
+@media (width >= 64rem) {
+  .devis-grid {
+    /* The same two columns as before: the list takes what is left, the cards
+       take 22rem. The list spans both rows so the right column can stack. */
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    grid-template-areas:
+      'liste chiffrage'
+      'liste reste';
+    align-items: start;
+  }
+}
+
+/*
+ * BOD STEPS ASIDE FOR A PINNED ACTION BAR.
+ *
+ * The quote page pins a send bar to the foot of a phone screen, and the
+ * assistant's launcher is pinned to the same corner at a higher z-index: it
+ * covered the last 38 pixels of the button, which is the corner a right thumb
+ * reaches first. Reserving space inside the bar was tried and looked like a
+ * mistake, because a primary action that stops short of its own bar's edge reads
+ * as broken.
+ *
+ * So the floating element yields to the fixed one. `:has()` is what makes this
+ * possible without threading state through the layout: the launcher lives beside
+ * `main` and knows nothing about the page inside it, and a page cannot reach up
+ * to set a variable on the root without a client effect. The bar declares itself
+ * with `data-dock` and the rule reads it from the body.
+ *
+ * Only below `lg`, because that is the only width where the bar exists.
+ */
+@media (width < 64rem) {
+  body:has([data-dock]) [data-assistant-launcher] {
+    /* The bar measures 106px; this clears it with the launcher's own 16px. */
+    bottom: 7.5rem;
+  }
+}
+
+/* ============================================================================
+   LE CADRE DES BANNIERES
+
+   Les deux ratios sont poses en proprietes personnalisees par `BannerStage`,
+   parce qu'ils viennent maintenant de la base et non plus de deux classes
+   Tailwind figees a la compilation.
+
+   640px est le meme point de rupture que le `<source media>` du composant, et
+   les deux doivent le rester : pour la largeur ou ils differeraient, le cadre
+   et le fichier reellement affiche ne parleraient pas du meme rapport, et la
+   piece serait etiree ou rognee.
+   ========================================================================= */
+.banner-frame {
+  aspect-ratio: var(--cadre-mobile);
+}
+
+@media (min-width: 640px) {
+  .banner-frame {
+    aspect-ratio: var(--cadre-large);
+  }
+}
+
+/* LA BANNIERE ET LA PROMO, COTE A COTE A PARTIR DE 640 PX, EMPILEES EN DESSOUS.
+   Chaque bloc porte `--part`, le rapport largeur/hauteur de sa premiere piece,
+   calcule a partir des dimensions du fichier : aucun ratio n'est ecrit ici. Des
+   largeurs proportionnelles aux rapports donnent la meme hauteur aux deux
+   blocs, et `flex-basis: 0` fait que l'espace entre eux est retire des deux
+   dans la meme proportion, sans casser cette egalite. Le 640 est celui de
+   `.banner-frame` et du `<source media>` de `BannerStage` : les trois doivent
+   rester egaux. */
+/* L'AIR DE L'OUVERTURE, EN UNE SEULE VALEUR.
+   Le proprietaire essaie une ouverture detachee du bord de la page : la meme
+   mesure sert au rembourrage de la section et a l'ecart entre la banniere et
+   la promo, pour qu'ils restent egaux quand on la fait varier. */
+:root {
+  --banner-air: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --banner-air: 1.25rem;
+  }
+}
+
+.banner-stage {
+  padding: var(--banner-air);
+}
+
+.banner-duo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--banner-air);
+}
+
+.banner-duo > * {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .banner-duo {
+    flex-direction: row;
+  }
+
+  .banner-duo > * {
+    flex: var(--part) 1 0%;
+  }
+}

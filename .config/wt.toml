@@ -1,0 +1,135 @@
+# Worktree automation shared by everyone on this repo.
+#
+# Setup on a new machine: install worktrunk (`wt`) with its shell integration,
+# then run `wt config approvals add` here (again whenever this file changes).
+# tmux, Caddy, claude and opencode are optional: each step skips itself when
+# its tool is missing. Each machine can tune it with env vars in the shell profile:
+#
+#   WT_TMUX=off          no tmux session
+#   WT_AGENTS="claude"   agents started in the Agents window
+#                        (default "claude opencode"; "" starts none)
+#   WT_EDITOR=hx         editor in the Editor window (default $EDITOR, then nvim)
+#   WT_PROXY=off         no Caddy route
+#
+# P is this repo's tmux session prefix; it must be unique across the org.
+# Hook bodies are POSIX sh. Avoid "{{", "{%" and "{#" in shell code (e.g.
+# ${#var}): worktrunk reads them as template syntax.
+
+[aliases]
+mc = '''WORKTRUNK_COMMIT__GENERATION__COMMAND='f=$(mktemp); printf "\n\n" > "$f"; sed "s/^/# /" >> "$f"; ${EDITOR:-nvim} "$f" < /dev/tty > /dev/tty; grep -v "^#" "$f"' wt merge'''
+# Bring an existing worktree back after a reboot: session, dev server, route
+up = "wt hook pre-start && wt hook post-start server proxy"
+# Local server URL: `wt url` for this worktree, `wt url <branch>` for another
+url = "echo http://{% if args %}{{ args[0] | sanitize }}{% else %}{{ branch | sanitize }}{% endif %}.{{ remote_repo | lower }}.localhost:8080"
+
+[[pre-start]]
+tmux = '''
+[ "${WT_TMUX:-on}" = off ] && exit 0
+command -v tmux >/dev/null 2>&1 || exit 0
+P=now
+B={{ branch | sanitize }}
+W={{ worktree_path }}
+S="${P}_$B"
+
+# A tmux server started from inside an agent would pass the agent's env to every pane
+for v in $(env | sed -n 's/^\(CLAUDE[A-Z_]*\)=.*/\1/p'); do unset "$v"; done
+
+if tmux has-session -t "=$S" 2>/dev/null; then
+  if [ "$(tmux display -p -t "=$S:" '#{session_path}')" = "$W" ]; then
+    echo "✓ tmux session $S already exists"
+    exit 0
+  fi
+  # Same name, other path: left over from a removed worktree
+  tmux kill-session -t "=$S"
+fi
+
+# Target windows by id: window-renaming plugins can change names mid-hook
+ED_W=$(tmux new-session -d -P -F '#{window_id}' -s "$S" -c "$W" -n Editor)
+AG_W=$(tmux new-window -d -P -F '#{window_id}' -t "=$S:" -n Agents -c "$W")
+TE_W=$(tmux new-window -d -P -F '#{window_id}' -t "=$S:" -n Terminal -c "$W")
+tmux split-window -h -t "$TE_W" -c "$W"
+
+ED="${WT_EDITOR:-${EDITOR:-nvim}}"
+command -v "${ED%% *}" >/dev/null 2>&1 && tmux send-keys -t "$ED_W" "$ED" Enter
+
+n=0
+for a in ${WT_AGENTS-claude opencode}; do
+  command -v "$a" >/dev/null 2>&1 || continue
+  [ $n -gt 0 ] && tmux split-window -h -t "$AG_W" -c "$W"
+  tmux send-keys -t "$AG_W" "$a" Enter
+  n=$((n + 1))
+done
+tmux select-layout -t "$AG_W" even-horizontal >/dev/null
+tmux select-window -t "$TE_W"
+
+if [ -n "$TMUX" ]; then how="tmux switch-client -t '=$S'"; else how="tmux attach -t '=$S'"; fi
+# Report only; never fail, a pre-start failure would skip install and dev server
+if tmux has-session -t "=$S" 2>/dev/null; then echo "✓ tmux session $S: $how"; else echo "✗ tmux session $S was not created"; fi
+'''
+
+# Printed here rather than by the post-start proxy step, whose output only goes to a log
+[[pre-start]]
+url = '''
+[ "${WT_PROXY:-on}" = off ] && exit 0
+command -v caddy >/dev/null 2>&1 || exit 0
+URL=http://{{ branch | sanitize }}.{{ remote_repo | lower }}.localhost:8080
+echo "↗ Local server: $URL"
+'''
+
+[[post-start]]
+# Reflink node_modules, .env etc. from the primary worktree; npm install then only tops up
+copy = "wt step copy-ignored"
+
+# This project uses npm (package-lock.json), not pnpm
+[[post-start]]
+install = "npm install --prefer-offline --no-audit --no-fund"
+
+# tether stops the dev server when the worktree is removed, however it is removed.
+# The port hashes repo + branch so the same branch in two repos gets two ports.
+[[post-start]]
+server = "wt step tether -- npm run dev -- --port {{ (remote_repo ~ '/' ~ branch) | hash_port }}"
+proxy = '''
+[ "${WT_PROXY:-on}" = off ] && exit 0
+command -v caddy >/dev/null 2>&1 || exit 0
+ID=wt:{{ remote_repo | lower }}:{{ branch | sanitize }}
+HOST={{ branch | sanitize }}.{{ remote_repo | lower }}.localhost
+PORT={{ (remote_repo ~ '/' ~ branch) | hash_port }}
+API=http://localhost:2019
+curl -sf --max-time 1 "$API/config/" >/dev/null || caddy start >/dev/null 2>&1
+curl -sf "$API/config/apps/http/servers/wt" >/dev/null ||
+  curl -sfX PUT "$API/config/apps/http/servers/wt" -H 'Content-Type: application/json' \
+    -d '{"listen":[":8080"],"automatic_https":{"disable":true},"routes":[]}'
+curl -sf -X DELETE "$API/id/$ID" >/dev/null
+printf '{"@id":"%s","match":[{"host":["%s"]}],"handle":[{"handler":"reverse_proxy","upstreams":[{"dial":"127.0.0.1:%s"}]}]}' "$ID" "$HOST" "$PORT" |
+  curl -sfX PUT "$API/config/apps/http/servers/wt/routes/0" -H 'Content-Type: application/json' -d @-
+'''
+
+[pre-remove]
+proxy = "curl -sf -X DELETE http://localhost:2019/id/wt:{{ remote_repo | lower }}:{{ branch | sanitize }} || true"
+tmux = '''
+command -v tmux >/dev/null 2>&1 || exit 0
+P=now
+B={{ branch | sanitize }}
+S="${P}_$B"
+tmux has-session -t "=$S" 2>/dev/null || exit 0
+
+# Agents (opencode) survive kill-session's hangup and spin at 100% CPU, so stop
+# every pane's programs first. Skip the pane running this `wt remove`, if any.
+# Space-separated on purpose: tmux silently drops a run-shell command with newlines.
+pids=$(tmux list-panes -s -t "=$S" -F '#{pane_id} #{pane_pid}' |
+  awk -v me="$TMUX_PANE" '$1 != me { printf "%s ", $2 }')
+for p in $pids; do pkill -TERM -P "$p"; done
+
+# Kill from the tmux server after a delay, so a `wt remove` typed inside this
+# session finishes before its pane goes away
+tmux run-shell -b -d 3 "for p in $pids; do pkill -KILL -P \$p; done; tmux kill-session -t '=$S'"
+'''
+
+# Build output is per-worktree; copying it only brings stale caches
+[step.copy-ignored]
+exclude = [".next/"]
+
+# list.url templates can't use repo variables ({{ remote_repo }} renders the
+# whole URL empty), so the repo's host label is written out
+[list]
+url = "http://{{ branch | sanitize }}.now-tech--website.localhost:8080"
