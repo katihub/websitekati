@@ -91,14 +91,20 @@ export async function api<T>(chemin: string, options: Options = {}): Promise<T> 
     ...(sansSession ? {} : await enteteAutorisation()),
   }
 
-  if (options.corps !== undefined) entetes['Content-Type'] = 'application/json'
+  const formulaire = typeof FormData !== 'undefined' && options.corps instanceof FormData
+  if (options.corps !== undefined && !formulaire) entetes['Content-Type'] = 'application/json'
   if (options.cleIdempotence) entetes['Cle-Idempotence'] = options.cleIdempotence
   if (options.jetonSuivi) entetes['X-Jeton-Suivi'] = options.jetonSuivi
+  const corpsRequete: BodyInit | undefined = options.corps === undefined
+    ? undefined
+    : formulaire
+      ? options.corps as FormData
+      : JSON.stringify(options.corps)
 
   const reponse = await fetch(`${BASE}/v1${chemin}`, {
     method: options.methode ?? 'GET',
     headers: entetes,
-    body: options.corps === undefined ? undefined : JSON.stringify(options.corps),
+    body: corpsRequete,
     signal: options.signal,
   })
 
@@ -114,6 +120,21 @@ export async function api<T>(chemin: string, options: Options = {}): Promise<T> 
   }
 
   return donnees as T
+}
+
+export async function telechargerApi(chemin: string, nom: string): Promise<void> {
+  if (!BASE) throw new ErreurApi(0, "Le service n'est pas configure")
+  const reponse = await fetch(`${BASE}/v1${chemin}`, { headers: await enteteAutorisation() })
+  if (!reponse.ok) {
+    const donnees = safeJson(await reponse.text())
+    throw new ErreurApi(reponse.status, extraireMessage(donnees) ?? `Le service a repondu ${reponse.status}`)
+  }
+  const url = URL.createObjectURL(await reponse.blob())
+  const lien = document.createElement('a')
+  lien.href = url
+  lien.download = nom
+  lien.click()
+  URL.revokeObjectURL(url)
 }
 
 function safeJson(t: string): unknown {

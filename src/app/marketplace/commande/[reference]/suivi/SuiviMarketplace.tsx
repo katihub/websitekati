@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
-import { ErreurApi, api } from '@/lib/api'
+import { ErreurApi, api, telechargerApi } from '@/lib/api'
 import { formatPrice } from '@/lib/format'
 
 type Evenement = { id: string; type: string; versStatut: string | null; motif: string | null; creeLe: string }
@@ -12,7 +12,8 @@ type Expedition = { id: string; reference: string; statut: string; ville: string
 type SousCommande = { id: string; reference: string; statut: string; boutique: { nom: string; slug: string }; lignes: Ligne[]; expeditions: Expedition[] }
 type Commande = { id: string; reference: string; statut: string; totalFermeTtc: number; acompteDu: number; acompteRecu: number; resteAPayer: number; sousCommandes: SousCommande[] }
 type Retour = { id: string; statut: string; quantite: number; montantRembourseFcfa: number; referenceRetour: string | null }
-type Demande = { id: string; reference: string; statut: string; objet: string; modifieLe: string; boutique: { nom: string }; ligne: Ligne | null; messages: Array<{ id: string; auteurType: string; contenu: string; creeLe: string }>; retour: Retour | null }
+type Piece = { id: string; nomCapture: string; typeMime: string; tailleOctets: number; empreinteSha256: string }
+type Demande = { id: string; reference: string; statut: string; objet: string; modifieLe: string; boutique: { nom: string }; ligne: Ligne | null; messages: Array<{ id: string; auteurType: string; contenu: string; creeLe: string; pieces: Piece[] }>; retour: Retour | null }
 
 const CATEGORIES = [
   ['produit_non_conforme', 'Produit non conforme'],
@@ -116,6 +117,39 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
     }
   }
 
+  async function joindrePieces(demande: Demande, fichiers: FileList | null) {
+    const message = demande.messages.at(-1)
+    if (!message || !fichiers?.length) return
+    if (fichiers.length > 5) {
+      setErreur('Vous pouvez joindre au maximum 5 fichiers a la fois.')
+      return
+    }
+    setEnvoi(true)
+    setErreur('')
+    try {
+      for (const fichier of Array.from(fichiers)) {
+        if (fichier.size > 10 * 1024 * 1024) throw new Error(`${fichier.name} depasse 10 Mio.`)
+        const corps = new FormData()
+        corps.append('fichier', fichier)
+        await api(`/marketplace/demandes-client/${demande.id}/messages/${message.id}/pieces`, { methode: 'POST', corps })
+      }
+      await charger()
+    } catch (cause) {
+      setErreur(cause instanceof Error ? cause.message : "La piece n'a pas pu etre jointe.")
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
+  async function telechargerPiece(demandeId: string, piece: Piece) {
+    setErreur('')
+    try {
+      await telechargerApi(`/marketplace/demandes-client/${demandeId}/pieces/${piece.id}`, piece.nomCapture)
+    } catch (cause) {
+      setErreur(cause instanceof Error ? cause.message : "La piece n'a pas pu etre telechargee.")
+    }
+  }
+
   if (chargement) return <main className="mx-auto max-w-5xl px-5 py-14"><p role="status">Chargement du suivi…</p></main>
   if (!commande) return <main className="mx-auto max-w-3xl px-5 py-14"><p role="alert">{erreur || 'Commande introuvable.'}</p></main>
 
@@ -152,7 +186,31 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
         ))}
       </section>
 
-      <section className="mt-10"><h2 className="text-h3 font-semibold">Mes demandes et retours</h2>{demandes.length === 0 ? <p className="mt-3 text-small text-ink-3">Aucun dossier ouvert sur cette commande.</p> : <div className="mt-4 grid gap-3">{demandes.map((demande) => <article key={demande.id} className="rounded-well border border-rule p-4"><div className="flex flex-wrap justify-between gap-2"><strong>{demande.objet}</strong><span className="text-micro text-primary">{libelle(demande.statut)}</span></div><p className="mt-1 text-micro text-ink-3">{demande.reference} · {demande.boutique.nom}</p>{demande.retour ? <p className="mt-3 rounded-control bg-space p-3 text-small">Retour : {libelle(demande.retour.statut)}{demande.retour.montantRembourseFcfa ? ` · ${formatPrice(demande.retour.montantRembourseFcfa)}` : ''}</p> : demande.ligne && demande.ligne.quantiteLivree > demande.ligne.quantiteRetournee ? <button type="button" disabled={envoi} onClick={() => demanderRetour(demande.id, demande.ligne!)} className="mt-3 rounded-control border border-rule px-4 py-2 text-small font-semibold">Demander un retour</button> : null}</article>)}</div>}</section>
+      <section className="mt-10">
+        <h2 className="text-h3 font-semibold">Mes demandes et retours</h2>
+        {demandes.length === 0 ? <p className="mt-3 text-small text-ink-3">Aucun dossier ouvert sur cette commande.</p> : (
+          <div className="mt-4 grid gap-3">{demandes.map((demande) => (
+            <article key={demande.id} className="rounded-well border border-rule p-4">
+              <div className="flex flex-wrap justify-between gap-2"><strong>{demande.objet}</strong><span className="text-micro text-primary">{libelle(demande.statut)}</span></div>
+              <p className="mt-1 text-micro text-ink-3">{demande.reference} · {demande.boutique.nom}</p>
+              {demande.messages.map(message => (
+                <div key={message.id} className="mt-3 rounded-control bg-space p-3 text-small">
+                  <p><b>{message.auteurType === 'client' ? 'Vous' : 'Intervenant'} :</b> {message.contenu}</p>
+                  {message.pieces.length ? <ul className="mt-2 flex flex-wrap gap-2">{message.pieces.map(piece => (
+                    <li key={piece.id}><button type="button" className="text-micro font-semibold text-secondary underline" onClick={() => void telechargerPiece(demande.id, piece)}>{piece.nomCapture} · {Math.ceil(piece.tailleOctets / 1024)} Ko</button></li>
+                  ))}</ul> : null}
+                </div>
+              ))}
+              <label className="mt-3 inline-flex cursor-pointer items-center rounded-control border border-rule px-4 py-2 text-small font-semibold">
+                {envoi ? 'Envoi…' : 'Joindre des preuves'}
+                <input type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" disabled={envoi} onChange={event => { void joindrePieces(demande, event.currentTarget.files); event.currentTarget.value = '' }} />
+              </label>
+              <p className="mt-1 text-micro text-ink-3">PDF, JPEG, PNG ou WebP · 10 Mio maximum · 5 fichiers par message.</p>
+              {demande.retour ? <p className="mt-3 rounded-control bg-space p-3 text-small">Retour : {libelle(demande.retour.statut)}{demande.retour.montantRembourseFcfa ? ` · ${formatPrice(demande.retour.montantRembourseFcfa)}` : ''}</p> : demande.ligne && demande.ligne.quantiteLivree > demande.ligne.quantiteRetournee ? <button type="button" disabled={envoi} onClick={() => demanderRetour(demande.id, demande.ligne!)} className="mt-3 rounded-control border border-rule px-4 py-2 text-small font-semibold">Demander un retour</button> : null}
+            </article>
+          ))}</div>
+        )}
+      </section>
 
       {selection ? <div className="fixed inset-0 z-50 grid place-items-center bg-ink/55 p-4" role="dialog" aria-modal="true" aria-label="Ouvrir une demande"><form onSubmit={ouvrirDemande} className="w-full max-w-xl rounded-well bg-surface p-6 shadow-xl"><div className="flex justify-between gap-4"><div><p className="t-label text-ink-3">Nouvelle demande</p><h2 className="mt-1 text-h4 font-semibold">{selection.ligne.offreTitreCapture}</h2></div><button type="button" aria-label="Fermer" onClick={() => setSelection(null)} className="text-h4">×</button></div><label className="mt-5 block text-small font-semibold">Catégorie<select name="categorie" required className="mt-1 w-full rounded-control border border-rule bg-surface p-3 font-normal">{CATEGORIES.map(([valeur, texte]) => <option key={valeur} value={valeur}>{texte}</option>)}</select></label><label className="mt-4 block text-small font-semibold">Objet<input name="objet" minLength={5} maxLength={180} required className="mt-1 w-full rounded-control border border-rule p-3 font-normal" /></label><label className="mt-4 block text-small font-semibold">Description<textarea name="description" minLength={10} maxLength={5000} required rows={5} className="mt-1 w-full rounded-control border border-rule p-3 font-normal" /></label><button disabled={envoi} className="mt-5 min-h-11 w-full rounded-control bg-secondary px-5 font-bold text-on-surface">{envoi ? 'Envoi…' : 'Ouvrir la demande'}</button></form></div> : null}
 
