@@ -87,6 +87,12 @@ type ShopPayment = { id: string; reference: string; netVendeurPrevu: number; cre
   commande: { statutPaiement: string; payeLe: string | null };
   transactionsFinancieres: Array<{ id: string; type: string; libelle: string; creeLe: string;
     ecritures: Array<{ sens: string; montantFcfa: number }> }> }
+type SellerFinance = {
+  soldes: { disponibleFcfa: number; geleFcfa: number }
+  destinations: Array<{ id: string; type: string; stockageCle: string; expireLe: string | null }>
+  retraits: Array<{ id: string; reference: string; montantFcfa: number; statut: string; creeLe: string; motifDecision: string | null; referenceExterne: string | null }>
+  transactions: Array<{ id: string; type: string; libelle: string; creeLe: string; ecritures: Array<{ sens: string; compte: string; montantFcfa: number }> }>
+}
 type ShopReview = { id: string; note: number; dimension: string; commentaire: string | null; statut: string; creeLe: string;
   reponse: { contenu: string; creeLe: string } | null;
   ligne: { produitNomCapture: string; sousCommande: { reference: string } } }
@@ -95,9 +101,9 @@ type ShopMember = { id: string; nom: string; courriel: string; roles: string[]; 
   inviteLe: string | null; premiereConnexionLe: string | null; desactiveLe: string | null }
 
 type Listing<T> = { total: number; elements: T[] }
-type Section = 'documents' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'members'
+type Section = 'documents' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'finance' | 'reviews' | 'customers' | 'members'
 type Access = 'allowed' | 'denied' | 'error'
-const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed' }
+const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed' }
 
 const DOCUMENT_LABELS: Record<string, string> = {
   identite: 'Pièce d’identité (CNI ou passeport)',
@@ -162,6 +168,7 @@ export function SellerWorkspace() {
   const [orders, setOrders] = useState<Listing<ShopOrder>>({ total: 0, elements: [] })
   const [deliveries, setDeliveries] = useState<Listing<ShopDelivery>>({ total: 0, elements: [] })
   const [payments, setPayments] = useState<Listing<ShopPayment>>({ total: 0, elements: [] })
+  const [finance, setFinance] = useState<SellerFinance | null>(null)
   const [reviews, setReviews] = useState<Listing<ShopReview>>({ total: 0, elements: [] })
   const [customers, setCustomers] = useState<{ elements: ShopCustomer[] }>({ elements: [] })
   const [members, setMembers] = useState<ShopMember[]>([])
@@ -183,10 +190,11 @@ export function SellerWorkspace() {
       api<Listing<ShopReview>>(`/vendeurs/mes-boutiques/${shopId}/avis`),
       api<{ elements: ShopCustomer[] }>(`/vendeurs/mes-boutiques/${shopId}/clients`),
       api<ShopMember[]>(`/vendeurs/mes-boutiques/${shopId}/membres`),
+      api<SellerFinance>(`/marketplace/finance/boutiques/${shopId}`),
     ])
     if (nextSpace.status === 'rejected') throw nextSpace.reason
     setSpace(nextSpace.value)
-    const names: Section[] = ['documents', 'products', 'offers', 'orders', 'deliveries', 'payments', 'reviews', 'customers', 'members']
+    const names: Section[] = ['documents', 'products', 'offers', 'orders', 'deliveries', 'payments', 'reviews', 'customers', 'members', 'finance']
     const nextAccess = { ...initialAccess }
     sections.forEach((result, index) => {
       const name = names[index]
@@ -202,6 +210,7 @@ export function SellerWorkspace() {
     setReviews(sections[6].status === 'fulfilled' ? sections[6].value as Listing<ShopReview> : { total: 0, elements: [] })
     setCustomers(sections[7].status === 'fulfilled' ? sections[7].value as { elements: ShopCustomer[] } : { elements: [] })
     setMembers(sections[8].status === 'fulfilled' ? sections[8].value as ShopMember[] : [])
+    setFinance(sections[9].status === 'fulfilled' ? sections[9].value as SellerFinance : null)
   }, [])
 
   const load = useCallback(async () => {
@@ -279,7 +288,7 @@ export function SellerWorkspace() {
           ))}
           {access.orders !== 'denied' ? <button className={panel === 'orders' ? styles.activeNav : ''} onClick={() => setPanel('orders')}><ShopIcon name="cart" />Commandes</button> : null}
           {access.deliveries !== 'denied' ? <button className={panel === 'deliveries' ? styles.activeNav : ''} onClick={() => setPanel('deliveries')}><ShopIcon name="truck" />Livraisons</button> : null}
-          {access.payments !== 'denied' ? <button className={panel === 'payments' ? styles.activeNav : ''} onClick={() => setPanel('payments')}><ShopIcon name="wallet" />Paiements</button> : null}
+          {access.finance !== 'denied' ? <button className={panel === 'payments' ? styles.activeNav : ''} onClick={() => setPanel('payments')}><ShopIcon name="wallet" />Finances</button> : null}
           {access.reviews !== 'denied' ? <button className={panel === 'reviews' ? styles.activeNav : ''} onClick={() => setPanel('reviews')}><ShopIcon name="star" />Avis clients</button> : null}
           {access.customers !== 'denied' ? <button className={panel === 'customers' ? styles.activeNav : ''} onClick={() => setPanel('customers')}><ShopIcon name="users" />Clients</button> : null}
           {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'settings' ? styles.activeNav : ''} onClick={() => setPanel('settings')}><ShopIcon name="settings" />Paramètres boutique</button> : null}
@@ -296,7 +305,7 @@ export function SellerWorkspace() {
         {error ? <div className={styles.error} role="alert">{error}<button onClick={() => void load()}>Réessayer</button></div> : null}
         {space ? <>
           <header className={styles.pageHead}>
-            <div><h1>{panel === 'overview' ? `Bonjour, ${space.nom}` : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Produits proposés' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'payments' ? 'Paiements' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? 'Voici ce qui se passe dans votre boutique.' : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
+            <div><h1>{panel === 'overview' ? `Bonjour, ${space.nom}` : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Produits proposés' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? 'Voici ce qui se passe dans votre boutique.' : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
             <div className={styles.headTools}><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> Voir ma boutique</Link></div>
           </header>
 
@@ -310,7 +319,7 @@ export function SellerWorkspace() {
           {panel === 'offers' ? access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.offers} /> : null}
           {panel === 'orders' ? access.orders === 'allowed' ? <OrdersPanel listing={orders} /> : <SectionUnavailable access={access.orders} /> : null}
           {panel === 'deliveries' ? access.deliveries === 'allowed' ? <DeliveriesPanel listing={deliveries} /> : <SectionUnavailable access={access.deliveries} /> : null}
-          {panel === 'payments' ? access.payments === 'allowed' ? <PaymentsPanel listing={payments} /> : <SectionUnavailable access={access.payments} /> : null}
+          {panel === 'payments' ? access.finance === 'allowed' && finance ? <PaymentsPanel shopId={space.id} finance={finance} listing={payments} canWithdraw={space.mesRoles.includes('proprietaire')} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.finance} /> : null}
           {panel === 'reviews' ? access.reviews === 'allowed' ? <ReviewsPanel listing={reviews} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.reviews} /> : null}
           {panel === 'customers' ? access.customers === 'allowed' ? <CustomersPanel customers={customers.elements} /> : <SectionUnavailable access={access.customers} /> : null}
           {panel === 'settings' ? space.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <SettingsPanel key={space.id} shop={space} onRefresh={load} /> : <SectionUnavailable access="denied" /> : null}
@@ -385,9 +394,31 @@ function DeliveriesPanel({ listing }: { listing: Listing<ShopDelivery> }) {
   return <section className={styles.featureList}><header><h2>Suivi des livraisons</h2><span>{listing.total} au total · {listing.elements.length} affichée{listing.elements.length > 1 ? 's' : ''}</span></header>{listing.elements.length ? <ul>{listing.elements.map(delivery => <li key={delivery.id}><div><strong>{delivery.reference}</strong><small>Commande {delivery.sousCommande.reference} · {delivery.ville} · {delivery.modeLivraison === 'vendeur' ? 'Livraison boutique' : 'Livraison KatiHub'}</small><small>{delivery.livraisonPrevueDebut ? `Prévue le ${new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(delivery.livraisonPrevueDebut))}` : `Créée le ${new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(delivery.creeLe))}`}</small></div><b data-status={delivery.statut}>{STATUS_LABELS[delivery.statut] ?? delivery.statut.replaceAll('_', ' ')}</b></li>)}</ul> : <p className={styles.blank}>Aucune livraison pour cette boutique.</p>}</section>
 }
 
-function PaymentsPanel({ listing }: { listing: Listing<ShopPayment> }) {
+function PaymentsPanel({ shopId, finance, listing, canWithdraw, onRefresh }: { shopId: string; finance: SellerFinance; listing: Listing<ShopPayment>; canWithdraw: boolean; onRefresh: () => Promise<void> }) {
+  const [amount, setAmount] = useState('')
+  const [destinationId, setDestinationId] = useState(finance.destinations[0]?.id ?? '')
+  const [pending, setPending] = useState(false)
+  const [message, setMessage] = useState('')
+  const selectedDestinationId = destinationId || finance.destinations[0]?.id || ''
+  async function requestWithdrawal(event: FormEvent) {
+    event.preventDefault(); setPending(true); setMessage('')
+    try {
+      await api(`/marketplace/finance/boutiques/${shopId}/retraits`, { methode: 'POST', corps: { montantFcfa: Number(amount), documentDestinationId: selectedDestinationId } })
+      setAmount(''); setMessage('Demande enregistrée. Le montant est gelé jusqu’à la décision KatiHub.'); await onRefresh()
+    } catch (cause) { setMessage(errorText(cause)) } finally { setPending(false) }
+  }
+  async function cancelWithdrawal(id: string) {
+    if (!window.confirm('Annuler cette demande et rendre le montant disponible ?')) return
+    setPending(true); setMessage('')
+    try { await api(`/marketplace/finance/boutiques/${shopId}/retraits/${id}/annulation`, { methode: 'POST' }); await onRefresh(); setMessage('La demande a été annulée et le montant dégelé.') }
+    catch (cause) { setMessage(errorText(cause)) } finally { setPending(false) }
+  }
   return <div className={styles.detailStack}>
-    <section className={styles.detailIntro}><span>COMPTABILITÉ DE LA BOUTIQUE</span><h2>Des montants que vous pouvez retracer</h2><p>Le net prévu est une estimation par commande, pas un solde disponible au retrait. Les écritures récentes ci-dessous sont celles enregistrées pour chaque sous-commande.</p></section>
+    <section className={styles.detailIntro}><span>COMPTABILITÉ DE LA BOUTIQUE</span><h2>Votre argent, de la vente au reversement</h2><p>Une commission devient acquise après la livraison, la fenêtre de retour et la résolution des litiges. Chaque demande immobilise immédiatement la somme pour empêcher un double retrait.</p></section>
+    <section className={styles.financeBalances}><article><small>Disponible</small><strong>{money(finance.soldes.disponibleFcfa)}</strong><span>Retirable maintenant</span></article><article><small>Gelé</small><strong>{money(finance.soldes.geleFcfa)}</strong><span>Demandes en cours</span></article></section>
+    <div className={styles.financeColumns}><section className={styles.featureList}><header><h2>Demandes de retrait</h2><span>{finance.retraits.length} récente(s)</span></header>{finance.retraits.length ? <ul>{finance.retraits.map(retrait => <li key={retrait.id}><div><strong>{retrait.reference}</strong><small>{money(retrait.montantFcfa)} · {new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(retrait.creeLe))}</small>{retrait.referenceExterne ? <small>Référence bancaire : {retrait.referenceExterne}</small> : null}{retrait.motifDecision ? <em>{retrait.motifDecision}</em> : null}</div><div className={styles.withdrawalStatus}><b data-status={retrait.statut}>{retrait.statut.replaceAll('_', ' ')}</b>{retrait.statut === 'demande' && canWithdraw ? <button disabled={pending} onClick={() => void cancelWithdrawal(retrait.id)}>Annuler</button> : null}</div></li>)}</ul> : <p className={styles.blank}>Aucun retrait demandé.</p>}</section>
+      <section className={styles.actionPanel}><h2>Demander un retrait</h2><p>Minimum 5 000 FCFA. Seul le propriétaire peut confirmer la demande.</p><form onSubmit={requestWithdrawal}><label>Montant FCFA<input required type="number" min="5000" max={finance.soldes.disponibleFcfa} step="1" disabled={!canWithdraw} value={amount} onChange={event => setAmount(event.target.value)} /></label><label>Destination validée<select required disabled={!canWithdraw || !finance.destinations.length} value={selectedDestinationId} onChange={event => setDestinationId(event.target.value)}><option value="">Sélectionner…</option>{finance.destinations.map(destination => <option value={destination.id} key={destination.id}>{destination.type.toUpperCase()} · {destination.stockageCle.split('/').at(-1)}</option>)}</select></label>{!finance.destinations.length ? <p className={styles.feedback}>Ajoutez puis faites valider un RIB dans la rubrique Vérification.</p> : null}{message ? <p className={styles.feedback} role="status">{message}</p> : null}<button disabled={pending || !canWithdraw || !selectedDestinationId || Number(amount) < 5000 || Number(amount) > finance.soldes.disponibleFcfa}>{pending ? 'Traitement…' : 'Geler et demander le retrait'}</button></form></section></div>
+    <section className={styles.featureList}><header><h2>Journal financier</h2><span>{finance.transactions.length} écriture(s)</span></header>{finance.transactions.length ? <ul>{finance.transactions.map(transaction => <li key={transaction.id}><div><strong>{transaction.libelle}</strong><small>{new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(transaction.creeLe))}</small>{transaction.ecritures.map((entry, index) => <small key={`${transaction.id}-${entry.compte}-${index}`}>{entry.compte.replaceAll('_', ' ')} · {entry.sens === 'credit' ? '+' : '−'}{money(entry.montantFcfa)}</small>)}</div><b>{transaction.type.replaceAll('_', ' ')}</b></li>)}</ul> : <p className={styles.blank}>Aucune écriture vendeur disponible.</p>}</section>
     <section className={styles.featureList}><header><h2>Commandes et paiements</h2><span>{listing.total} commande(s) · {listing.elements.length} affichée(s)</span></header>
       {listing.elements.length ? <ul>{listing.elements.map(item => <li key={item.id}><div><strong>{item.reference}</strong><small>{new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(item.creeLe))} · Paiement {item.commande.statutPaiement.replaceAll('_', ' ')}</small><small>Net vendeur prévu : {money(item.netVendeurPrevu)}{item.commande.payeLe ? ` · Payé le ${new Intl.DateTimeFormat('fr-CM').format(new Date(item.commande.payeLe))}` : ''}</small>{item.transactionsFinancieres.flatMap(transaction => transaction.ecritures.map(entry => <small key={`${transaction.id}-${entry.sens}`}>{transaction.libelle} · {entry.sens === 'credit' ? '+' : '−'}{money(entry.montantFcfa)}</small>))}</div><b data-status={item.commande.statutPaiement}>{item.commande.statutPaiement.replaceAll('_', ' ')}</b></li>)}</ul> : <p className={styles.blank}>Aucune commande à rapprocher pour le moment.</p>}
     </section>
