@@ -11,9 +11,9 @@ type Ligne = { id: string; offreTitreCapture: string; quantite: number; quantite
 type Expedition = { id: string; reference: string; statut: string; ville: string; montantACollecterFcfa: number; livreeLe: string | null; evenements: Evenement[] }
 type SousCommande = { id: string; reference: string; statut: string; boutique: { nom: string; slug: string }; lignes: Ligne[]; expeditions: Expedition[] }
 type Commande = { id: string; reference: string; statut: string; totalFermeTtc: number; acompteDu: number; acompteRecu: number; resteAPayer: number; sousCommandes: SousCommande[] }
-type Retour = { id: string; statut: string; quantite: number; montantRembourseFcfa: number; referenceRetour: string | null }
+type Retour = { id: string; statut: string; quantite: number; montantRembourseFcfa: number; referenceRetour: string | null; motifDecision?: string | null; motifArbitrage?: string | null; motifContestation?: string | null }
 type Piece = { id: string; nomCapture: string; typeMime: string; tailleOctets: number; empreinteSha256: string }
-type Demande = { id: string; reference: string; statut: string; objet: string; modifieLe: string; boutique: { nom: string }; ligne: Ligne | null; messages: Array<{ id: string; auteurType: string; contenu: string; creeLe: string; pieces: Piece[] }>; retour: Retour | null }
+type Demande = { id: string; reference: string; statut: string; objet: string; modifieLe: string; boutique: { nom: string }; ligne: Ligne | null; messages: Array<{ id: string; auteurType: string; contenu: string; creeLe: string; pieces: Piece[] }>; retour: Retour | null; capacites: { repondre: boolean; expedier: boolean; contester: boolean } }
 
 const CATEGORIES = [
   ['produit_non_conforme', 'Produit non conforme'],
@@ -117,8 +117,41 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
     }
   }
 
+  async function repondre(demandeId: string) {
+    const contenu = window.prompt('Votre message (2 caracteres minimum)')?.trim()
+    if (!contenu) return
+    setEnvoi(true); setErreur('')
+    try {
+      await api(`/marketplace/demandes-client/${demandeId}/messages`, { methode: 'POST', corps: { contenu } })
+      await charger()
+    } catch (cause) { setErreur(cause instanceof Error ? cause.message : "Le message n'a pas pu etre envoye.") }
+    finally { setEnvoi(false) }
+  }
+
+  async function expedierRetour(retourId: string) {
+    const referenceRetour = window.prompt('Reference de suivi du colis retour')?.trim()
+    if (!referenceRetour) return
+    setEnvoi(true); setErreur('')
+    try {
+      await api(`/marketplace/demandes-client/retours/${retourId}/expedition`, { methode: 'POST', corps: { referenceRetour } })
+      await charger()
+    } catch (cause) { setErreur(cause instanceof Error ? cause.message : "L'expedition n'a pas pu etre enregistree.") }
+    finally { setEnvoi(false) }
+  }
+
+  async function contesterRetour(retourId: string) {
+    const motif = window.prompt('Expliquez pourquoi vous contestez ce refus')?.trim()
+    if (!motif) return
+    setEnvoi(true); setErreur('')
+    try {
+      await api(`/marketplace/demandes-client/retours/${retourId}/contestation`, { methode: 'POST', corps: { motif } })
+      await charger()
+    } catch (cause) { setErreur(cause instanceof Error ? cause.message : "La contestation n'a pas pu etre ouverte.") }
+    finally { setEnvoi(false) }
+  }
+
   async function joindrePieces(demande: Demande, fichiers: FileList | null) {
-    const message = demande.messages.at(-1)
+    const message = demande.messages.findLast((element) => element.auteurType === 'client')
     if (!message || !fichiers?.length) return
     if (fichiers.length > 5) {
       setErreur('Vous pouvez joindre au maximum 5 fichiers a la fois.')
@@ -201,10 +234,15 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
                   ))}</ul> : null}
                 </div>
               ))}
-              <label className="mt-3 inline-flex cursor-pointer items-center rounded-control border border-rule px-4 py-2 text-small font-semibold">
+              <div className="mt-3 flex flex-wrap gap-2">
+              {demande.capacites.repondre ? <button type="button" disabled={envoi} onClick={() => void repondre(demande.id)} className="rounded-control bg-ink px-4 py-2 text-small font-semibold text-white">RÃ©pondre</button> : null}
+              <label className="inline-flex cursor-pointer items-center rounded-control border border-rule px-4 py-2 text-small font-semibold">
                 {envoi ? 'Envoi…' : 'Joindre des preuves'}
                 <input type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" disabled={envoi} onChange={event => { void joindrePieces(demande, event.currentTarget.files); event.currentTarget.value = '' }} />
               </label>
+              {demande.retour && demande.capacites.expedier ? <button type="button" disabled={envoi} onClick={() => void expedierRetour(demande.retour!.id)} className="rounded-control bg-secondary px-4 py-2 text-small font-semibold">DÃ©clarer le colis expÃ©diÃ©</button> : null}
+              {demande.retour && demande.capacites.contester ? <button type="button" disabled={envoi} onClick={() => void contesterRetour(demande.retour!.id)} className="rounded-control border border-warn px-4 py-2 text-small font-semibold text-warn">Contester la dÃ©cision</button> : null}
+              </div>
               <p className="mt-1 text-micro text-ink-3">PDF, JPEG, PNG ou WebP · 10 Mio maximum · 5 fichiers par message.</p>
               {demande.retour ? <p className="mt-3 rounded-control bg-space p-3 text-small">Retour : {libelle(demande.retour.statut)}{demande.retour.montantRembourseFcfa ? ` · ${formatPrice(demande.retour.montantRembourseFcfa)}` : ''}</p> : demande.ligne && demande.ligne.quantiteLivree > demande.ligne.quantiteRetournee ? <button type="button" disabled={envoi} onClick={() => demanderRetour(demande.id, demande.ligne!)} className="mt-3 rounded-control border border-rule px-4 py-2 text-small font-semibold">Demander un retour</button> : null}
             </article>

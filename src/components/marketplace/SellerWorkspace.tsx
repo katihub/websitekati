@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
-import { api, ErreurApi } from '@/lib/api'
+import { api, ErreurApi, telechargerApi } from '@/lib/api'
 import {
   connexionLocaleActive,
   seDeconnecterLocalement,
@@ -99,11 +99,16 @@ type ShopReview = { id: string; note: number; dimension: string; commentaire: st
 type ShopCustomer = { id: string; nom: string | null; sansCompte: boolean; commandes: number; derniereCommandeLe: string | null }
 type ShopMember = { id: string; nom: string; courriel: string; roles: string[]; actif: boolean;
   inviteLe: string | null; premiereConnexionLe: string | null; desactiveLe: string | null }
+type DisputePiece = { id: string; nomCapture: string; tailleOctets: number }
+type ShopDispute = { id: string; reference: string; statut: string; objet: string; modifieLe: string;
+  commande: { reference: string }; client?: { courriel: string }; messages: Array<{ id: string; auteurType: string; contenu: string; creeLe: string; pieces: DisputePiece[] }>;
+  retour: null | { id: string; statut: string; motifClient: string; motifDecision: string | null; motifContestation: string | null; referenceRetour: string | null };
+  capacites: { repondre: boolean; decider: boolean; recevoir: boolean; contester: boolean } }
 
 type Listing<T> = { total: number; elements: T[] }
-type Section = 'documents' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'finance' | 'reviews' | 'customers' | 'members'
+type Section = 'documents' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'finance' | 'reviews' | 'customers' | 'members' | 'disputes'
 type Access = 'allowed' | 'denied' | 'error'
-const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed' }
+const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed', disputes: 'allowed' }
 
 const DOCUMENT_LABELS: Record<string, string> = {
   identite: 'Pièce d’identité (CNI ou passeport)',
@@ -172,11 +177,12 @@ export function SellerWorkspace() {
   const [reviews, setReviews] = useState<Listing<ShopReview>>({ total: 0, elements: [] })
   const [customers, setCustomers] = useState<{ elements: ShopCustomer[] }>({ elements: [] })
   const [members, setMembers] = useState<ShopMember[]>([])
+  const [disputes, setDisputes] = useState<ShopDispute[]>([])
   const [access, setAccess] = useState<Record<Section, Access>>(initialAccess)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [authenticated, setAuthenticated] = useState(false)
-  const [panel, setPanel] = useState<'overview' | 'verification' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members'>('overview')
+  const [panel, setPanel] = useState<'overview' | 'verification' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members' | 'disputes'>('overview')
 
   const loadDetails = useCallback(async (shopId: string) => {
     const [nextSpace, ...sections] = await Promise.allSettled([
@@ -191,10 +197,11 @@ export function SellerWorkspace() {
       api<{ elements: ShopCustomer[] }>(`/vendeurs/mes-boutiques/${shopId}/clients`),
       api<ShopMember[]>(`/vendeurs/mes-boutiques/${shopId}/membres`),
       api<SellerFinance>(`/marketplace/finance/boutiques/${shopId}`),
+      api<ShopDispute[]>(`/marketplace/demandes-client/boutiques/${shopId}`),
     ])
     if (nextSpace.status === 'rejected') throw nextSpace.reason
     setSpace(nextSpace.value)
-    const names: Section[] = ['documents', 'products', 'offers', 'orders', 'deliveries', 'payments', 'reviews', 'customers', 'members', 'finance']
+    const names: Section[] = ['documents', 'products', 'offers', 'orders', 'deliveries', 'payments', 'reviews', 'customers', 'members', 'finance', 'disputes']
     const nextAccess = { ...initialAccess }
     sections.forEach((result, index) => {
       const name = names[index]
@@ -211,6 +218,7 @@ export function SellerWorkspace() {
     setCustomers(sections[7].status === 'fulfilled' ? sections[7].value as { elements: ShopCustomer[] } : { elements: [] })
     setMembers(sections[8].status === 'fulfilled' ? sections[8].value as ShopMember[] : [])
     setFinance(sections[9].status === 'fulfilled' ? sections[9].value as SellerFinance : null)
+    setDisputes(sections[10].status === 'fulfilled' ? sections[10].value as ShopDispute[] : [])
   }, [])
 
   const load = useCallback(async () => {
@@ -288,6 +296,7 @@ export function SellerWorkspace() {
           ))}
           {access.orders !== 'denied' ? <button className={panel === 'orders' ? styles.activeNav : ''} onClick={() => setPanel('orders')}><ShopIcon name="cart" />Commandes</button> : null}
           {access.deliveries !== 'denied' ? <button className={panel === 'deliveries' ? styles.activeNav : ''} onClick={() => setPanel('deliveries')}><ShopIcon name="truck" />Livraisons</button> : null}
+          {access.disputes !== 'denied' ? <button className={panel === 'disputes' ? styles.activeNav : ''} onClick={() => setPanel('disputes')}><ShopIcon name="info" />Litiges et retours</button> : null}
           {access.finance !== 'denied' ? <button className={panel === 'payments' ? styles.activeNav : ''} onClick={() => setPanel('payments')}><ShopIcon name="wallet" />Finances</button> : null}
           {access.reviews !== 'denied' ? <button className={panel === 'reviews' ? styles.activeNav : ''} onClick={() => setPanel('reviews')}><ShopIcon name="star" />Avis clients</button> : null}
           {access.customers !== 'denied' ? <button className={panel === 'customers' ? styles.activeNav : ''} onClick={() => setPanel('customers')}><ShopIcon name="users" />Clients</button> : null}
@@ -305,7 +314,7 @@ export function SellerWorkspace() {
         {error ? <div className={styles.error} role="alert">{error}<button onClick={() => void load()}>Réessayer</button></div> : null}
         {space ? <>
           <header className={styles.pageHead}>
-            <div><h1>{panel === 'overview' ? `Bonjour, ${space.nom}` : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Produits proposés' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? 'Voici ce qui se passe dans votre boutique.' : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
+            <div><h1>{panel === 'overview' ? `Bonjour, ${space.nom}` : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Produits proposés' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? 'Voici ce qui se passe dans votre boutique.' : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
             <div className={styles.headTools}><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> Voir ma boutique</Link></div>
           </header>
 
@@ -319,6 +328,7 @@ export function SellerWorkspace() {
           {panel === 'offers' ? access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.offers} /> : null}
           {panel === 'orders' ? access.orders === 'allowed' ? <OrdersPanel listing={orders} /> : <SectionUnavailable access={access.orders} /> : null}
           {panel === 'deliveries' ? access.deliveries === 'allowed' ? <DeliveriesPanel listing={deliveries} /> : <SectionUnavailable access={access.deliveries} /> : null}
+          {panel === 'disputes' ? access.disputes === 'allowed' ? <DisputesPanel disputes={disputes} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.disputes} /> : null}
           {panel === 'payments' ? access.finance === 'allowed' && finance ? <PaymentsPanel shopId={space.id} finance={finance} listing={payments} canWithdraw={space.mesRoles.includes('proprietaire')} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.finance} /> : null}
           {panel === 'reviews' ? access.reviews === 'allowed' ? <ReviewsPanel listing={reviews} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.reviews} /> : null}
           {panel === 'customers' ? access.customers === 'allowed' ? <CustomersPanel customers={customers.elements} /> : <SectionUnavailable access={access.customers} /> : null}
@@ -423,6 +433,52 @@ function PaymentsPanel({ shopId, finance, listing, canWithdraw, onRefresh }: { s
       {listing.elements.length ? <ul>{listing.elements.map(item => <li key={item.id}><div><strong>{item.reference}</strong><small>{new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(item.creeLe))} · Paiement {item.commande.statutPaiement.replaceAll('_', ' ')}</small><small>Net vendeur prévu : {money(item.netVendeurPrevu)}{item.commande.payeLe ? ` · Payé le ${new Intl.DateTimeFormat('fr-CM').format(new Date(item.commande.payeLe))}` : ''}</small>{item.transactionsFinancieres.flatMap(transaction => transaction.ecritures.map(entry => <small key={`${transaction.id}-${entry.sens}`}>{transaction.libelle} · {entry.sens === 'credit' ? '+' : '−'}{money(entry.montantFcfa)}</small>))}</div><b data-status={item.commande.statutPaiement}>{item.commande.statutPaiement.replaceAll('_', ' ')}</b></li>)}</ul> : <p className={styles.blank}>Aucune commande à rapprocher pour le moment.</p>}
     </section>
   </div>
+}
+
+function DisputesPanel({ disputes, onRefresh }: { disputes: ShopDispute[]; onRefresh: () => Promise<void> }) {
+  const [pending, setPending] = useState('')
+  const [message, setMessage] = useState('')
+
+  async function run(id: string, action: () => Promise<unknown>, success: string) {
+    setPending(id); setMessage('')
+    try { await action(); await onRefresh(); setMessage(success) }
+    catch (cause) { setMessage(errorText(cause)) }
+    finally { setPending('') }
+  }
+  function reply(dispute: ShopDispute) {
+    const contenu = window.prompt('Votre reponse au client')?.trim()
+    if (!contenu) return
+    void run(dispute.id, () => api(`/marketplace/demandes-client/${dispute.id}/messages`, { methode: 'POST', corps: { contenu } }), 'Reponse envoyee au client.')
+  }
+  function decide(dispute: ShopDispute, decision: 'autorise' | 'refuse') {
+    if (!dispute.retour) return
+    const motif = window.prompt(decision === 'autorise' ? "Motif de l'autorisation" : 'Motif du refus')?.trim()
+    if (!motif) return
+    void run(dispute.id, () => api(`/marketplace/demandes-client/retours/${dispute.retour!.id}/decision`, { methode: 'POST', corps: { decision, motif, responsable: decision === 'autorise' ? 'vendeur' : 'client', fraisRetourFcfa: 0 } }), `Retour ${decision}.`)
+  }
+  function contest(dispute: ShopDispute) {
+    if (!dispute.retour) return
+    const motif = window.prompt("Motif de contestation de l'autorisation (10 caracteres minimum)")?.trim()
+    if (!motif) return
+    void run(dispute.id, () => api(`/marketplace/demandes-client/retours/${dispute.retour!.id}/contestation`, { methode: 'POST', corps: { motif } }), 'Contestation transmise a KATIHUB.')
+  }
+  function receive(dispute: ShopDispute) {
+    if (!dispute.retour || !window.confirm('Confirmer la reception physique du colis retour ?')) return
+    void run(dispute.id, () => api(`/marketplace/demandes-client/retours/${dispute.retour!.id}/reception`, { methode: 'POST' }), 'Reception enregistree. KATIHUB peut proceder au remboursement.')
+  }
+  async function attach(dispute: ShopDispute, files: FileList | null) {
+    const ownMessage = dispute.messages.findLast((item) => item.auteurType === 'vendeur')
+    if (!ownMessage || !files?.length) { setMessage("Envoyez d'abord une reponse vendeur avant d'ajouter une piece."); return }
+    await run(dispute.id, async () => {
+      for (const file of Array.from(files).slice(0, 5)) {
+        const body = new FormData(); body.append('fichier', file)
+        await api(`/marketplace/demandes-client/${dispute.id}/messages/${ownMessage.id}/pieces`, { methode: 'POST', corps: body })
+      }
+    }, 'Justificatif ajoute au dossier.')
+  }
+  return <div className={styles.detailStack}><section className={styles.detailIntro}><span>SERVICE APRES-VENTE</span><h2>Traiter chaque dossier jusqu&apos;a sa resolution</h2><p>Repondez au client, motivez chaque decision et confirmez seulement les colis physiquement recus. KATIHUB arbitre les contestations et execute le remboursement.</p></section>
+    {message ? <p className={styles.feedback} role="status">{message}</p> : null}
+    <section className={styles.featureList}><header><h2>Dossiers de la boutique</h2><span>{disputes.length} dossier(s)</span></header>{disputes.length ? <ul>{disputes.map(dispute => <li key={dispute.id} className={styles.disputeRow}><div><strong>{dispute.reference} · {dispute.objet}</strong><small>Commande {dispute.commande.reference} · {new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(dispute.modifieLe))}</small><p>Statut : {dispute.statut.replaceAll('_', ' ')}{dispute.retour ? ` · retour ${dispute.retour.statut.replaceAll('_', ' ')}` : ''}</p>{dispute.retour?.motifClient ? <em>Motif client : {dispute.retour.motifClient}</em> : null}{dispute.messages.slice(-2).map(item => <blockquote key={item.id}><b>{item.auteurType}</b> · {item.contenu}{item.pieces.map(piece => <button key={piece.id} type="button" onClick={() => void telechargerApi(`/marketplace/demandes-client/${dispute.id}/pieces/${piece.id}`, piece.nomCapture)}>{piece.nomCapture}</button>)}</blockquote>)}<div className={styles.disputeActions}>{dispute.capacites.repondre ? <button disabled={pending === dispute.id} onClick={() => reply(dispute)}>Repondre</button> : null}{dispute.capacites.decider ? <><button disabled={pending === dispute.id} onClick={() => decide(dispute, 'autorise')}>Autoriser</button><button disabled={pending === dispute.id} onClick={() => decide(dispute, 'refuse')}>Refuser</button></> : null}{dispute.capacites.recevoir ? <button disabled={pending === dispute.id} onClick={() => receive(dispute)}>Confirmer la reception</button> : null}{dispute.capacites.contester ? <button disabled={pending === dispute.id} onClick={() => contest(dispute)}>Contester</button> : null}<label>Ajouter une preuve<input className={styles.srOnly} type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" disabled={pending === dispute.id} onChange={event => { void attach(dispute, event.currentTarget.files); event.currentTarget.value = '' }} /></label></div></div><b data-status={dispute.statut}>{dispute.statut.replaceAll('_', ' ')}</b></li>)}</ul> : <p className={styles.blank}>Aucun litige ouvert pour cette boutique.</p>}</section></div>
 }
 
 function ReviewsPanel({ listing, onRefresh }: { listing: Listing<ShopReview>; onRefresh: () => Promise<void> }) {
