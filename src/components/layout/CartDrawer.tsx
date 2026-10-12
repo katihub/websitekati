@@ -9,7 +9,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { IconArrowRight, IconClose, IconPhone } from "@/components/brand/Icons";
 import { Action } from "@/components/ui/Action";
 import { useAccount } from "@/lib/account";
-import { useCart } from "@/lib/cart";
+import { cartLineKey, useCart } from "@/lib/cart";
 import { useCheckoutGate } from "@/lib/checkout-gate";
 import { formatPrice } from "@/lib/format";
 import { useSession } from "@/lib/session";
@@ -61,6 +61,7 @@ export function CartDrawer() {
   const { openPourCommande, pointsVente } = useAccount();
   const router = useRouter();
   const phone = shopPhone(pointsVente);
+  const marketplace = lines.some(line => Boolean(line.offerId));
   const panel = useRef<HTMLDivElement>(null);
   const restoreTo = useRef<HTMLElement | null>(null);
   const reduced = useReducedMotion();
@@ -187,15 +188,15 @@ export function CartDrawer() {
                 <ul className="flex-1 divide-y divide-rule overflow-y-auto px-6">
                   {lines.map((line) => (
                     <li
-                      key={line.slug}
+                      key={cartLineKey(line)}
                       className={`flex gap-4 py-5 ${
-                        line.slug === lastAdded
+                        cartLineKey(line) === lastAdded
                           ? "motion-safe:animate-[line-in_520ms_var(--ease-draw)_both]"
                           : ""
                       }`}
                     >
                       <Link
-                        href={`/produit/${line.slug}`}
+                        href={line.offerId ? `/marketplace/produits/${line.slug}` : `/produit/${line.slug}`}
                         onClick={close}
                         className="relative block size-[72px] shrink-0 overflow-hidden rounded-well bg-surface"
                       >
@@ -212,7 +213,7 @@ export function CartDrawer() {
 
                       <div className="min-w-0 flex-1">
                         <Link
-                          href={`/produit/${line.slug}`}
+                          href={line.offerId ? `/marketplace/produits/${line.slug}` : `/produit/${line.slug}`}
                           onClick={close}
                           /* `clamp-2` is `-webkit-box`, so the floor is a
                              min-height and not a flex centring: the utility
@@ -230,7 +231,7 @@ export function CartDrawer() {
                           <div className="flex items-center rounded-control border border-rule">
                             <button
                               type="button"
-                              onClick={() => setQty(line.slug, line.qty - 1)}
+                              onClick={() => setQty(cartLineKey(line), line.qty - 1)}
                               aria-label={`Retirer un ${line.name}`}
                               className="press grid size-11 place-items-center text-ink-2 hover:text-secondary md:size-8"
                             >
@@ -241,7 +242,7 @@ export function CartDrawer() {
                             </span>
                             <button
                               type="button"
-                              onClick={() => setQty(line.slug, line.qty + 1)}
+                              onClick={() => setQty(cartLineKey(line), line.qty + 1)}
                               aria-label={`Ajouter un ${line.name}`}
                               className="press grid size-11 place-items-center text-ink-2 hover:text-secondary md:size-8"
                             >
@@ -254,7 +255,7 @@ export function CartDrawer() {
                               sits where it was drawn. */}
                           <button
                             type="button"
-                            onClick={() => remove(line.slug)}
+                            onClick={() => remove(cartLineKey(line))}
                             className="press -mr-2 flex min-h-11 items-center px-2 text-micro text-ink-3 transition-colors duration-[var(--t-fast)] hover:text-warn md:mr-0 md:min-h-0 md:px-0"
                           >
                             Retirer
@@ -315,16 +316,17 @@ export function CartDrawer() {
                       elle la fenetre s'ouvre « pour commander » et, quelle que
                       soit l'issue, c'est elle qui mene a la suite. */}
                   <Link
-                    href="/commande/valider"
+                    href={marketplace ? "/panier" : "/commande/valider"}
                     onClick={(event) => {
                       event.preventDefault()
                       close()
-                      if (session) router.push('/commande/valider')
+                      if (marketplace) router.push('/panier')
+                      else if (session) router.push('/commande/valider')
                       else openPourCommande()
                     }}
                     className="press fill mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-control bg-secondary px-6 text-[0.875rem] font-bold text-on-surface transition-colors duration-[var(--t-fast)] ease-brand [--fill-to:var(--secondary)]"
                   >
-                    Commander maintenant
+                    {marketplace ? 'Voir mon panier' : 'Commander maintenant'}
                     <IconArrowRight className="text-[1.0625rem]" />
                   </Link>
 

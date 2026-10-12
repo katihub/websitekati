@@ -37,6 +37,9 @@ next-env.d.ts
 
 # throwaway inspection scripts (qa/capture.mjs and qa/audit.mjs are the kept ones)
 /qa/_*.mjs
+/qa-*.png
+/.dev-website*.log
+*.legacy
 
 # The designer's source artwork, kept on disk and out of the repository.
 # `public/branding/banner-*.jpg` are the five pieces the site actually serves;

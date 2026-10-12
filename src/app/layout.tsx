@@ -3,10 +3,8 @@ import { Suspense } from 'react'
 import { IBM_Plex_Mono, Poppins } from 'next/font/google'
 
 import './globals.css'
-import { AuthDialog } from '@/components/account/AuthDialog'
-import { Assistant } from '@/components/assistant/Assistant'
-import { Footer } from '@/components/layout/Footer'
-import { Header } from '@/components/layout/Header'
+import { KatiFooter } from '@/components/marketplace/KatiFooter'
+import { KatiHeader } from '@/components/marketplace/KatiHeader'
 import { CartDrawer } from '@/components/layout/CartDrawer'
 import { Reveal } from '@/components/ui/Reveal'
 import { NavigationProgress } from '@/components/ui/NavigationProgress'
@@ -14,9 +12,6 @@ import { ScrollOnQuery } from '@/components/ui/ScrollOnQuery'
 import { AccountProvider } from '@/lib/account'
 import { CartProvider } from '@/lib/cart'
 import { SessionProvider } from '@/lib/session'
-import { lireNavigationOuNull, lirePointsVenteOuVide } from '@/lib/catalogue-en-direct'
-import { SITE } from '@/constants/site'
-import { shopWhatsapp } from '@/lib/comptoirs'
 
 /**
  * Poppins carries the text and the display sizes.
@@ -67,12 +62,11 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: `${SITE.name}, matériel informatique, réseau, sécurité et énergie au Cameroun`,
-    template: `%s · ${SITE.name}`,
+    default: 'KatiHub — vos boutiques locales au même endroit',
+    template: '%s · KatiHub',
   },
   description:
-    'Distributeur d’équipement informatique, réseau, vidéosurveillance et énergie à Douala et Yaoundé. ' +
-    'Plus de 4 000 références en stock, garanties, avec retrait le jour même.',
+    'La marketplace camerounaise qui réunit des boutiques locales vérifiées, avec paiement sécurisé et livraison à Douala et Yaoundé.',
 }
 
 /**
@@ -99,14 +93,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
      tait et la liste des comptoirs est vide ; la page, elle, dit la panne. La
      memoire de `cache` fait que l'en-tete et le pied de page relisent les memes
      reponses sans second appel. */
-  const [nav, pointsVente] = await Promise.all([lireNavigationOuNull(), lirePointsVenteOuVide()])
-
   return (
     <html lang="fr" className={`${poppins.variable} ${plexMono.variable}`}>
       {/* `data-habillage` dit si le menu des rayons a pu etre lu. Le travailleur
           de service le lit avant de garder /hors-ligne : une copie sans rayons,
           prise pendant une panne, resterait sur le telephone du client. */}
-      <body data-habillage={nav ? 'complet' : 'incomplet'}>
+      <body data-habillage="marketplace">
         {/* Both providers wrap the document rather than a subtree: the masthead
             reads them, the drawer and the dialog render at the root, and the
             controls that fill them are inside the page. Nothing below is a
@@ -122,9 +114,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             existe sans compte et doit continuer a fonctionner pour qui ne se
             connectera jamais; la session vient s ajouter. */}
         <SessionProvider>
-        <AccountProvider pointsVente={pointsVente}>
+        <AccountProvider pointsVente={[]}>
           <CartProvider>
-            <Header />
+            <KatiHeader />
             {/* L'ESPACE AVANT LE PIED DE PAGE APPARTIENT A LA DERNIERE SECTION DE
             CHAQUE PAGE, PAS A `main`. Pose ici, il s'ajoutait sous tout, y
             compris sous une bande pleine largeur qui porte deja son fond et son
@@ -133,15 +125,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             `pb-band` a sa derniere section, et une bande de couleur n'en prend
             pas. Une page ajoutee demain doit y penser. */}
         <main>{children}</main>
-            <Footer />
+            <KatiFooter />
             <CartDrawer />
           </CartProvider>
-          <AuthDialog referenceCount={nav?.nombreProduits ?? null} />
         </AccountProvider>
         {/* L'ASSISTANT LIT LA SESSION, DONC IL VIT DEDANS. Un client connecté
             confie sa question à l'équipe sans laisser de coordonnées : son
             compte les porte déjà. Hors du fournisseur, `useSession()` lève. */}
-        <Assistant whatsapp={shopWhatsapp(pointsVente)} />
         </SessionProvider>
         <Reveal />
         {/* `useSearchParams` opts its whole subtree into client rendering unless

@@ -42,7 +42,14 @@ export interface CartLine {
   readonly price: number
   readonly image: string | null
   readonly qty: number
+  readonly offerId?: string
+  readonly boutiqueId?: string
+  readonly boutiqueNom?: string
+  readonly modesLivraison?: Array<'vendeur' | 'katihub'>
+  readonly villesLivraison?: string[]
 }
+
+export const cartLineKey = (line: Pick<CartLine, 'slug' | 'offerId'>) => line.offerId ?? line.slug
 
 const STORAGE_KEY = 'nowtech.panier.v1'
 const EMPTY = '[]'
@@ -114,6 +121,8 @@ export interface CartState {
   add: (line: Omit<CartLine, 'qty'>, qty?: number) => void
   setQty: (slug: string, qty: number) => void
   remove: (slug: string) => void
+  /** Retire seulement les quantités commandées, sans perdre un ajout dans un autre onglet. */
+  consume: (ordered: readonly CartLine[]) => void
   /** Vide le panier : une commande passee ne doit pas pouvoir repartir par megarde. */
   vider: () => void
   open: () => void
@@ -131,15 +140,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const add = useCallback((line: Omit<CartLine, 'qty'>, qty = 1) => {
     const current = parse(readRaw())
-    const existing = current.find((l) => l.slug === line.slug)
+    const key = cartLineKey(line)
+    const existing = current.find((l) => cartLineKey(l) === key)
     writeRaw(
       existing
         ? current.map((l) =>
-            l.slug === line.slug ? { ...l, qty: Math.min(l.qty + qty, MAX_QTY) } : l,
+            cartLineKey(l) === key ? { ...l, ...line, qty: Math.min(l.qty + qty, MAX_QTY) } : l,
           )
         : [...current, { ...line, qty }],
     )
-    setLastAdded(line.slug)
+    setLastAdded(key)
     setOpen(true)
   }, [])
 
@@ -147,13 +157,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const current = parse(readRaw())
     writeRaw(
       qty <= 0
-        ? current.filter((l) => l.slug !== slug)
-        : current.map((l) => (l.slug === slug ? { ...l, qty: Math.min(qty, MAX_QTY) } : l)),
+        ? current.filter((l) => cartLineKey(l) !== slug)
+        : current.map((l) => (cartLineKey(l) === slug ? { ...l, qty: Math.min(qty, MAX_QTY) } : l)),
     )
   }, [])
 
   const remove = useCallback((slug: string) => {
-    writeRaw(parse(readRaw()).filter((l) => l.slug !== slug))
+    writeRaw(parse(readRaw()).filter((l) => cartLineKey(l) !== slug))
+  }, [])
+
+  const consume = useCallback((ordered: readonly CartLine[]) => {
+    const quantities = new Map(ordered.map(line => [cartLineKey(line), line.qty]))
+    writeRaw(parse(readRaw()).flatMap(line => {
+      const qty = line.qty - (quantities.get(cartLineKey(line)) ?? 0)
+      return qty > 0 ? [{ ...line, qty }] : []
+    }))
   }, [])
 
   const vider = useCallback(() => writeRaw([]), [])
@@ -168,11 +186,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       add,
       setQty,
       remove,
+      consume,
       vider,
       open: () => setOpen(true),
       close: () => setOpen(false),
     }),
-    [lines, isOpen, lastAdded, add, setQty, remove, vider],
+    [lines, isOpen, lastAdded, add, setQty, remove, consume, vider],
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

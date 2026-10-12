@@ -27,6 +27,7 @@ import {
 import { pickupLine, shopPhone } from '@/lib/comptoirs'
 import { formatAmount, formatCount } from '@/lib/format'
 import { avecPanneCatalogue } from '@/lib/panne-catalogue'
+import { MarketplaceHome } from '@/components/marketplace/MarketplaceHome'
 
 /**
  * The homepage.
@@ -62,6 +63,10 @@ import { avecPanneCatalogue } from '@/lib/panne-catalogue'
  * moves.
  */
 export default avecPanneCatalogue(async function HomePage() {
+  return <MarketplaceHome />
+  /* L'ancienne vitrine NowTech est conservée temporairement sous ce point de
+     coupure pendant la migration de ses pages profondes. Elle n'est plus
+     exécutée : la racine appartient désormais à la marketplace KatiHub. */
   /* TOUT VIENT DU BACKEND, EN QUATRE LECTURES PARALLELES. Les bannieres, la
      navigation (rayons, comptes, photographies d'ouverture, marques), les blocs
      de l'accueil (selections, tour des comptoirs, colonnes d'arrivages) et les

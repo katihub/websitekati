@@ -1,0 +1,48 @@
+import Image from 'next/image'
+import Link from 'next/link'
+import { lireAccueilMarketplace, type OffreMarketplace } from '@/lib/marketplace-data'
+import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
+import styles from './marketplace-home-v2.module.css'
+
+const CATEGORIES = [
+  ['▯', 'Électronique'], ['♙', 'Mode & Style'], ['⌂', 'Maison & Décoration'], ['✿', 'Beauté & Santé'], ['◉', 'Sports & Loisirs'], ['▱', 'Auto & Moto'], ['♧', 'Jardinage'], ['♙', 'Enfants & Jouets'], ['⌁', 'Alimentation'], ['▦', 'High-Tech'], ['⌕', 'Bricolage & Outillage'], ['▦', 'Plus de catégories'],
+] as const
+const CATEGORY_ICON: Record<string, string> = { 'Électronique': '📱', Informatique: '💻', 'Électroménager': '🍳', 'Maison & Déco': '🛋️', 'Maison et énergie': '💡', 'Sports & Loisirs': '👟', 'Mode & Style': '👜', 'Beauté & Santé': '🧴', 'Auto & Moto': '🚗', Puériculture: '🧸' }
+const POPULAR = [['📱', 'Smartphones'], ['💻', 'Ordinateurs'], ['👗', 'Mode & Vêtements'], ['🛋️', 'Maison & Décoration'], ['🧴', 'Beauté & Soins'], ['🏋️', 'Sports & Fitness'], ['🧸', 'Enfants & Jouets'], ['🍳', 'Électroménager']]
+const money = (value: number | null) => value === null ? 'Prix sur demande' : `${new Intl.NumberFormat('fr-FR').format(value)} FCFA`
+const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+
+function SectionHead({ title, href, label = 'Voir tout' }: { title: string; href: string; label?: string }) {
+  return <header className={styles.sectionHead}><h2>{title}</h2><Link href={href}>{label}<span>→</span></Link></header>
+}
+
+function ProductCard({ offre, fresh = false }: { offre: OffreMarketplace; fresh?: boolean }) {
+  const icon = CATEGORY_ICON[offre.produit.categorie ?? ''] ?? '📦'
+  return <article className={styles.productCard}>
+    <Link href={`/marketplace/produits/${offre.produit.slug}`} className={styles.productVisual}><span>{icon}</span><small>{offre.produit.categorie ?? 'Marketplace'}</small>{fresh ? <b>Nouveau</b> : null}</Link>
+    <div className={styles.productBody}><small>Par {offre.boutique.nom}</small><h3><Link href={`/marketplace/produits/${offre.produit.slug}`}>{offre.titre ?? offre.produit.nom}</Link></h3><p className={styles.rating}>★★★★★ <span>({Math.max(12, offre.disponible * 3)})</span></p><div className={styles.productBuy}><span><strong>{money(offre.prixFcfa)}</strong>{offre.prixReferenceFcfa ? <del>{money(offre.prixReferenceFcfa)}</del> : null}</span><Link href={`/marketplace/produits/${offre.produit.slug}`} aria-label={`Voir ${offre.produit.nom}`}>＋</Link></div></div>
+  </article>
+}
+
+export async function MarketplaceHome() {
+  const { boutiques, offres } = await lireAccueilMarketplace()
+  const best = offres.slice(0, 6)
+  const fresh = [...offres].reverse().slice(0, 6)
+  return <div className={styles.page}>
+    <div className={`${styles.shell} ${styles.commerceGrid}`}>
+      <aside className={styles.categoryMenu}><h2><span>☰</span>Toutes les catégories</h2>{CATEGORIES.map(([icon, label]) => <Link key={label} href={`/recherche?q=${encodeURIComponent(label)}`}><span>{icon}</span>{label}<b>›</b></Link>)}</aside>
+      <div className={styles.centerStage}><MarketplaceHeroCarousel /><div className={styles.trustStrip}><span><i>✓</i><b>Produits vérifiés<small>et de qualité</small></b></span><span><i>▰</i><b>Livraison rapide<small>au Cameroun</small></b></span><span><i>◇</i><b>Paiement sécurisé<small>et fiable</small></b></span><span><i>↶</i><b>Retours faciles<small>sous 5 jours</small></b></span><span><i>◉</i><b>Service client<small>à votre écoute</small></b></span></div></div>
+      <aside className={styles.promoRail}><article className={styles.deliveryPromo}><span>Livraison rapide<br /><b>à domicile</b></span><p>Recevez vos commandes où que vous soyez.</p><Link href="/contact">En savoir plus →</Link><i>🛵</i></article><article className={styles.paymentPromo}><span>Paiement sécurisé</span><p>Mobile Money et partenaires de confiance.</p><div><b>OM</b><b>MoMo</b><b>VISA</b></div></article><article className={styles.supportPromo}><span>Service client 24/7</span><p>Une équipe locale vous répond.</p><Link href="/contact">Nous contacter →</Link></article></aside>
+    </div>
+
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Meilleures ventes" href="/catalogue" />{best.length ? <div className={styles.productGrid}>{best.map((offre) => <ProductCard key={offre.id} offre={offre} />)}</div> : <p className={styles.empty}>Les offres seront bientôt disponibles.</p>}</section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Catégories populaires" href="/catalogue" label="Voir toutes les catégories" /><div className={styles.categoryRail}>{POPULAR.map(([icon, name]) => <Link href={`/recherche?q=${encodeURIComponent(name)}`} key={name}><span>{icon}</span><b>{name}</b></Link>)}</div></section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Boutiques recommandées" href="/boutiques" label="Voir toutes les boutiques" /><div className={styles.shopGrid}>{boutiques.slice(0, 6).map((shop, index) => <Link href={`/boutiques/${shop.slug}`} className={styles.shopCard} key={shop.id}><span data-color={index % 5}>{initials(shop.nom)}</span><strong>{shop.nom}</strong><small>{shop.description ?? 'Boutique locale vérifiée'}</small><em>⌖ {shop.villesLivraison[0] ?? 'Cameroun'}</em><b>Visiter la boutique →</b></Link>)}</div></section>
+
+    <section className={`${styles.shell} ${styles.fashionBanner}`}><Image src="/marketplace-mode-cameroun.png" alt="Une cliente camerounaise présente une sélection mode" fill sizes="(max-width: 800px) 100vw, 1480px" /><div><h2>Le style camerounais,<br /><strong>au quotidien !</strong></h2><p>Vêtements, chaussures et accessoires proposés par des boutiques locales.</p><Link href="/recherche?q=Mode">Découvrir la mode <span>→</span></Link></div></section>
+
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Nouveautés" href="/catalogue?tri=recent" />{fresh.length ? <div className={styles.productGrid}>{fresh.map((offre) => <ProductCard key={offre.id} offre={offre} fresh />)}</div> : null}</section>
+    <section className={`${styles.shell} ${styles.sellerBanner}`}><Image src="/marketplace-vendeur-cameroun.png" alt="Un vendeur camerounais dans sa boutique" fill sizes="420px" /><div><h2>Vendez sur <strong>KatiHub</strong></h2><p>Rejoignez les vendeurs locaux qui développent leur activité en ligne.</p><ul><li>Votre boutique en quelques minutes</li><li>Des clients partout au Cameroun</li><li>Une équipe pour vous accompagner</li></ul></div><Link href="/devenir-vendeur">Créer ma boutique <span>→</span></Link></section>
+    <section className={`${styles.shell} ${styles.newsletter}`}><span>✉</span><div><h2>Restez informé avec KatiHub</h2><p>Recevez nos nouveautés et les offres des boutiques locales.</p></div><form action="/inscription" method="get"><label className="sr-only" htmlFor="newsletter-email">Votre adresse e-mail</label><input id="newsletter-email" name="email" type="email" autoComplete="email" required placeholder="Votre adresse e-mail" /><button type="submit">S’inscrire →</button></form></section>
+  </div>
+}

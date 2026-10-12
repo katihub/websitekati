@@ -43,7 +43,8 @@ const browser = await chromium.launch()
 const problems = []
 
 for (const [label, viewport] of Object.entries(targets)) {
-  const context = await browser.newContext({ ...viewport, locale: 'fr-FR' })
+  const { width, height, ...device } = viewport
+  const context = await browser.newContext({ viewport: { width, height }, ...device, locale: 'fr-FR' })
   const page = await context.newPage()
 
   page.on('console', (message) => {
