@@ -1,0 +1,81 @@
+# =============================================================================
+# CE QUI DOIT ETRE VRAI AVANT QU'UNE PR ENTRE DANS `main`.
+#
+# La vitrine etait le seul des trois projets sans verification automatique :
+# le backend et le panel bloquaient une fusion fautive, la vitrine partait telle
+# quelle. C'est pourtant elle que voient les clients.
+#
+# CINQ ETAPES, CHACUNE LANCEE MEME SI UNE PRECEDENTE ECHOUE : une seule
+# execution montre tous les problemes au lieu d'un par poussee.
+#   1. le lint ;
+#   2. le typage ;
+#   3. les tests unitaires de `qa/*.test.mjs` ;
+#   4. le build de production, sans backend joignable : une page qui exigerait
+#      l'API au moment du build casserait le deploiement ;
+#   5. les parcours navigateur `e2e/` sur ce build, backend simule, en largeur
+#      bureau et mobile.
+# =============================================================================
+
+name: Verifications
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: verifications-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      # Un hote qui ne repond jamais : les parcours e2e interceptent `/v1/`, et
+      # tout appel qui leur echapperait echoue franchement au lieu de toucher un
+      # vrai serveur.
+      NEXT_PUBLIC_API_URL: http://api.e2e.invalid
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        if: always()
+        run: npm run lint
+
+      - name: Typage
+        if: always()
+        run: npm run typecheck
+
+      - name: Tests unitaires
+        if: always()
+        run: npm test
+
+      - name: Build de production
+        id: build
+        if: always()
+        run: npm run build
+
+      - name: Navigateur des parcours
+        if: always() && steps.build.outcome == 'success'
+        run: npx playwright install --with-deps chromium
+
+      - name: Parcours navigateur
+        if: always() && steps.build.outcome == 'success'
+        run: npm run e2e
+
+      - name: Rapport des parcours
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-playwright
+          path: playwright-report/
+          retention-days: 14

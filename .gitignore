@@ -67,3 +67,8 @@ next-env.d.ts
 
 # livrables commerciaux, regenerables
 /documents/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
