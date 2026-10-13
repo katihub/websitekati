@@ -35,7 +35,7 @@ test('le client ouvre un litige sur une ligne livrée et le retrouve dans ses do
   await page.goto('/marketplace/commande/CM-E2E/suivi')
   await page.getByRole('button', { name: 'Signaler un problème' }).click()
 
-  const fenetre = page.getByRole('dialog', { name: 'Ouvrir une demande' })
+  const fenetre = page.getByRole('dialog', { name: /^Signaler un problème/ })
   await fenetre.getByLabel('Catégorie').selectOption('produit_endommage')
   await fenetre.getByLabel('Objet').fill('Écran fissuré à la réception')
   await fenetre.getByLabel('Description').fill('L’écran était fissuré dans le carton scellé.')
@@ -62,7 +62,7 @@ test('un refus du serveur reste visible et la fenêtre garde la saisie', async (
 
   await page.goto('/marketplace/commande/CM-E2E/suivi')
   await page.getByRole('button', { name: 'Signaler un problème' }).click()
-  const fenetre = page.getByRole('dialog', { name: 'Ouvrir une demande' })
+  const fenetre = page.getByRole('dialog', { name: /^Signaler un problème/ })
   await fenetre.getByLabel('Objet').fill('Écran fissuré à la réception')
   await fenetre.getByLabel('Description').fill('L’écran était fissuré dans le carton scellé.')
   await fenetre.getByRole('button', { name: 'Ouvrir la demande' }).click()

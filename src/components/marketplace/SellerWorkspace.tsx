@@ -9,6 +9,8 @@ import {
   surChangementLocal,
 } from '@/lib/connexion-locale'
 import { supabase } from '@/lib/supabase'
+import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
+import { ApercuPieces, TYPES_PIECES, verifierPieces, type VerificationPieces } from './ApercuPieces'
 import { MerchantLogin } from './MerchantLogin'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
 import styles from '@/app/espace-vendeur/seller-workspace.module.css'
@@ -435,50 +437,147 @@ function PaymentsPanel({ shopId, finance, listing, canWithdraw, onRefresh }: { s
   </div>
 }
 
+const AUTEURS_LITIGE: Record<string, string> = { client: 'Client', vendeur: 'Votre boutique', equipe: 'KatiHub' }
+const RESPONSABLES_RETOUR = [
+  ['vendeur', 'La boutique (produit non conforme, erreur de préparation)'],
+  ['agent_livraison', 'La livraison (colis abîmé pendant le transport)'],
+  ['indetermine', 'À déterminer par KatiHub'],
+] as const
+
+type FenetreLitige =
+  | { type: 'reponse'; dispute: ShopDispute }
+  | { type: 'autorise' | 'refuse' | 'reception' | 'contestation'; dispute: ShopDispute; retour: NonNullable<ShopDispute['retour']> }
+  | { type: 'pieces'; dispute: ShopDispute; messageId: string; verification: VerificationPieces }
+  | null
+
 function DisputesPanel({ disputes, onRefresh }: { disputes: ShopDispute[]; onRefresh: () => Promise<void> }) {
-  const [pending, setPending] = useState('')
+  const [fenetre, setFenetre] = useState<FenetreLitige>(null)
   const [message, setMessage] = useState('')
 
-  async function run(id: string, action: () => Promise<unknown>, success: string) {
-    setPending(id); setMessage('')
-    try { await action(); await onRefresh(); setMessage(success) }
-    catch (cause) { setMessage(errorText(cause)) }
-    finally { setPending('') }
+  function ouvrir(prochaine: FenetreLitige) { setMessage(''); setFenetre(prochaine) }
+
+  /** Une erreur remonte a la fenetre, qui l'affiche en gardant la saisie. */
+  async function enregistrer(appel: () => Promise<unknown>, succes: string) {
+    await appel()
+    setFenetre(null)
+    setMessage(succes)
+    await onRefresh()
   }
-  function reply(dispute: ShopDispute) {
-    const contenu = window.prompt('Votre reponse au client')?.trim()
-    if (!contenu) return
-    void run(dispute.id, () => api(`/marketplace/demandes-client/${dispute.id}/messages`, { methode: 'POST', corps: { contenu } }), 'Reponse envoyee au client.')
+
+  function valider(donnees: FormData): Promise<void> {
+    if (!fenetre) return Promise.resolve()
+    const motif = String(donnees.get('motif') ?? '').trim()
+    switch (fenetre.type) {
+      case 'reponse':
+        return enregistrer(() => api(`/marketplace/demandes-client/${fenetre.dispute.id}/messages`, { methode: 'POST', corps: { contenu: String(donnees.get('contenu') ?? '').trim() } }), 'Réponse envoyée au client.')
+      case 'autorise':
+        return enregistrer(() => api(`/marketplace/demandes-client/retours/${fenetre.retour.id}/decision`, { methode: 'POST', corps: { decision: 'autorise', motif, responsable: String(donnees.get('responsable') ?? 'vendeur'), fraisRetourFcfa: 0 } }), 'Retour autorisé. Le client est prévenu et peut expédier le colis.')
+      case 'refuse':
+        return enregistrer(() => api(`/marketplace/demandes-client/retours/${fenetre.retour.id}/decision`, { methode: 'POST', corps: { decision: 'refuse', motif, responsable: 'client', fraisRetourFcfa: 0 } }), 'Retour refusé. Le client peut contester auprès de KatiHub.')
+      case 'reception':
+        return enregistrer(() => api(`/marketplace/demandes-client/retours/${fenetre.retour.id}/reception`, { methode: 'POST' }), 'Réception enregistrée. KatiHub peut procéder au remboursement.')
+      case 'contestation':
+        return enregistrer(() => api(`/marketplace/demandes-client/retours/${fenetre.retour.id}/contestation`, { methode: 'POST', corps: { motif } }), 'Contestation transmise à KatiHub pour arbitrage.')
+      case 'pieces':
+        return envoyerPieces(fenetre.dispute, fenetre.messageId, fenetre.verification.acceptees)
+    }
   }
-  function decide(dispute: ShopDispute, decision: 'autorise' | 'refuse') {
-    if (!dispute.retour) return
-    const motif = window.prompt(decision === 'autorise' ? "Motif de l'autorisation" : 'Motif du refus')?.trim()
-    if (!motif) return
-    void run(dispute.id, () => api(`/marketplace/demandes-client/retours/${dispute.retour!.id}/decision`, { methode: 'POST', corps: { decision, motif, responsable: decision === 'autorise' ? 'vendeur' : 'client', fraisRetourFcfa: 0 } }), `Retour ${decision}.`)
-  }
-  function contest(dispute: ShopDispute) {
-    if (!dispute.retour) return
-    const motif = window.prompt("Motif de contestation de l'autorisation (10 caracteres minimum)")?.trim()
-    if (!motif) return
-    void run(dispute.id, () => api(`/marketplace/demandes-client/retours/${dispute.retour!.id}/contestation`, { methode: 'POST', corps: { motif } }), 'Contestation transmise a KATIHUB.')
-  }
-  function receive(dispute: ShopDispute) {
-    if (!dispute.retour || !window.confirm('Confirmer la reception physique du colis retour ?')) return
-    void run(dispute.id, () => api(`/marketplace/demandes-client/retours/${dispute.retour!.id}/reception`, { methode: 'POST' }), 'Reception enregistree. KATIHUB peut proceder au remboursement.')
-  }
-  async function attach(dispute: ShopDispute, files: FileList | null) {
-    const ownMessage = dispute.messages.findLast((item) => item.auteurType === 'vendeur')
-    if (!ownMessage || !files?.length) { setMessage("Envoyez d'abord une reponse vendeur avant d'ajouter une piece."); return }
-    await run(dispute.id, async () => {
-      for (const file of Array.from(files).slice(0, 5)) {
-        const body = new FormData(); body.append('fichier', file)
-        await api(`/marketplace/demandes-client/${dispute.id}/messages/${ownMessage.id}/pieces`, { methode: 'POST', corps: body })
+
+  async function envoyerPieces(dispute: ShopDispute, messageId: string, fichiers: File[]) {
+    if (!fichiers.length) throw new Error('Aucun fichier valide à joindre.')
+    let envoyes = 0
+    try {
+      for (const fichier of fichiers) {
+        const corps = new FormData(); corps.append('fichier', fichier)
+        await api(`/marketplace/demandes-client/${dispute.id}/messages/${messageId}/pieces`, { methode: 'POST', corps })
+        envoyes += 1
       }
-    }, 'Justificatif ajoute au dossier.')
+    } catch (cause) {
+      if (envoyes) await onRefresh()
+      const raison = errorText(cause)
+      throw new Error(envoyes ? `${envoyes} fichier(s) joint(s), puis échec : ${raison}` : raison)
+    }
+    setFenetre(null)
+    setMessage(`${envoyes} justificatif(s) ajouté(s) au dossier.`)
+    await onRefresh()
   }
-  return <div className={styles.detailStack}><section className={styles.detailIntro}><span>SERVICE APRES-VENTE</span><h2>Traiter chaque dossier jusqu&apos;a sa resolution</h2><p>Repondez au client, motivez chaque decision et confirmez seulement les colis physiquement recus. KATIHUB arbitre les contestations et execute le remboursement.</p></section>
-    {message ? <p className={styles.feedback} role="status">{message}</p> : null}
-    <section className={styles.featureList}><header><h2>Dossiers de la boutique</h2><span>{disputes.length} dossier(s)</span></header>{disputes.length ? <ul>{disputes.map(dispute => <li key={dispute.id} className={styles.disputeRow}><div><strong>{dispute.reference} · {dispute.objet}</strong><small>Commande {dispute.commande.reference} · {new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(dispute.modifieLe))}</small><p>Statut : {dispute.statut.replaceAll('_', ' ')}{dispute.retour ? ` · retour ${dispute.retour.statut.replaceAll('_', ' ')}` : ''}</p>{dispute.retour?.motifClient ? <em>Motif client : {dispute.retour.motifClient}</em> : null}{dispute.messages.slice(-2).map(item => <blockquote key={item.id}><b>{item.auteurType}</b> · {item.contenu}{item.pieces.map(piece => <button key={piece.id} type="button" onClick={() => void telechargerApi(`/marketplace/demandes-client/${dispute.id}/pieces/${piece.id}`, piece.nomCapture)}>{piece.nomCapture}</button>)}</blockquote>)}<div className={styles.disputeActions}>{dispute.capacites.repondre ? <button disabled={pending === dispute.id} onClick={() => reply(dispute)}>Repondre</button> : null}{dispute.capacites.decider ? <><button disabled={pending === dispute.id} onClick={() => decide(dispute, 'autorise')}>Autoriser</button><button disabled={pending === dispute.id} onClick={() => decide(dispute, 'refuse')}>Refuser</button></> : null}{dispute.capacites.recevoir ? <button disabled={pending === dispute.id} onClick={() => receive(dispute)}>Confirmer la reception</button> : null}{dispute.capacites.contester ? <button disabled={pending === dispute.id} onClick={() => contest(dispute)}>Contester</button> : null}<label>Ajouter une preuve<input className={styles.srOnly} type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" disabled={pending === dispute.id} onChange={event => { void attach(dispute, event.currentTarget.files); event.currentTarget.value = '' }} /></label></div></div><b data-status={dispute.statut}>{dispute.statut.replaceAll('_', ' ')}</b></li>)}</ul> : <p className={styles.blank}>Aucun litige ouvert pour cette boutique.</p>}</section></div>
+
+  function choisirPieces(dispute: ShopDispute, fichiers: FileList | null) {
+    if (!fichiers?.length) return
+    const propre = dispute.messages.findLast((item) => item.auteurType === 'vendeur')
+    if (!propre) { setMessage('Répondez d’abord au client : un justificatif accompagne toujours votre message.'); return }
+    ouvrir({ type: 'pieces', dispute, messageId: propre.id, verification: verifierPieces(Array.from(fichiers)) })
+  }
+
+  const decision = fenetre?.type === 'autorise' || fenetre?.type === 'refuse' ? fenetre : null
+
+  return <div className={styles.detailStack}><section className={styles.detailIntro}><span>SERVICE APRÈS-VENTE</span><h2>Traiter chaque dossier jusqu’à sa résolution</h2><p>Répondez au client, motivez chaque décision et confirmez seulement les colis physiquement reçus. KatiHub arbitre les contestations et exécute le remboursement.</p></section>
+    <p className={message ? styles.feedback : styles.srOnly} role="status">{message}</p>
+    <section className={styles.featureList}><header><h2>Dossiers de la boutique</h2><span>{disputes.length} dossier(s)</span></header>{disputes.length ? <ul>{disputes.map(dispute => <li key={dispute.id} className={styles.disputeRow}><div>
+      <strong>{dispute.reference} · {dispute.objet}</strong>
+      <small>Commande {dispute.commande.reference} · mis à jour le {new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(dispute.modifieLe))}</small>
+      <p>Statut : {dispute.statut.replaceAll('_', ' ')}{dispute.retour ? ` · retour ${dispute.retour.statut.replaceAll('_', ' ')}` : ''}</p>
+      {dispute.retour?.motifClient ? <em>Motif du client : {dispute.retour.motifClient}</em> : null}
+      {dispute.retour?.referenceRetour ? <small>Colis retour : {dispute.retour.referenceRetour}</small> : null}
+      <ol aria-label={`Échanges du dossier ${dispute.reference}`}>{dispute.messages.map(item => <li key={item.id}><blockquote><b>{AUTEURS_LITIGE[item.auteurType] ?? 'Intervenant'}</b> · <time dateTime={item.creeLe}>{new Intl.DateTimeFormat('fr-CM', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.creeLe))}</time><br />{item.contenu}{item.pieces.map(piece => <button key={piece.id} type="button" onClick={() => void telechargerApi(`/marketplace/demandes-client/${dispute.id}/pieces/${piece.id}`, piece.nomCapture)}>{piece.nomCapture}</button>)}</blockquote></li>)}</ol>
+      <div className={styles.disputeActions}>
+        {dispute.capacites.repondre ? <button onClick={() => ouvrir({ type: 'reponse', dispute })}>Répondre</button> : null}
+        {dispute.capacites.decider && dispute.retour ? <><button onClick={() => ouvrir({ type: 'autorise', dispute, retour: dispute.retour! })}>Autoriser le retour</button><button onClick={() => ouvrir({ type: 'refuse', dispute, retour: dispute.retour! })}>Refuser le retour</button></> : null}
+        {dispute.capacites.recevoir && dispute.retour ? <button onClick={() => ouvrir({ type: 'reception', dispute, retour: dispute.retour! })}>Confirmer la réception</button> : null}
+        {dispute.capacites.contester && dispute.retour ? <button onClick={() => ouvrir({ type: 'contestation', dispute, retour: dispute.retour! })}>Contester</button> : null}
+        <label>Ajouter une preuve<input className={styles.srOnly} type="file" multiple accept={TYPES_PIECES.join(',')} onChange={event => { choisirPieces(dispute, event.currentTarget.files); event.currentTarget.value = '' }} /></label>
+      </div></div><b data-status={dispute.statut}>{dispute.statut.replaceAll('_', ' ')}</b></li>)}</ul> : <p className={styles.blank}>Aucun litige ouvert pour cette boutique.</p>}</section>
+
+    <FenetreAction ouverte={fenetre?.type === 'reponse'} titre="Répondre au client" libelleValider="Envoyer la réponse" onFermer={() => setFenetre(null)} onValider={valider}>
+      <ChampTexte nom="contenu" libelle="Votre réponse" aide="Le client la reçoit par courriel et la lit dans le suivi de sa commande." multiligne required minLength={2} maxLength={5000} />
+    </FenetreAction>
+
+    <FenetreAction
+      ouverte={Boolean(decision)}
+      titre={decision?.type === 'autorise' ? 'Autoriser le retour' : 'Refuser le retour'}
+      description={decision?.type === 'autorise' ? 'Le client pourra expédier le colis. Le remboursement suivra votre confirmation de réception.' : 'Le client sera prévenu et pourra contester votre refus auprès de KatiHub.'}
+      libelleValider={decision?.type === 'autorise' ? 'Autoriser' : 'Refuser'}
+      irreversible="Je confirme cette décision : elle ne pourra plus être modifiée depuis cet espace, seulement contestée."
+      onFermer={() => setFenetre(null)}
+      onValider={valider}
+    >
+      {decision?.type === 'autorise' ? <fieldset className="grid gap-2"><legend className="text-small font-semibold">Origine du problème</legend>{RESPONSABLES_RETOUR.map(([valeur, texte], index) => <label key={valeur} className="flex min-h-11 items-center gap-3 rounded-control border border-rule px-3 text-small"><input type="radio" name="responsable" value={valeur} defaultChecked={index === 0} required className="size-5" />{texte}</label>)}</fieldset> : null}
+      <ChampTexte nom="motif" libelle="Motif communiqué au client" aide="Il figure au dossier et sera lu en cas d’arbitrage." multiligne required minLength={5} maxLength={1000} />
+    </FenetreAction>
+
+    <FenetreAction
+      ouverte={fenetre?.type === 'reception'}
+      titre="Confirmer la réception du colis retour"
+      description={fenetre?.type === 'reception' && fenetre.retour.referenceRetour ? `Colis ${fenetre.retour.referenceRetour}.` : undefined}
+      libelleValider="Confirmer la réception"
+      irreversible="J’ai le colis retour physiquement en main. Cette confirmation déclenche le remboursement du client et ne peut pas être annulée."
+      onFermer={() => setFenetre(null)}
+      onValider={valider}
+    />
+
+    <FenetreAction
+      ouverte={fenetre?.type === 'contestation'}
+      titre="Contester l’autorisation du retour"
+      description="KatiHub examine les échanges et les preuves, puis rend une décision qui s’impose aux deux parties."
+      libelleValider="Envoyer la contestation"
+      irreversible="Je comprends qu’une seule contestation est possible sur ce retour."
+      onFermer={() => setFenetre(null)}
+      onValider={valider}
+    >
+      <ChampTexte nom="motif" libelle="Pourquoi contestez-vous ?" aide="10 caractères minimum." multiligne required minLength={10} maxLength={1000} />
+    </FenetreAction>
+
+    <FenetreAction
+      ouverte={fenetre?.type === 'pieces'}
+      titre="Ajouter des justificatifs"
+      description="Vérifiez les fichiers : une fois ajoutés, ils restent au dossier et ne peuvent pas être retirés."
+      libelleValider={fenetre?.type === 'pieces' ? `Ajouter ${fenetre.verification.acceptees.length} fichier(s)` : 'Ajouter'}
+      onFermer={() => setFenetre(null)}
+      onValider={valider}
+    >
+      {fenetre?.type === 'pieces' ? <ApercuPieces verification={fenetre.verification} /> : null}
+    </FenetreAction>
+  </div>
 }
 
 function ReviewsPanel({ listing, onRefresh }: { listing: Listing<ShopReview>; onRefresh: () => Promise<void> }) {

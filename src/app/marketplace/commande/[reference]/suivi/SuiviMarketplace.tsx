@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
+import { ApercuPieces, PIECES_MAX_PAR_MESSAGE, TYPES_PIECES, taillePiece, verifierPieces, type VerificationPieces } from '@/components/marketplace/ApercuPieces'
+import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
 import { ErreurApi, api, telechargerApi } from '@/lib/api'
 import { formatPrice } from '@/lib/format'
 
@@ -13,7 +15,8 @@ type SousCommande = { id: string; reference: string; statut: string; boutique: {
 type Commande = { id: string; reference: string; statut: string; totalFermeTtc: number; acompteDu: number; acompteRecu: number; resteAPayer: number; sousCommandes: SousCommande[] }
 type Retour = { id: string; statut: string; quantite: number; montantRembourseFcfa: number; referenceRetour: string | null; motifDecision?: string | null; motifArbitrage?: string | null; motifContestation?: string | null }
 type Piece = { id: string; nomCapture: string; typeMime: string; tailleOctets: number; empreinteSha256: string }
-type Demande = { id: string; reference: string; statut: string; objet: string; modifieLe: string; boutique: { nom: string }; ligne: Ligne | null; messages: Array<{ id: string; auteurType: string; contenu: string; creeLe: string; pieces: Piece[] }>; retour: Retour | null; capacites: { repondre: boolean; expedier: boolean; contester: boolean } }
+type Message = { id: string; auteurType: string; contenu: string; creeLe: string; pieces: Piece[] }
+type Demande = { id: string; reference: string; statut: string; objet: string; modifieLe: string; boutique: { nom: string }; ligne: Ligne | null; messages: Message[]; retour: Retour | null; capacites: { repondre: boolean; expedier: boolean; contester: boolean } }
 
 const CATEGORIES = [
   ['produit_non_conforme', 'Produit non conforme'],
@@ -24,13 +27,22 @@ const CATEGORIES = [
   ['autre', 'Autre demande'],
 ] as const
 
+const AUTEURS: Record<string, string> = { client: 'Vous', vendeur: 'La boutique', equipe: 'KatiHub' }
+
+type Fenetre =
+  | { type: 'ouverture'; sousCommande: SousCommande; ligne: Ligne; expedition?: Expedition }
+  | { type: 'message' | 'retour'; demande: Demande }
+  | { type: 'expedition' | 'contestation'; demande: Demande; retour: Retour }
+  | { type: 'pieces'; demande: Demande; message: Message; verification: VerificationPieces }
+  | null
+
 export function SuiviMarketplace({ reference }: { reference: string }) {
   const [commande, setCommande] = useState<Commande | null>(null)
   const [demandes, setDemandes] = useState<Demande[]>([])
   const [erreur, setErreur] = useState('')
+  const [succes, setSucces] = useState('')
   const [chargement, setChargement] = useState(true)
-  const [envoi, setEnvoi] = useState(false)
-  const [selection, setSelection] = useState<{ sousCommande: SousCommande; ligne: Ligne; expedition?: Expedition } | null>(null)
+  const [fenetre, setFenetre] = useState<Fenetre>(null)
 
   const charger = useCallback(async (signal?: AbortSignal) => {
     setErreur('')
@@ -71,107 +83,88 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
     return () => controleur.abort()
   }, [reference])
 
-  async function ouvrirDemande(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!commande || !selection || envoi) return
-    const donnees = new FormData(event.currentTarget)
-    setEnvoi(true)
+  function ouvrir(prochaine: Fenetre) {
     setErreur('')
-    try {
-      await api('/marketplace/demandes-client', {
-        methode: 'POST',
-        corps: {
-          commandeId: commande.id,
-          sousCommandeId: selection.sousCommande.id,
-          ligneId: selection.ligne.id,
-          ...(selection.expedition ? { expeditionId: selection.expedition.id } : {}),
-          categorie: donnees.get('categorie'),
-          objet: donnees.get('objet'),
-          description: donnees.get('description'),
-        },
-      })
-      setSelection(null)
-      await charger()
-    } catch (cause) {
-      setErreur(cause instanceof ErreurApi ? cause.message : 'La demande n’a pas pu être créée.')
-    } finally {
-      setEnvoi(false)
-    }
+    setSucces('')
+    setFenetre(prochaine)
   }
 
-  async function demanderRetour(demandeId: string, ligne: Ligne) {
-    const motif = window.prompt('Motif du retour (10 caractères minimum)')?.trim()
-    if (!motif) return
-    setEnvoi(true)
-    setErreur('')
-    try {
-      await api(`/marketplace/demandes-client/${demandeId}/retour`, {
-        methode: 'POST',
-        corps: { ligneId: ligne.id, quantite: 1, motif },
-      })
-      await charger()
-    } catch (cause) {
-      setErreur(cause instanceof ErreurApi ? cause.message : 'Le retour n’a pas pu être demandé.')
-    } finally {
-      setEnvoi(false)
-    }
+  /** Enregistre, recharge et dit ce qui a ete fait. Une erreur remonte a la fenetre, qui l'affiche. */
+  async function enregistrer(appel: () => Promise<unknown>, messageSucces: string) {
+    await appel()
+    setFenetre(null)
+    setSucces(messageSucces)
+    await charger()
   }
 
-  async function repondre(demandeId: string) {
-    const contenu = window.prompt('Votre message (2 caracteres minimum)')?.trim()
-    if (!contenu) return
-    setEnvoi(true); setErreur('')
-    try {
-      await api(`/marketplace/demandes-client/${demandeId}/messages`, { methode: 'POST', corps: { contenu } })
-      await charger()
-    } catch (cause) { setErreur(cause instanceof Error ? cause.message : "Le message n'a pas pu etre envoye.") }
-    finally { setEnvoi(false) }
+  function ouvrirDemande(donnees: FormData) {
+    if (!commande || fenetre?.type !== 'ouverture') return Promise.resolve()
+    const { sousCommande, ligne, expedition } = fenetre
+    return enregistrer(() => api('/marketplace/demandes-client', {
+      methode: 'POST',
+      corps: {
+        commandeId: commande.id,
+        sousCommandeId: sousCommande.id,
+        ligneId: ligne.id,
+        ...(expedition ? { expeditionId: expedition.id } : {}),
+        categorie: donnees.get('categorie'),
+        objet: String(donnees.get('objet') ?? '').trim(),
+        description: String(donnees.get('description') ?? '').trim(),
+      },
+    }), 'Votre demande est ouverte. La boutique a été prévenue.')
   }
 
-  async function expedierRetour(retourId: string) {
-    const referenceRetour = window.prompt('Reference de suivi du colis retour')?.trim()
-    if (!referenceRetour) return
-    setEnvoi(true); setErreur('')
-    try {
-      await api(`/marketplace/demandes-client/retours/${retourId}/expedition`, { methode: 'POST', corps: { referenceRetour } })
-      await charger()
-    } catch (cause) { setErreur(cause instanceof Error ? cause.message : "L'expedition n'a pas pu etre enregistree.") }
-    finally { setEnvoi(false) }
+  function demanderRetour(demande: Demande, donnees: FormData) {
+    const ligne = demande.ligne
+    if (!ligne) return Promise.resolve()
+    return enregistrer(() => api(`/marketplace/demandes-client/${demande.id}/retour`, {
+      methode: 'POST',
+      corps: { ligneId: ligne.id, quantite: Number(donnees.get('quantite') ?? 1), motif: String(donnees.get('motif') ?? '').trim() },
+    }), 'Votre demande de retour est envoyée. La boutique va l’examiner.')
   }
 
-  async function contesterRetour(retourId: string) {
-    const motif = window.prompt('Expliquez pourquoi vous contestez ce refus')?.trim()
-    if (!motif) return
-    setEnvoi(true); setErreur('')
-    try {
-      await api(`/marketplace/demandes-client/retours/${retourId}/contestation`, { methode: 'POST', corps: { motif } })
-      await charger()
-    } catch (cause) { setErreur(cause instanceof Error ? cause.message : "La contestation n'a pas pu etre ouverte.") }
-    finally { setEnvoi(false) }
+  function repondre(demande: Demande, donnees: FormData) {
+    return enregistrer(() => api(`/marketplace/demandes-client/${demande.id}/messages`, {
+      methode: 'POST', corps: { contenu: String(donnees.get('contenu') ?? '').trim() },
+    }), 'Message envoyé.')
   }
 
-  async function joindrePieces(demande: Demande, fichiers: FileList | null) {
+  function expedierRetour(retour: Retour, donnees: FormData) {
+    return enregistrer(() => api(`/marketplace/demandes-client/retours/${retour.id}/expedition`, {
+      methode: 'POST', corps: { referenceRetour: String(donnees.get('referenceRetour') ?? '').trim() },
+    }), 'Expédition du retour enregistrée. La boutique confirmera sa réception.')
+  }
+
+  function contesterRetour(retour: Retour, donnees: FormData) {
+    return enregistrer(() => api(`/marketplace/demandes-client/retours/${retour.id}/contestation`, {
+      methode: 'POST', corps: { motif: String(donnees.get('motif') ?? '').trim() },
+    }), 'Votre contestation est transmise à KatiHub pour arbitrage.')
+  }
+
+  function choisirPieces(demande: Demande, fichiers: FileList | null) {
     const message = demande.messages.findLast((element) => element.auteurType === 'client')
     if (!message || !fichiers?.length) return
-    if (fichiers.length > 5) {
-      setErreur('Vous pouvez joindre au maximum 5 fichiers a la fois.')
-      return
-    }
-    setEnvoi(true)
-    setErreur('')
+    ouvrir({ type: 'pieces', demande, message, verification: verifierPieces(Array.from(fichiers)) })
+  }
+
+  async function envoyerPieces(demande: Demande, message: Message, fichiers: File[]) {
+    let envoyes = 0
     try {
-      for (const fichier of Array.from(fichiers)) {
-        if (fichier.size > 10 * 1024 * 1024) throw new Error(`${fichier.name} depasse 10 Mio.`)
+      for (const fichier of fichiers) {
         const corps = new FormData()
         corps.append('fichier', fichier)
         await api(`/marketplace/demandes-client/${demande.id}/messages/${message.id}/pieces`, { methode: 'POST', corps })
+        envoyes += 1
       }
-      await charger()
     } catch (cause) {
-      setErreur(cause instanceof Error ? cause.message : "La piece n'a pas pu etre jointe.")
-    } finally {
-      setEnvoi(false)
+      // Les pieces deja deposees le restent : on le dit, pour qu'aucune ne soit renvoyee en double.
+      if (envoyes) await charger()
+      const raison = cause instanceof Error ? cause.message : 'La pièce n’a pas pu être jointe.'
+      throw new Error(envoyes ? `${envoyes} fichier(s) joint(s), puis échec : ${raison}` : raison)
     }
+    setFenetre(null)
+    setSucces(`${envoyes} pièce(s) jointe(s) au dossier.`)
+    await charger()
   }
 
   async function telechargerPiece(demandeId: string, piece: Piece) {
@@ -179,7 +172,7 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
     try {
       await telechargerApi(`/marketplace/demandes-client/${demandeId}/pieces/${piece.id}`, piece.nomCapture)
     } catch (cause) {
-      setErreur(cause instanceof Error ? cause.message : "La piece n'a pas pu etre telechargee.")
+      setErreur(cause instanceof Error ? cause.message : 'La pièce n’a pas pu être téléchargée.')
     }
   }
 
@@ -194,6 +187,7 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
       </header>
 
       {erreur ? <p className="mt-5 rounded-well border border-warn p-3 text-small text-warn" role="alert">{erreur}</p> : null}
+      <p role="status" className={succes ? 'mt-5 rounded-well border border-primary p-3 text-small text-primary' : 'sr-only'}>{succes}</p>
 
       <section className="mt-8 grid gap-5">
         {commande.sousCommandes.map((groupe) => (
@@ -205,7 +199,7 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
                   <li key={ligne.id} className="py-3">
                     <div className="flex justify-between gap-4"><span>{ligne.offreTitreCapture} × {ligne.quantite}</span><strong className="t-num">{formatPrice(ligne.totalNetFcfa)}</strong></div>
                     <p className="mt-1 text-micro text-ink-3">Livré : {ligne.quantiteLivree} · Retourné : {ligne.quantiteRetournee} · Remboursé : {ligne.quantiteRemboursee}</p>
-                    <button type="button" className="mt-2 text-micro font-semibold text-secondary underline" onClick={() => setSelection({ sousCommande: groupe, ligne, expedition: groupe.expeditions[0] })}>Signaler un problème</button>
+                    <button type="button" className="mt-1 min-h-11 text-small font-semibold text-secondary underline" onClick={() => ouvrir({ type: 'ouverture', sousCommande: groupe, ligne, expedition: groupe.expeditions[0] })}>Signaler un problème</button>
                   </li>
                 ))}
               </ul>
@@ -222,38 +216,129 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
       <section className="mt-10">
         <h2 className="text-h3 font-semibold">Mes demandes et retours</h2>
         {demandes.length === 0 ? <p className="mt-3 text-small text-ink-3">Aucun dossier ouvert sur cette commande.</p> : (
-          <div className="mt-4 grid gap-3">{demandes.map((demande) => (
+          <div className="mt-4 grid gap-4">{demandes.map((demande) => (
             <article key={demande.id} className="rounded-well border border-rule p-4">
-              <div className="flex flex-wrap justify-between gap-2"><strong>{demande.objet}</strong><span className="text-micro text-primary">{libelle(demande.statut)}</span></div>
+              <div className="flex flex-wrap justify-between gap-2"><strong>{demande.objet}</strong><span className="text-micro font-semibold text-primary">{libelle(demande.statut)}</span></div>
               <p className="mt-1 text-micro text-ink-3">{demande.reference} · {demande.boutique.nom}</p>
-              {demande.messages.map(message => (
-                <div key={message.id} className="mt-3 rounded-control bg-space p-3 text-small">
-                  <p><b>{message.auteurType === 'client' ? 'Vous' : 'Intervenant'} :</b> {message.contenu}</p>
-                  {message.pieces.length ? <ul className="mt-2 flex flex-wrap gap-2">{message.pieces.map(piece => (
-                    <li key={piece.id}><button type="button" className="text-micro font-semibold text-secondary underline" onClick={() => void telechargerPiece(demande.id, piece)}>{piece.nomCapture} · {Math.ceil(piece.tailleOctets / 1024)} Ko</button></li>
-                  ))}</ul> : null}
-                </div>
-              ))}
-              <div className="mt-3 flex flex-wrap gap-2">
-              {demande.capacites.repondre ? <button type="button" disabled={envoi} onClick={() => void repondre(demande.id)} className="rounded-control bg-ink px-4 py-2 text-small font-semibold text-white">RÃ©pondre</button> : null}
-              <label className="inline-flex cursor-pointer items-center rounded-control border border-rule px-4 py-2 text-small font-semibold">
-                {envoi ? 'Envoi…' : 'Joindre des preuves'}
-                <input type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" disabled={envoi} onChange={event => { void joindrePieces(demande, event.currentTarget.files); event.currentTarget.value = '' }} />
-              </label>
-              {demande.retour && demande.capacites.expedier ? <button type="button" disabled={envoi} onClick={() => void expedierRetour(demande.retour!.id)} className="rounded-control bg-secondary px-4 py-2 text-small font-semibold">DÃ©clarer le colis expÃ©diÃ©</button> : null}
-              {demande.retour && demande.capacites.contester ? <button type="button" disabled={envoi} onClick={() => void contesterRetour(demande.retour!.id)} className="rounded-control border border-warn px-4 py-2 text-small font-semibold text-warn">Contester la dÃ©cision</button> : null}
+
+              <ol className="mt-4 grid gap-3" aria-label={`Échanges du dossier ${demande.reference}`}>
+                {demande.messages.map((message) => (
+                  <li key={message.id} className={`rounded-control p-3 text-small ${message.auteurType === 'client' ? 'bg-space' : 'border border-rule'}`}>
+                    <p className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><b>{AUTEURS[message.auteurType] ?? 'Intervenant'}</b><time dateTime={message.creeLe} className="text-micro text-ink-3">{date(message.creeLe)}</time></p>
+                    <p className="mt-1 whitespace-pre-line break-words">{message.contenu}</p>
+                    {message.pieces.length ? <ul className="mt-2 flex flex-wrap gap-2">{message.pieces.map((piece) => (
+                      <li key={piece.id}><button type="button" className="min-h-11 text-small font-semibold text-secondary underline" onClick={() => void telechargerPiece(demande.id, piece)}>{piece.nomCapture} · {taillePiece(piece.tailleOctets)}</button></li>
+                    ))}</ul> : null}
+                  </li>
+                ))}
+              </ol>
+
+              {demande.retour ? <RetourResume retour={demande.retour} /> : null}
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {demande.capacites.repondre ? <button type="button" onClick={() => ouvrir({ type: 'message', demande })} className="min-h-11 rounded-control bg-ink px-4 text-small font-semibold text-white">Répondre</button> : null}
+                <label className="inline-flex min-h-11 cursor-pointer items-center rounded-control border border-rule px-4 text-small font-semibold focus-within:outline focus-within:outline-2">
+                  Joindre des preuves
+                  <input type="file" multiple accept={TYPES_PIECES.join(',')} className="sr-only" onChange={(event) => { choisirPieces(demande, event.currentTarget.files); event.currentTarget.value = '' }} />
+                </label>
+                {demande.retour && demande.capacites.expedier ? <button type="button" onClick={() => ouvrir({ type: 'expedition', demande, retour: demande.retour! })} className="min-h-11 rounded-control bg-secondary px-4 text-small font-semibold">Déclarer le colis expédié</button> : null}
+                {demande.retour && demande.capacites.contester ? <button type="button" onClick={() => ouvrir({ type: 'contestation', demande, retour: demande.retour! })} className="min-h-11 rounded-control border border-warn px-4 text-small font-semibold text-warn">Contester la décision</button> : null}
+                {!demande.retour && demande.ligne && demande.ligne.quantiteLivree > demande.ligne.quantiteRetournee ? <button type="button" onClick={() => ouvrir({ type: 'retour', demande })} className="min-h-11 rounded-control border border-rule px-4 text-small font-semibold">Demander un retour</button> : null}
               </div>
-              <p className="mt-1 text-micro text-ink-3">PDF, JPEG, PNG ou WebP · 10 Mio maximum · 5 fichiers par message.</p>
-              {demande.retour ? <p className="mt-3 rounded-control bg-space p-3 text-small">Retour : {libelle(demande.retour.statut)}{demande.retour.montantRembourseFcfa ? ` · ${formatPrice(demande.retour.montantRembourseFcfa)}` : ''}</p> : demande.ligne && demande.ligne.quantiteLivree > demande.ligne.quantiteRetournee ? <button type="button" disabled={envoi} onClick={() => demanderRetour(demande.id, demande.ligne!)} className="mt-3 rounded-control border border-rule px-4 py-2 text-small font-semibold">Demander un retour</button> : null}
+              <p className="mt-2 text-micro text-ink-3">PDF, JPEG, PNG ou WebP · 10 Mio maximum · {PIECES_MAX_PAR_MESSAGE} fichiers par envoi.</p>
             </article>
           ))}</div>
         )}
       </section>
 
-      {selection ? <div className="fixed inset-0 z-50 grid place-items-center bg-ink/55 p-4" role="dialog" aria-modal="true" aria-label="Ouvrir une demande"><form onSubmit={ouvrirDemande} className="w-full max-w-xl rounded-well bg-surface p-6 shadow-xl"><div className="flex justify-between gap-4"><div><p className="t-label text-ink-3">Nouvelle demande</p><h2 className="mt-1 text-h4 font-semibold">{selection.ligne.offreTitreCapture}</h2></div><button type="button" aria-label="Fermer" onClick={() => setSelection(null)} className="text-h4">×</button></div><label className="mt-5 block text-small font-semibold">Catégorie<select name="categorie" required className="mt-1 w-full rounded-control border border-rule bg-surface p-3 font-normal">{CATEGORIES.map(([valeur, texte]) => <option key={valeur} value={valeur}>{texte}</option>)}</select></label><label className="mt-4 block text-small font-semibold">Objet<input name="objet" minLength={5} maxLength={180} required className="mt-1 w-full rounded-control border border-rule p-3 font-normal" /></label><label className="mt-4 block text-small font-semibold">Description<textarea name="description" minLength={10} maxLength={5000} required rows={5} className="mt-1 w-full rounded-control border border-rule p-3 font-normal" /></label><button disabled={envoi} className="mt-5 min-h-11 w-full rounded-control bg-secondary px-5 font-bold text-on-surface">{envoi ? 'Envoi…' : 'Ouvrir la demande'}</button></form></div> : null}
+      <FenetreAction
+        ouverte={fenetre?.type === 'ouverture'}
+        titre={fenetre?.type === 'ouverture' ? `Signaler un problème : ${fenetre.ligne.offreTitreCapture}` : ''}
+        description="La boutique est prévenue et dispose d’un délai pour répondre. Vous pourrez ensuite joindre des photos."
+        libelleValider="Ouvrir la demande"
+        onFermer={() => setFenetre(null)}
+        onValider={ouvrirDemande}
+      >
+        <label className="block text-small font-semibold">Catégorie<select name="categorie" required className="mt-1 w-full rounded-control border border-rule bg-surface p-3 text-small font-normal">{CATEGORIES.map(([valeur, texte]) => <option key={valeur} value={valeur}>{texte}</option>)}</select></label>
+        <ChampTexte nom="objet" libelle="Objet" aide="5 à 180 caractères." required minLength={5} maxLength={180} />
+        <ChampTexte nom="description" libelle="Description" aide="Ce que vous avez constaté, et quand. 10 caractères minimum." multiligne required minLength={10} maxLength={5000} />
+      </FenetreAction>
+
+      <FenetreAction
+        ouverte={fenetre?.type === 'message'}
+        titre="Répondre"
+        libelleValider="Envoyer le message"
+        onFermer={() => setFenetre(null)}
+        onValider={(donnees) => (fenetre?.type === 'message' ? repondre(fenetre.demande, donnees) : Promise.resolve())}
+      >
+        <ChampTexte nom="contenu" libelle="Votre message" multiligne required minLength={2} maxLength={5000} />
+      </FenetreAction>
+
+      <FenetreAction
+        ouverte={fenetre?.type === 'retour'}
+        titre="Demander un retour"
+        description="La boutique accepte ou refuse le retour. S’il est accepté, vous indiquerez ensuite la référence d’expédition du colis."
+        libelleValider="Demander le retour"
+        onFermer={() => setFenetre(null)}
+        onValider={(donnees) => (fenetre?.type === 'retour' ? demanderRetour(fenetre.demande, donnees) : Promise.resolve())}
+      >
+        {fenetre?.type === 'retour' && fenetre.demande.ligne ? (
+          <ChampTexte nom="quantite" libelle="Quantité à retourner" inputMode="numeric" required pattern="[1-9][0-9]*" defaultValue="1"
+            aide={`Au plus ${fenetre.demande.ligne.quantiteLivree - fenetre.demande.ligne.quantiteRetournee} pour ${fenetre.demande.ligne.offreTitreCapture}.`} />
+        ) : null}
+        <ChampTexte nom="motif" libelle="Motif du retour" aide="10 caractères minimum." multiligne required minLength={10} maxLength={1000} />
+      </FenetreAction>
+
+      <FenetreAction
+        ouverte={fenetre?.type === 'expedition'}
+        titre="Déclarer le colis expédié"
+        description="La référence permet à la boutique de suivre le colis. Elle ne pourra plus être modifiée."
+        libelleValider="Enregistrer l’expédition"
+        onFermer={() => setFenetre(null)}
+        onValider={(donnees) => (fenetre?.type === 'expedition' ? expedierRetour(fenetre.retour, donnees) : Promise.resolve())}
+      >
+        <ChampTexte nom="referenceRetour" libelle="Référence de suivi du colis retour" required minLength={3} maxLength={120} />
+      </FenetreAction>
+
+      <FenetreAction
+        ouverte={fenetre?.type === 'contestation'}
+        titre="Contester la décision"
+        description="KatiHub examine les échanges et les preuves du dossier, puis rend une décision qui s’impose aux deux parties."
+        libelleValider="Envoyer la contestation"
+        irreversible="Je comprends qu’une contestation ne peut être ouverte qu’une seule fois sur ce retour, et que la décision de KatiHub sera définitive."
+        onFermer={() => setFenetre(null)}
+        onValider={(donnees) => (fenetre?.type === 'contestation' ? contesterRetour(fenetre.retour, donnees) : Promise.resolve())}
+      >
+        <ChampTexte nom="motif" libelle="Pourquoi contestez-vous ?" aide="10 caractères minimum." multiligne required minLength={10} maxLength={1000} />
+      </FenetreAction>
+
+      <FenetreAction
+        ouverte={fenetre?.type === 'pieces'}
+        titre="Joindre des preuves"
+        description="Vérifiez les fichiers : une fois jointes, les pièces restent au dossier et ne peuvent pas être retirées."
+        libelleValider={fenetre?.type === 'pieces' ? `Joindre ${fenetre.verification.acceptees.length} fichier(s)` : 'Joindre'}
+        onFermer={() => setFenetre(null)}
+        onValider={() => (fenetre?.type === 'pieces' && fenetre.verification.acceptees.length
+          ? envoyerPieces(fenetre.demande, fenetre.message, fenetre.verification.acceptees)
+          : Promise.reject(new Error('Aucun fichier valide à joindre.')))}
+      >
+        {fenetre?.type === 'pieces' ? <ApercuPieces verification={fenetre.verification} /> : null}
+      </FenetreAction>
 
       <Link href="/compte/commandes" className="mt-10 inline-flex text-small text-secondary underline">← Toutes mes commandes</Link>
     </main>
+  )
+}
+
+function RetourResume({ retour }: { retour: Retour }) {
+  const motif = retour.motifArbitrage ?? retour.motifDecision
+  return (
+    <div className="mt-4 rounded-control bg-space p-3 text-small">
+      <p><b>Retour :</b> {libelle(retour.statut)}{retour.montantRembourseFcfa ? ` · ${formatPrice(retour.montantRembourseFcfa)} remboursés` : ''}</p>
+      {retour.referenceRetour ? <p className="mt-1 text-micro text-ink-3">Colis retour : {retour.referenceRetour}</p> : null}
+      {motif ? <p className="mt-1 text-micro text-ink-2">{retour.motifArbitrage ? 'Décision de KatiHub' : 'Motif de la boutique'} : {motif}</p> : null}
+      {retour.motifContestation ? <p className="mt-1 text-micro text-ink-2">Votre contestation : {retour.motifContestation}</p> : null}
+    </div>
   )
 }
 
