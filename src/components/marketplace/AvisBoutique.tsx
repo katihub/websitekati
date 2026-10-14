@@ -41,7 +41,7 @@ function Etoiles({ note, taille = 'petite' }: { note: number; taille?: 'petite' 
   </span>
 }
 
-export function AvisBoutique({ slug, nom }: { slug: string; nom: string }) {
+export function AvisBoutique({ slug, nom, cible = 'boutique' }: { slug: string; nom: string; cible?: 'boutique' | 'produit' }) {
   const [liste, setListe] = useState<ListeAvis | null>(null)
   const [page, setPage] = useState(1)
   const [erreur, setErreur] = useState('')
@@ -50,14 +50,14 @@ export function AvisBoutique({ slug, nom }: { slug: string; nom: string }) {
 
   const charger = useCallback(async (prochaine: number) => {
     try {
-      const resultat = await api<ListeAvis>(`/marketplace/reputation/boutiques/${encodeURIComponent(slug)}/avis?page=${prochaine}&taille=${TAILLE}`, { anonyme: true })
+      const resultat = await api<ListeAvis>(`/marketplace/reputation/${cible === 'produit' ? 'produits' : 'boutiques'}/${encodeURIComponent(slug)}/avis?page=${prochaine}&taille=${TAILLE}`, { anonyme: true })
       setListe(actuelle => prochaine > 1 && actuelle ? { ...resultat, avis: [...actuelle.avis, ...resultat.avis] } : resultat)
       setPage(prochaine)
       setErreur('')
     } catch {
       setErreur('Les avis ne peuvent pas être chargés pour le moment.')
     }
-  }, [slug])
+  }, [slug, cible])
 
   const chargerAchats = useCallback(async () => {
     const connecte = apiDisponible && Object.keys(await enteteAutorisation()).length > 0
@@ -71,9 +71,9 @@ export function AvisBoutique({ slug, nom }: { slug: string; nom: string }) {
   }, [slug])
 
   useEffect(() => {
-    const minuterie = window.setTimeout(() => { void charger(1); void chargerAchats() }, 0)
+    const minuterie = window.setTimeout(() => { void charger(1); if (cible === 'boutique') void chargerAchats() }, 0)
     return () => window.clearTimeout(minuterie)
-  }, [charger, chargerAchats])
+  }, [charger, chargerAchats, cible])
 
   async function publie() {
     await Promise.all([charger(1), chargerAchats()])
@@ -88,13 +88,13 @@ export function AvisBoutique({ slug, nom }: { slug: string; nom: string }) {
     <div className={styles.grille}>
       <div className={styles.colonne}>
         <Synthese liste={liste} />
-        <Ecrire slug={slug} nom={nom} session={session} achats={achats} onPublie={publie} />
+        {cible === 'boutique' ? <Ecrire slug={slug} nom={nom} session={session} achats={achats} onPublie={publie} /> : null}
       </div>
 
       <div className={styles.colonne}>
         {erreur ? <p className={styles.alerte} role="alert">{erreur}</p> : null}
         {!liste && !erreur ? <p className={styles.vide} role="status">Chargement des avis…</p> : null}
-        {liste && !liste.avis.length ? <p className={styles.vide}>Aucun avis pour le moment. Les clients qui ont reçu une commande de {nom} pourront donner le leur ici.</p> : null}
+        {liste && !liste.avis.length ? <p className={styles.vide}>{cible === 'produit' ? `Aucun avis sur ${nom} pour le moment. Les clients qui l’ont reçu pourront donner le leur.` : `Aucun avis pour le moment. Les clients qui ont reçu une commande de ${nom} pourront donner le leur ici.`}</p> : null}
         {liste?.avis.length ? <ol className={styles.liste}>
           {liste.avis.map(avis => <li key={avis.id} className={styles.avis} data-testid="avis-boutique">
             <div className={styles.avisTete}>

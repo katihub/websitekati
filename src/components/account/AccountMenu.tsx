@@ -254,6 +254,15 @@ export function AccountMenu() {
               <span className="text-micro text-ink-3">Suivi et réception</span>
             </Link>
           ) : null}
+          <Link
+            href="/compte/favoris"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex min-h-11 flex-col justify-center px-4 py-2.5 text-small transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
+          >
+            Mes favoris
+            <span className="text-micro text-ink-3">Produits gardés pour plus tard</span>
+          </Link>
           {session ? (
             <Link
               href="/compte/devis"
