@@ -35,6 +35,8 @@ export interface ProfilServeur {
   telephone: string
   comptoirPrefere: string | null
   raisonSociale: string | null
+  /** Demandee a l'inscription depuis le 14 octobre 2026 ; nulle pour les comptes anterieurs. */
+  ville?: string | null
   completLe: string | null
 }
 
@@ -127,6 +129,8 @@ export async function enregistrerFiche(champs: {
   telephone: string
   nom?: string
   comptoirPrefere?: string
+  ville?: string
+  raisonSociale?: string
 }): Promise<boolean> {
   if (!apiDisponible) return false
   try {
@@ -140,6 +144,38 @@ export async function enregistrerFiche(champs: {
     }
     return false
   }
+}
+
+/**
+ * LA FICHE D'UN COMPTE CONFIRME PAR E-MAIL, A SA PREMIERE CONNEXION.
+ *
+ * Quand Supabase exige la confirmation de l'adresse, l'inscription se termine
+ * sans session : la fiche ne peut pas etre ecrite a ce moment-la. Le nom, le
+ * telephone et la ville voyagent donc dans les metadonnees du compte, et sont
+ * enregistres ici a la premiere connexion. Une fiche existante n'est completee
+ * que de sa ville, sans rien perdre de ce qu'elle porte deja.
+ */
+export async function completerFicheDepuisInscription(meta: Record<string, unknown> | undefined): Promise<void> {
+  const ville = typeof meta?.city === 'string' ? meta.city : undefined
+  const telephone = typeof meta?.phone === 'string' ? meta.phone : undefined
+  const nom = typeof meta?.full_name === 'string' ? meta.full_name : undefined
+  if (!ville && !telephone) return
+  const actuelle = await lireProfilServeur()
+  // API absente ou injoignable : on reessaiera a la prochaine connexion.
+  if (!actuelle) return
+  const fiche = actuelle.profil
+  if (!fiche) {
+    if (telephone) await enregistrerFiche({ telephone, nom, ville })
+    return
+  }
+  if (fiche.ville || !ville) return
+  await enregistrerFiche({
+    telephone: fiche.telephone,
+    nom: fiche.nom ?? undefined,
+    comptoirPrefere: fiche.comptoirPrefere ?? undefined,
+    raisonSociale: fiche.raisonSociale ?? undefined,
+    ville,
+  })
 }
 
 /**

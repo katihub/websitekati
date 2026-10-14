@@ -12,7 +12,8 @@ import { lockScroll } from '@/lib/scroll-lock'
 import { connexionLocaleActive, seConnecterLocalement } from '@/lib/connexion-locale'
 import { supabase } from '@/lib/supabase'
 import { useSession } from '@/lib/session'
-import { enregistrerFiche, lireProfilServeur, pousserProfil, reconcilier } from '@/lib/profil'
+import { completerFicheDepuisInscription, enregistrerFiche, lireProfilServeur, pousserProfil, reconcilier } from '@/lib/profil'
+import { VILLES_CAMEROUN, villeValide } from '@/constants/villes'
 
 /**
  * Les messages du fournisseur sont en anglais et écrits pour un développeur.
@@ -643,6 +644,7 @@ function CardForm({
    * trompe une fois sur deux.
    */
   const [motDePasse, setMotDePasse] = useState('')
+  const [ville, setVille] = useState('')
   const [mode, setMode] = useState<'connexion' | 'inscription'>('connexion')
   const [enCours, setEnCours] = useState(false)
 
@@ -661,6 +663,11 @@ function CardForm({
     const telephoneInscription = mode === 'inscription' ? normalisePhone(phone) : null
     if (mode === 'inscription' && !telephoneInscription) {
       setEmailError('Indiquez un mobile camerounais : neuf chiffres commençant par 6.')
+      return
+    }
+    const villeInscription = mode === 'inscription' ? villeValide(ville) : null
+    if (mode === 'inscription' && !villeInscription) {
+      setEmailError('Indiquez votre ville.')
       return
     }
     if (motDePasse.length < 8) {
@@ -682,8 +689,12 @@ function CardForm({
       const { error } =
         mode === 'connexion'
           ? await client.auth.signInWithPassword({ email: email.trim(), password: motDePasse })
-          : await client.auth.signUp({ email: email.trim(), password: motDePasse })
+          : await client.auth.signUp({ email: email.trim(), password: motDePasse, options: { data: { phone: telephoneInscription, city: villeInscription } } })
       erreur = error?.message ?? null
+      if (!erreur && mode === 'connexion') {
+        const { data } = await client.auth.getUser()
+        await completerFicheDepuisInscription(data.user?.user_metadata)
+      }
     } else {
       // A development machine without Supabase: the backend's local door. On
       // that door, signing up and signing in are the same gesture — any
@@ -707,7 +718,7 @@ function CardForm({
     /* La fiche du serveur nait avec le telephone : c'est tout ce que le backend
        exige d'un compte. Le nom viendra avec la premiere commande. Un echec ici
        n'empeche pas d'avancer — la page de commande redemandera le numero. */
-    if (telephoneInscription) await enregistrerFiche({ telephone: telephoneInscription })
+    if (telephoneInscription) await enregistrerFiche({ telephone: telephoneInscription, ville: villeInscription ?? undefined })
 
     /* LA SUITE DEPEND DU MOTIF. Un devis a besoin du nom et du comptoir pour son
        message WhatsApp : la fiche suit. Une commande les demande elle-meme : la
@@ -809,6 +820,23 @@ function CardForm({
                 className={`${INPUT} t-num`}
               />
             </span>
+          </label>
+        ) : null}
+        {mode === 'inscription' ? (
+          <label className="mt-4 block">
+            <span className={LABEL}>Ville</span>
+            <input
+              value={ville}
+              onChange={(event) => setVille(event.target.value)}
+              list="villes-inscription-fenetre"
+              autoComplete="address-level2"
+              maxLength={60}
+              placeholder="Douala, Yaoundé…"
+              className="mt-2 block min-h-12 w-full rounded-control border border-rule-2 bg-paper px-4 text-[1rem] text-ink transition-colors duration-[var(--t-fast)] placeholder:text-ink-3 focus:border-ink focus:outline-none"
+            />
+            <datalist id="villes-inscription-fenetre">
+              {VILLES_CAMEROUN.map((nom) => <option key={nom} value={nom} />)}
+            </datalist>
           </label>
         ) : null}
         <label className="mt-4 block">

@@ -91,7 +91,7 @@ export function SellerSignupForm() {
           corps: {
             type: values.type, nomLegal: values.legal.trim(),
             niu: values.niu.trim() || undefined, rccm: values.rccm.trim() || undefined,
-            boutique: { nom: values.shop.trim(), slug, description: values.description.trim(), modesLivraison: [values.delivery], villesLivraison: [values.city] },
+            boutique: { nom: values.shop.trim(), slug, description: values.description.trim(), modesLivraison: [values.delivery], villesLivraison: [values.city], ville: values.city },
             proprietaire: { courriel: values.email.trim().toLowerCase(), nom: values.owner.trim(), telephone: values.phone.replace(/[\s().-]/g, '') },
           },
         })

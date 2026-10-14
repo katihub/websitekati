@@ -76,7 +76,8 @@ export type MarketplaceProduct = {
     villesLivraison: string[]
     delaiMaxJours: number | null
     disponible: number
-    boutique: { id: string; nom: string; slug: string }
+    /** `ville` : la ville de la boutique, montree au client a la place de son nom. */
+    boutique: { id: string; nom: string; slug: string; ville?: string | null }
   }>
 }
 

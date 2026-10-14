@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { connexionLocaleActive, seConnecterLocalement } from '@/lib/connexion-locale'
+import { completerFicheDepuisInscription } from '@/lib/profil'
 import { supabase } from '@/lib/supabase'
 import styles from '@/app/inscription/signup.module.css'
 
@@ -26,12 +27,15 @@ export function CustomerLoginForm() {
     try {
       const client = supabase()
       if (client) {
-        const { error: authError } = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+        const { data, error: authError } = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
         if (authError) throw authError
+        await completerFicheDepuisInscription(data.user?.user_metadata)
       } else if (connexionLocaleActive) await seConnecterLocalement(email.trim().toLowerCase(), password)
       else throw new Error('La connexion est indisponible pour le moment.')
       setPassword('')
-      router.push('/compte/commandes')
+      // Retour a la page d'origine (ex. les avis d'une boutique), seulement vers un chemin interne.
+      const retour = new URLSearchParams(window.location.search).get('retour')
+      router.push(retour && /^\/(?![/\\])/.test(retour) ? retour : '/compte/commandes')
     } catch {
       setError('Connexion impossible. Vérifiez votre adresse et votre mot de passe.')
     } finally { setPending(false) }

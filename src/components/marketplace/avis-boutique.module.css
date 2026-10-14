@@ -1,0 +1,54 @@
+.section{--navy:#082f6b;--orange:#f47605;--line:#dfe7f1;--muted:#64748b;margin-top:28px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:clamp(18px,3vw,28px);color:#0b2b59}
+.entete{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;margin-bottom:18px}
+.entete h2{display:flex;align-items:center;gap:9px;margin:0;color:var(--navy);font-size:20px}
+.entete p{margin:0;color:var(--muted);font-size:13px}
+.grille{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.6fr);gap:clamp(18px,3vw,36px);align-items:start}
+.colonne{display:grid;gap:16px;min-width:0}
+.synthese{display:grid;gap:8px;border-radius:9px;background:#f5f8fc;padding:18px}
+.moyenne{display:flex;align-items:baseline;gap:6px;margin:0}
+.moyenne strong{color:var(--navy);font-size:38px;line-height:1}
+.moyenne span{color:var(--muted);font-size:14px}
+.synthese ul{display:grid;gap:5px;margin:8px 0 0;padding:0;list-style:none}
+.synthese li{display:grid;grid-template-columns:34px 1fr 28px;align-items:center;gap:8px;color:#425572;font-size:12px}
+.synthese li span:last-child{text-align:right}
+.barre{height:7px;overflow:hidden;border-radius:6px;background:#dde5ef}
+.barre i{display:block;height:100%;border-radius:inherit;background:var(--orange)}
+.etoiles{display:inline-flex;gap:1px;color:#cbd5e1;font-size:15px;line-height:1}
+.etoiles[data-taille=grande]{font-size:21px}
+.etoiles [data-pleine=true]{color:var(--orange)}
+.invitation,.formulaire{display:grid;gap:10px;border:1px solid var(--line);border-radius:9px;padding:18px}
+.invitation h3,.formulaire h3{margin:0;color:var(--navy);font-size:16px}
+.invitation p{margin:0;color:#425572;font-size:13px;line-height:1.55}
+.formulaire label{display:grid;gap:6px;color:#29476f;font-size:12px;font-weight:700}
+.formulaire label>span{color:var(--muted);font-weight:500}
+.formulaire select,.formulaire textarea{width:100%;border:1px solid #cdd8e6;border-radius:7px;background:#fff;padding:10px 11px;color:#0b2b59;font:500 14px inherit}
+.formulaire select:focus,.formulaire textarea:focus{border-color:var(--orange);outline:2px solid #ff760022}
+.achat{margin:0;color:#425572;font-size:13px}
+.notes{margin:0;padding:0;border:0;min-width:0}
+.notes legend{margin-bottom:4px;color:#29476f;font-size:12px;font-weight:700}
+.notes div{display:flex;gap:2px}
+.notes label{display:grid;place-items:center;width:44px;height:44px;border-radius:7px;color:#cbd5e1;font-size:28px;cursor:pointer}
+.notes label[data-active=true]{color:var(--orange)}
+.notes label:focus-within{outline:2px solid var(--navy);outline-offset:1px}
+.notes small{color:var(--muted);font-size:12px}
+.bouton{display:inline-flex;justify-content:center;align-items:center;min-height:44px;border:0;border-radius:7px;background:var(--orange);padding:0 18px;color:#fff;font-size:14px;font-weight:800;text-decoration:none;cursor:pointer}
+.bouton:disabled{opacity:.6;cursor:wait}
+.mention{margin:0;color:var(--muted);font-size:11px}
+.liste{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.avis{display:grid;gap:7px;border-top:1px solid #e7edf5;padding:16px 0}
+.avis:first-child{border-top:0;padding-top:0}
+.avisTete{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px}
+.avisTete strong{color:var(--navy)}
+.avisTete span:not([role]){color:var(--muted)}
+.avisTete time{margin-left:auto;color:var(--muted);font-size:12px}
+.verifie{display:flex;align-items:center;gap:5px;margin:0;color:#13824a;font-size:11px;font-weight:700}
+.verifie svg{width:13px;height:13px}
+.commentaire{margin:0;color:#25395c;font-size:14px;line-height:1.6;white-space:pre-line;overflow-wrap:anywhere}
+.reponse{border-left:3px solid var(--navy);border-radius:0 7px 7px 0;background:#f5f8fc;padding:10px 12px;font-size:13px}
+.reponse b{color:var(--navy)}
+.reponse p{margin:4px 0 0;color:#425572;line-height:1.5}
+.vide{margin:0;border-radius:9px;background:#f5f8fc;padding:22px;color:var(--muted);font-size:13px;text-align:center}
+.alerte{margin:0;border-radius:7px;background:#fff0eb;padding:10px 12px;color:#a42e1e;font-size:12px}
+.succes{margin:0;border-radius:7px;background:#e8f8ef;padding:10px 12px;color:#14804a;font-size:12px}
+.plus{justify-self:start;min-height:44px;border:1px solid #cdd8e6;border-radius:7px;background:#fff;padding:0 16px;color:var(--navy);font-weight:700;cursor:pointer}
+@media(max-width:800px){.grille{grid-template-columns:1fr}.avisTete time{margin-left:0;width:100%}}

@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase'
 import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
 import { ApercuPieces, TYPES_PIECES, verifierPieces, type VerificationPieces } from './ApercuPieces'
 import { MerchantLogin } from './MerchantLogin'
+import { VILLES_CAMEROUN } from '@/constants/villes'
 import { EditeurFicheProduit } from './vendeur/EditeurFicheProduit'
 import { FenetreNouvelleVariante, FenetrePrixVariante, revisionOuverte, type RevisionVariante } from './vendeur/FenetresVariante'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
@@ -26,6 +27,7 @@ type Shop = {
   statut: 'inactive' | 'active' | 'suspendue' | 'archivee'
   modesLivraison: string[]
   villesLivraison: string[]
+  ville?: string | null
 }
 
 type ShopSpace = Shop & {
@@ -599,15 +601,16 @@ function SettingsPanel({ shop, onRefresh }: { shop: ShopSpace; onRefresh: () => 
   const [name, setName] = useState(shop.nom)
   const [description, setDescription] = useState(shop.description ?? '')
   const [cities, setCities] = useState(shop.villesLivraison.join(', '))
+  const [city, setCity] = useState(shop.ville ?? shop.villesLivraison[0] ?? '')
   const [modes, setModes] = useState(shop.modesLivraison)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
   async function save(event: FormEvent) {
     event.preventDefault(); setPending(true); setMessage('')
-    try { await api(`/vendeurs/mes-boutiques/${shop.id}`, { methode: 'PATCH', corps: { nom: name.trim(), description: description.trim() || undefined, modesLivraison: modes, villesLivraison: cities.split(',').map(city => city.trim()).filter(Boolean) } }); await onRefresh(); setMessage('Modifications enregistrées.') }
+    try { await api(`/vendeurs/mes-boutiques/${shop.id}`, { methode: 'PATCH', corps: { nom: name.trim(), description: description.trim() || undefined, modesLivraison: modes, villesLivraison: cities.split(',').map(city => city.trim()).filter(Boolean), ville: city.trim() } }); await onRefresh(); setMessage('Modifications enregistrées.') }
     catch (cause) { setMessage(errorText(cause)) } finally { setPending(false) }
   }
-  return <div className={styles.detailStack}><section className={styles.detailIntro}><span>VOTRE VITRINE</span><h2>Les informations pratiques de la boutique</h2><p>Ces renseignements aident les clients à vous trouver et à connaître vos zones de livraison. Le statut, le lien public et la commission sont gérés par KatiHub.</p></section><section className={styles.settingsCard}><form onSubmit={event => void save(event)}><label>Nom affiché<input required minLength={2} maxLength={120} value={name} onChange={event => setName(event.target.value)} /></label><label>Présentation<textarea rows={5} maxLength={1000} value={description} onChange={event => setDescription(event.target.value)} placeholder="Parlez de votre savoir-faire, de vos produits…" /></label><fieldset><legend>Modes de livraison</legend><label><input type="checkbox" checked={modes.includes('katihub')} onChange={event => setModes(event.target.checked ? [...modes, 'katihub'] : modes.filter(mode => mode !== 'katihub'))} /> Livraison KatiHub</label><label><input type="checkbox" checked={modes.includes('vendeur')} onChange={event => setModes(event.target.checked ? [...modes, 'vendeur'] : modes.filter(mode => mode !== 'vendeur'))} /> Livraison par la boutique</label></fieldset><label>Villes desservies <small>Séparez les villes par une virgule.</small><input required value={cities} onChange={event => setCities(event.target.value)} placeholder="Douala, Yaoundé" /></label><div className={styles.settingsMeta}><span>Adresse publique : /boutiques/{shop.slug}</span><span>Statut : {STATUS_LABELS[shop.statut] ?? shop.statut}</span></div>{message ? <p className={styles.feedback} role="status">{message}</p> : null}<button type="submit" disabled={pending || modes.length === 0}>{pending ? 'Enregistrement…' : 'Enregistrer les modifications'}</button></form></section></div>
+  return <div className={styles.detailStack}><section className={styles.detailIntro}><span>VOTRE VITRINE</span><h2>Les informations pratiques de la boutique</h2><p>Ces renseignements aident les clients à vous trouver et à connaître vos zones de livraison. Le statut, le lien public et la commission sont gérés par KatiHub.</p></section><section className={styles.settingsCard}><form onSubmit={event => void save(event)}><label>Nom affiché<input required minLength={2} maxLength={120} value={name} onChange={event => setName(event.target.value)} /></label><label>Présentation<textarea rows={5} maxLength={1000} value={description} onChange={event => setDescription(event.target.value)} placeholder="Parlez de votre savoir-faire, de vos produits…" /></label><label>Ville de la boutique <small>Affichée aux clients sur vos fiches produit, à la place du nom de la boutique.</small><input required minLength={2} maxLength={60} list="villes-boutique" value={city} onChange={event => setCity(event.target.value)} placeholder="Douala" /><datalist id="villes-boutique">{VILLES_CAMEROUN.map(ville => <option key={ville} value={ville} />)}</datalist></label><fieldset><legend>Modes de livraison</legend><label><input type="checkbox" checked={modes.includes('katihub')} onChange={event => setModes(event.target.checked ? [...modes, 'katihub'] : modes.filter(mode => mode !== 'katihub'))} /> Livraison KatiHub</label><label><input type="checkbox" checked={modes.includes('vendeur')} onChange={event => setModes(event.target.checked ? [...modes, 'vendeur'] : modes.filter(mode => mode !== 'vendeur'))} /> Livraison par la boutique</label></fieldset><label>Villes desservies <small>Séparez les villes par une virgule.</small><input required value={cities} onChange={event => setCities(event.target.value)} placeholder="Douala, Yaoundé" /></label><div className={styles.settingsMeta}><span>Adresse publique : /boutiques/{shop.slug}</span><span>Statut : {STATUS_LABELS[shop.statut] ?? shop.statut}</span></div>{message ? <p className={styles.feedback} role="status">{message}</p> : null}<button type="submit" disabled={pending || modes.length === 0}>{pending ? 'Enregistrement…' : 'Enregistrer les modifications'}</button></form></section></div>
 }
 
 const MEMBER_ROLES: Record<string, string> = {

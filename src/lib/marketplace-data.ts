@@ -7,6 +7,8 @@ export interface BoutiqueMarketplace {
   description: string | null
   modesLivraison: string[]
   villesLivraison: string[]
+  /** La ville de la boutique elle-meme ; nulle si le marchand ne l'a pas encore renseignee. */
+  ville?: string | null
 }
 
 export interface OffreMarketplace {
