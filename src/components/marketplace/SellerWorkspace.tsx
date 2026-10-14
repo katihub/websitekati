@@ -14,6 +14,7 @@ import { ApercuPieces, TYPES_PIECES, verifierPieces, type VerificationPieces } f
 import { MerchantLogin } from './MerchantLogin'
 import { VILLES_CAMEROUN } from '@/constants/villes'
 import { EditeurFicheProduit } from './vendeur/EditeurFicheProduit'
+import { DevisBoutique } from './vendeur/DevisBoutique'
 import { cheminCategorie, libelleMois, useCategoriesMarketplace, type CategorieProduit } from './vendeur/categories'
 import { FenetreNouvelleVariante, FenetrePrixVariante, revisionOuverte, type RevisionVariante } from './vendeur/FenetresVariante'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
@@ -188,7 +189,7 @@ export function SellerWorkspace() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [authenticated, setAuthenticated] = useState(false)
-  const [panel, setPanel] = useState<'overview' | 'verification' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members' | 'disputes'>('overview')
+  const [panel, setPanel] = useState<'overview' | 'verification' | 'products' | 'offers' | 'quotes' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members' | 'disputes'>('overview')
 
   const loadDetails = useCallback(async (shopId: string) => {
     const [nextSpace, ...sections] = await Promise.allSettled([
@@ -295,6 +296,7 @@ export function SellerWorkspace() {
           {([
             ['products', 'package', 'Produits'],
             ['offers', 'tag', 'Offres'],
+            ['quotes', 'clock', 'Devis'],
           ] as const).map(([value, icon, label]) => (
             <button key={value} className={panel === value ? styles.activeNav : ''} onClick={() => setPanel(value)}>
               <ShopIcon name={icon} />{label}
@@ -331,6 +333,7 @@ export function SellerWorkspace() {
           /> : null}
           {panel === 'verification' ? access.documents === 'allowed' ? <VerificationPanel shopId={space.id} documents={documents} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.documents} /> : null}
           {panel === 'products' ? access.products === 'allowed' ? <ProductsPanel shopId={space.id} products={products} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.products} /> : null}
+          {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
           {panel === 'offers' ? access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.offers} /> : null}
           {panel === 'orders' ? access.orders === 'allowed' ? <OrdersPanel listing={orders} /> : <SectionUnavailable access={access.orders} /> : null}
           {panel === 'deliveries' ? access.deliveries === 'allowed' ? <DeliveriesPanel listing={deliveries} /> : <SectionUnavailable access={access.deliveries} /> : null}

@@ -7,3 +7,4 @@
 @media(min-width:1101px){.heading{width:calc((100% - 22px)*.6774)}.heading h1{font-size:29px}.steps li{min-width:98px}.steps li:not(:last-child):after{width:48px}.summary{margin-top:-112px}}
 @media(min-width:821px) and (max-width:1100px){.heading{width:calc((100% - 16px)*.63);flex-wrap:wrap}.heading .steps{margin-left:auto}.summary{margin-top:0}.rowInfo h2{font-size:12px}.unitPrice>strong,.lineTotal{font-size:13px}}
 @media(max-width:520px){.rowInfo h2{font-size:12px}.unitPrice>strong,.lineTotal{font-size:13px}.rowInfo p{font-size:10px}}
+.devis{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;margin-top:10px;border:1px solid #c8d3e2;border-radius:8px;background:#fff;color:#082f6b;font-size:13px!important;font-weight:700!important;cursor:pointer}.devis:disabled{opacity:.5;cursor:not-allowed}

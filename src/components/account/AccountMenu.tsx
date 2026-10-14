@@ -254,6 +254,17 @@ export function AccountMenu() {
               <span className="text-micro text-ink-3">Suivi et réception</span>
             </Link>
           ) : null}
+          {session ? (
+            <Link
+              href="/compte/devis"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex min-h-11 flex-col justify-center px-4 py-2.5 text-small transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
+            >
+              Mes devis marketplace
+              <span className="text-micro text-ink-3">Demandes et réponses des boutiques</span>
+            </Link>
+          ) : null}
 
           {/* THE FOCUS IS MOVED TO THE TRIGGER BEFORE THE DIALOG IS ASKED FOR,
               AND THE ORDER OF THOSE TWO LINES IS THE WHOLE POINT. The dialog
