@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { connexionLocaleActive, seConnecterLocalement } from '@/lib/connexion-locale'
 import { completerFicheDepuisInscription } from '@/lib/profil'
+import { avecRetour, useRetourDemande } from '@/lib/retour'
 import { supabase } from '@/lib/supabase'
 import styles from '@/app/inscription/signup.module.css'
 
 export function CustomerLoginForm() {
   const router = useRouter()
+  const retour = useRetourDemande()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -33,9 +35,8 @@ export function CustomerLoginForm() {
       } else if (connexionLocaleActive) await seConnecterLocalement(email.trim().toLowerCase(), password)
       else throw new Error('La connexion est indisponible pour le moment.')
       setPassword('')
-      // Retour a la page d'origine (ex. les avis d'une boutique), seulement vers un chemin interne.
-      const retour = new URLSearchParams(window.location.search).get('retour')
-      router.push(retour && /^\/(?![/\\])/.test(retour) ? retour : '/compte/commandes')
+      // Retour a la page d'origine (commande, devis, avis d'une boutique), seulement vers un chemin interne.
+      router.push(retour ?? '/compte/commandes')
     } catch {
       setError('Connexion impossible. Vérifiez votre adresse et votre mot de passe.')
     } finally { setPending(false) }
@@ -67,6 +68,6 @@ export function CustomerLoginForm() {
       {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
       <button className={styles.primary} disabled={pending}>{pending ? 'Connexion en cours…' : 'Se connecter'}</button>
     </form>
-    <p className={styles.switch}>Pas encore de compte ? <Link href="/inscription">Créer un compte</Link></p>
+    <p className={styles.switch}>Pas encore de compte ? <Link href={avecRetour('/inscription', retour)}>Créer un compte</Link></p>
   </section>
 }

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
+import { useAccount } from '@/lib/account'
 import { api } from '@/lib/api'
 import type { DevisMarketplace } from '@/lib/devis-marketplace'
 import { useSession } from '@/lib/session'
@@ -23,13 +24,12 @@ export function BoutonDemandeDevis({ lignes, className, libelle = 'Demander un d
 }) {
   const { session } = useSession()
   const router = useRouter()
+  const account = useAccount()
   const [ouverte, setOuverte] = useState(false)
   const articles = lignes.length
 
   // Sans session : la page de connexion, qui ramene ici ensuite. La selection reste dans le panier.
-  function connexion() {
-    router.push(`/connexion?retour=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`)
-  }
+  const connexion = account.open
 
   async function envoyer(donnees: FormData) {
     const entreprise = String(donnees.get('entreprise') ?? '').trim()

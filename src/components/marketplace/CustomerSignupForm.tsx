@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation'
 import { VILLES_CAMEROUN, villeValide } from '@/constants/villes'
 import { connexionLocaleActive, seConnecterLocalement } from '@/lib/connexion-locale'
 import { enregistrerFiche } from '@/lib/profil'
+import { avecRetour, useRetourDemande } from '@/lib/retour'
 import { supabase } from '@/lib/supabase'
 import styles from '@/app/inscription/signup.module.css'
 
 export function CustomerSignupForm() {
   const router = useRouter()
+  const retour = useRetourDemande()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -51,7 +53,7 @@ export function CustomerSignupForm() {
     } finally { setPending(false) }
   }
 
-  if (success) return <section className={`${styles.formArea} ${styles.success}`} aria-live="polite"><span className={styles.successMark}>✓</span><h1>Vous y êtes presque</h1><p>{success}</p><button type="button" className={styles.primary} onClick={() => router.push('/')}>Retourner à l’accueil</button></section>
+  if (success) return <section className={`${styles.formArea} ${styles.success}`} aria-live="polite"><span className={styles.successMark}>✓</span><h1>Vous y êtes presque</h1><p>{success}</p><button type="button" className={styles.primary} onClick={() => router.push(retour ?? '/')}>{retour ? 'Reprendre là où j’en étais' : 'Retourner à l’accueil'}</button></section>
 
   return <section className={styles.formArea} aria-labelledby="customer-signup-title">
     <h1 id="customer-signup-title">Créer un compte</h1>
@@ -68,6 +70,6 @@ export function CustomerSignupForm() {
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       <button className={styles.primary} disabled={pending}>{pending ? 'Un instant…' : local ? 'Continuer en démonstration' : 'Créer mon compte'}</button>
     </form>
-    <p className={styles.switch}>Déjà un compte ? <Link href="/connexion">Se connecter</Link></p>
+    <p className={styles.switch}>Déjà un compte ? <Link href={avecRetour('/connexion', retour)}>Se connecter</Link></p>
   </section>
 }

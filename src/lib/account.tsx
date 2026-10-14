@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import {
   createContext,
   useCallback,
@@ -285,22 +286,33 @@ export function AccountProvider({
     void deconnecter()
   }, [deconnecter])
 
-  // Stable identities: the dialog schedules its own arrival on `open`, and a
-  // callback rebuilt on every render would restart that timer on every render.
+  /* « SE CONNECTER » MENE A LA PAGE DE CONNEXION, QUI RAMENE ICI.
+     La fenetre de compte NowTech (`AuthDialog`) n'est plus montee depuis que le
+     site est devenu KatiHub (12 octobre) : la connexion et l'inscription vivent
+     sur /connexion et /inscription. Ouvrir une fenetre absente ne faisait rien,
+     et le bouton « Se connecter » de la commande etait inerte. Chaque appel
+     mene donc a /connexion, avec la page courante en retour ; le panier et la
+     selection restent dans le navigateur pendant ce temps. */
+  const router = useRouter()
+  const versConnexion = useCallback(() => {
+    const retour = `${window.location.pathname}${window.location.search}`
+    router.push(`/connexion?retour=${encodeURIComponent(retour)}`)
+  }, [router])
+
   const [motif, setMotif] = useState<MotifOuverture>('simple')
   const sansComptePossible = motif !== 'simple'
   const open = useCallback(() => {
     setMotif('simple')
-    setOpen(true)
-  }, [])
+    versConnexion()
+  }, [versConnexion])
   const openPourDevis = useCallback(() => {
     setMotif('devis')
-    setOpen(true)
-  }, [])
+    versConnexion()
+  }, [versConnexion])
   const openPourCommande = useCallback(() => {
     setMotif('commande')
-    setOpen(true)
-  }, [])
+    versConnexion()
+  }, [versConnexion])
   const close = useCallback(() => {
     markGreeted()
     setOpen(false)
