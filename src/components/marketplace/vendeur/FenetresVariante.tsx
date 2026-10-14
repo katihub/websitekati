@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 import { api } from '@/lib/api'
 import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
 
@@ -40,7 +42,9 @@ export type OffreVariante = {
   revisions: RevisionVariante[]
 }
 
-const LIGNES_ATTRIBUTS = 3
+/** Le backend accepte six attributs ; la fenetre en montre trois et en ajoute a la demande. */
+const LIGNES_ATTRIBUTS = 6
+const LIGNES_VISIBLES = 3
 const REVISION_OUVERTE = ['soumise', 'en_verification']
 
 /** Les paires nom/valeur saisies, sans les lignes vides ; null si aucune. */
@@ -78,6 +82,7 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
   onFermer: () => void
   onCreee: () => Promise<void>
 }) {
+  const [lignes, setLignes] = useState(LIGNES_VISIBLES)
   async function valider(donnees: FormData) {
     if (!origine) return
     const attributs = attributsDepuisFormulaire(donnees)
@@ -112,12 +117,13 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
     >
       <fieldset className="grid gap-2">
         <legend className="text-small font-semibold">Attributs <span className="font-normal text-ink-3">(facultatif, jusqu’à {LIGNES_ATTRIBUTS})</span></legend>
-        {Array.from({ length: LIGNES_ATTRIBUTS }, (_, i) => (
+        {Array.from({ length: lignes }, (_, i) => (
           <div key={i} className="grid grid-cols-2 gap-2">
-            <input name={`attribut-nom-${i}`} maxLength={40} aria-label={`Nom de l’attribut ${i + 1}`} placeholder={['Capacité', 'Couleur', 'Taille'][i]} className="rounded-control border border-rule bg-surface p-3 text-small" />
-            <input name={`attribut-valeur-${i}`} maxLength={60} aria-label={`Valeur de l’attribut ${i + 1}`} placeholder={['128 Go', 'Noir', 'XL'][i]} className="rounded-control border border-rule bg-surface p-3 text-small" />
+            <input name={`attribut-nom-${i}`} maxLength={40} aria-label={`Nom de l’attribut ${i + 1}`} placeholder={['Capacité', 'Couleur', 'Taille', 'Matière', 'Garantie fabricant', 'Connectivité'][i]} className="rounded-control border border-rule bg-surface p-3 text-small" />
+            <input name={`attribut-valeur-${i}`} maxLength={60} aria-label={`Valeur de l’attribut ${i + 1}`} placeholder={['128 Go', 'Noir', 'XL', 'Coton', '2 ans', '5G'][i]} className="rounded-control border border-rule bg-surface p-3 text-small" />
           </div>
         ))}
+        {lignes < LIGNES_ATTRIBUTS ? <button type="button" onClick={() => setLignes((n) => Math.min(LIGNES_ATTRIBUTS, n + 1))} className="justify-self-start min-h-11 rounded-control border border-dashed border-rule px-3 text-small font-semibold">+ Ajouter un attribut</button> : null}
       </fieldset>
       <ChampTexte nom="libelle" libelle="Nom affiché au client" aide="Vide : composé à partir des attributs (ex. 128 Go / Noir)." maxLength={120} />
       <ChampTexte nom="reference" libelle="Référence vendeur" required minLength={1} maxLength={80} placeholder="A15-128-NOIR" />

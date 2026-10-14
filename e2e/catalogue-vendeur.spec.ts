@@ -88,6 +88,10 @@ test('le marchand crée une variante avec son prix, puis change le prix d’une 
   await variante.getByLabel('Valeur de l’attribut 1').fill('256 Go')
   await variante.getByLabel('Nom de l’attribut 2').fill('Couleur')
   await variante.getByLabel('Valeur de l’attribut 2').fill('Bleu')
+  await expect(variante.getByLabel('Nom de l’attribut 4')).toHaveCount(0)
+  await variante.getByRole('button', { name: '+ Ajouter un attribut' }).click()
+  await variante.getByLabel('Nom de l’attribut 4').fill('Garantie fabricant')
+  await variante.getByLabel('Valeur de l’attribut 4').fill('2 ans')
   await variante.getByLabel('Référence vendeur').fill('A15-256-BLEU')
   await variante.getByLabel('Prix FCFA').fill('179000')
   await variante.getByLabel('Stock initial').fill('3')
@@ -95,7 +99,7 @@ test('le marchand crée une variante avec son prix, puis change le prix d’une 
   await expect(variante).toBeHidden()
 
   expect(api.appelsVers('POST', /\/variantes$/)[0]!.corps).toEqual({
-    libelleVariante: '256 Go / Bleu', attributsVariante: { Capacité: '256 Go', Couleur: 'Bleu' },
+    libelleVariante: '256 Go / Bleu / 2 ans', attributsVariante: { Capacité: '256 Go', Couleur: 'Bleu', 'Garantie fabricant': '2 ans' },
     referenceVendeur: 'A15-256-BLEU', prixFcfa: 179_000, quantiteInitiale: 3,
   })
 
