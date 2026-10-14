@@ -40,6 +40,27 @@ export interface ListeOffresMarketplace {
   offres: OffreMarketplace[]
   pagination: { page: number; taille: number; total: number; pages: number }
   filtres: { q: string | null; categorie: string | null; boutique: string | null; tri: string }
+  /** La categorie de la page, quand le catalogue est filtre par `categorieSlug`. */
+  categorie?: { nom: string; slug: string; parent: { nom: string; slug: string } | null } | null
+}
+
+/** L'arbre des categories KatiHub actives, tel que le marchand et le client le voient. */
+export interface CategorieArbre {
+  id: string
+  nom: string
+  slug: string
+  garantie: { mois: number; libelle: string }
+  sousCategories: Array<{ id: string; nom: string; slug: string; garantie: { mois: number; libelle: string } }>
+}
+
+/** Vide quand l'API ne repond pas : le menu se replie alors sur « Toutes les categories ». */
+export async function lireCategoriesMarketplace(): Promise<CategorieArbre[]> {
+  try {
+    const reponse = await fetch(`${BASE}/v1/marketplace/categories`, { next: { revalidate: 300 } })
+    return reponse.ok ? await reponse.json() as CategorieArbre[] : []
+  } catch {
+    return []
+  }
 }
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3101'
@@ -70,6 +91,7 @@ export async function lireOffresMarketplace(params: {
   prixMax?: number
   q?: string
   categorie?: string
+  categorieSlug?: string
   boutique?: string
   tri?: 'recent' | 'prix_asc' | 'prix_desc'
   page?: number
@@ -81,6 +103,7 @@ export async function lireOffresMarketplace(params: {
   if (params.prixMax !== undefined) query.set('prixMax', String(params.prixMax))
   if (params.q) query.set('q', params.q)
   if (params.categorie) query.set('categorie', params.categorie)
+  if (params.categorieSlug) query.set('categorieSlug', params.categorieSlug)
   if (params.boutique) query.set('boutique', params.boutique)
   if (params.tri) query.set('tri', params.tri)
   query.set('page', String(params.page ?? 1))
