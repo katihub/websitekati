@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { imageProduit } from '@/lib/image-produit'
 import Link from 'next/link'
 import { useState, useSyncExternalStore } from 'react'
 import type { BoutiquePubliqueMarketplace, OffreBoutiqueMarketplace } from '@/lib/marketplace-data'
@@ -37,7 +38,8 @@ function categoryIcon(category: string): ShopIconName {
 
 function StoreProductCard({ offer, shop, compact = false }: { offer: OffreBoutiqueMarketplace; shop: BoutiquePubliqueMarketplace; compact?: boolean }) {
   const cart = useCart()
-  const illustration = /samsung.*a15/i.test(offer.produit.nom) ? '/marketplace-telephone-kati.png' : null
+  const visuel = imageProduit(offer.produit)
+  const illustration = visuel?.url ?? null
   const href = `/marketplace/produits/${offer.produit.slug}?boutique=${encodeURIComponent(shop.slug)}`
   const discount = hasShopDiscount(offer) ? Math.round((1 - offer.prixFcfa! / offer.prixReferenceFcfa!) * 100) : null
   const alreadyAdded = cart.lines.find(line => line.offerId === offer.id)?.qty ?? 0
@@ -48,7 +50,7 @@ function StoreProductCard({ offer, shop, compact = false }: { offer: OffreBoutiq
   }
   return <article className={`${styles.productCard} ${compact ? styles.compactCard : ''}`} data-shop-offer={offer.id}>
     <Link className={styles.productVisual} href={href} aria-label={`Voir ${offer.produit.nom}`}>
-      {illustration ? <Image src={illustration} alt={`Illustration de ${offer.produit.nom}`} fill sizes={compact ? '80px' : '(max-width: 600px) 45vw, 240px'} /> : <div className={styles.cataloguePlaceholder}><ShopIcon name={categoryIcon(offer.produit.categorie ?? '')}/><span>{offer.produit.marque ?? offer.produit.categorie ?? 'Produit'}</span></div>}
+      {illustration ? <Image src={illustration} alt={visuel?.alt ?? offer.produit.nom} fill sizes={compact ? '80px' : '(max-width: 600px) 45vw, 240px'} /> : <div className={styles.cataloguePlaceholder}><ShopIcon name={categoryIcon(offer.produit.categorie ?? '')}/><span>{offer.produit.marque ?? offer.produit.categorie ?? 'Produit'}</span></div>}
       {discount ? <b className={styles.discount}>−{discount}%</b> : null}
       {!compact ? <small>{illustration ? 'Visuel illustratif' : 'Photo à venir'}</small> : null}
     </Link>

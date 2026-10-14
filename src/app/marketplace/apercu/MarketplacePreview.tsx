@@ -58,10 +58,20 @@ export type MarketplaceProduct = {
   description: string | null
   marque: string | null
   categorie: string | null
+  /** Le referencement valide par KatiHub ; absent, la page compose le sien. */
+  metaTitre?: string | null
+  metaDescription?: string | null
+  /** Les photos publiees, la premiere est l'image principale. */
+  images?: Array<{ id: string; url: string; texteAlternatif: string | null }>
   offres: Array<{
     id: string
     titre: string | null
     prixFcfa: number | null
+    prixReferenceFcfa?: number | null
+    /** Le nom de la variante (« 128 Go / Noir ») ; null pour une offre sans variante. */
+    libelleVariante?: string | null
+    attributsVariante?: Record<string, string> | null
+    ordreVariante?: number
     modesLivraison: Array<'vendeur' | 'katihub'>
     villesLivraison: string[]
     delaiMaxJours: number | null

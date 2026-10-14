@@ -19,7 +19,7 @@ export interface OffreMarketplace {
   disponible: number
   modesLivraison?: string[]
   villesLivraison?: string[]
-  produit: { nom: string; slug: string; marque: string | null; categorie: string | null }
+  produit: { nom: string; slug: string; marque: string | null; categorie: string | null; images?: Array<{ url: string; texteAlternatif: string | null }> }
   boutique: { nom: string; slug: string }
 }
 

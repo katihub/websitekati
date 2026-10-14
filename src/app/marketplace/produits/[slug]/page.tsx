@@ -21,9 +21,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   try {
     const produit = await chargerProduit(slug)
+    const titre = produit.metaTitre || `${produit.nom} — KatiHub`
+    const description = produit.metaDescription || produit.description || `Comparez les vendeurs vérifiés pour ${produit.nom} sur KatiHub.`
+    const image = produit.images?.[0]
     return {
-      title: { absolute: `${produit.nom} — KatiHub` },
-      description: produit.description ?? `Comparez les vendeurs vérifiés pour ${produit.nom} sur KatiHub.`,
+      title: { absolute: titre },
+      description,
+      alternates: { canonical: `/marketplace/produits/${produit.slug}` },
+      openGraph: { title: titre, description, type: 'website', images: image ? [{ url: image.url, alt: image.texteAlternatif ?? produit.nom }] : undefined },
     }
   } catch {
     return { title: { absolute: 'Produit — KatiHub' } }
