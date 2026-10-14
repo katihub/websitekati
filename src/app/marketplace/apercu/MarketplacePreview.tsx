@@ -59,6 +59,8 @@ export type MarketplaceProduct = {
   marque: string | null
   categorie: string | null
   /** Le referencement valide par KatiHub ; absent, la page compose le sien. */
+  /** La categorie KatiHub du produit et la garantie minimale qu'elle impose. */
+  categorieDetail?: { nom: string; slug: string; parent: { nom: string; slug: string } | null; garantieMinimaleMois: number; garantie: string } | null
   metaTitre?: string | null
   metaDescription?: string | null
   /** Les photos publiees, la premiere est l'image principale. */
@@ -68,6 +70,7 @@ export type MarketplaceProduct = {
     titre: string | null
     prixFcfa: number | null
     prixReferenceFcfa?: number | null
+    garantieMois?: number | null
     /** Le nom de la variante (« 128 Go / Noir ») ; null pour une offre sans variante. */
     libelleVariante?: string | null
     attributsVariante?: Record<string, string> | null

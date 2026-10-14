@@ -111,3 +111,57 @@ test('le marchand crée une variante avec son prix, puis change le prix d’une 
     modesLivraison: ['katihub'], villesLivraison: ['Douala'], delaiMaxJours: 2, libelleVariante: '128 Go', attributsVariante: { Capacité: '128 Go' },
   })
 })
+
+test('le marchand classe son produit dans une catégorie KatiHub et voit la garantie minimale', async ({ page }) => {
+  api = (await espaceVendeur(page, []))
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), { id: 'nouveau', statut: 'soumis' })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
+  await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
+  await page.getByRole('button', { name: 'Envoyer à la modération' }).click()
+  // Le navigateur bloque l'envoi tant que la sous-categorie manque.
+  expect(await page.getByRole('combobox', { name: /^Sous-catégorie/ }).evaluate((champ: HTMLSelectElement) => champ.validity.valueMissing)).toBe(true)
+  expect(api.appelsVers('POST', /propositions-produits$/)).toHaveLength(0)
+
+  await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléviseurs' })
+  await expect(page.getByTestId('garantie-categorie')).toContainText('2 ans')
+  await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléphones' })
+  await expect(page.getByTestId('garantie-categorie')).toContainText('1 an')
+  await page.getByRole('button', { name: 'Envoyer à la modération' }).click()
+  await expect(page.getByText('Produit envoyé à la modération.')).toBeVisible()
+
+  expect(api.appelsVers('POST', /propositions-produits$/)[0]!.corps).toEqual({
+    nom: 'Samsung Galaxy A25', slug: 'samsung-galaxy-a25', categorieId: '00000000-0000-4000-8000-000000000402',
+  })
+})
+
+test('l’offre part de la garantie minimale de la catégorie et ne peut pas descendre en dessous', async ({ page }) => {
+  const classe = { ...produit, categorieDetail: { id: 'c', nom: 'Téléphones', slug: 'electronique-telephones', parent: { id: 'p', nom: 'Électronique', slug: 'electronique' }, garantieMinimaleMois: 12, garantie: '1 an' } }
+  api = (await espaceVendeur(page, []))
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [classe])
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres$`), { id: 'offre', statut: 'brouillon' })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await expect(page.getByText('Électronique › Téléphones')).toBeVisible()
+  await page.getByRole('button', { name: 'Offres', exact: true }).click()
+
+  await page.getByRole('combobox', { name: /^Produit/ }).selectOption({ label: 'Samsung Galaxy A15' })
+  const garantie = page.getByLabel('Garantie en mois')
+  await expect(garantie).toHaveValue('12')
+  await expect(page.getByText('Minimum de la catégorie : 1 an')).toBeVisible()
+  await page.getByLabel('Référence vendeur').fill('A15-NOIR')
+  await page.getByLabel('Titre de l’offre').fill('Samsung Galaxy A15 128 Go')
+  await page.getByLabel('Prix FCFA').fill('149000')
+  await garantie.fill('6')
+  await page.getByRole('button', { name: 'Créer et soumettre l’offre' }).click()
+  expect(await garantie.evaluate((champ: HTMLInputElement) => champ.validity.rangeUnderflow)).toBe(true)
+  expect(api.appelsVers('POST', /\/offres$/)).toHaveLength(0)
+
+  await garantie.fill('24')
+  await page.getByRole('button', { name: 'Créer et soumettre l’offre' }).click()
+  await expect(page.getByText('Offre envoyée à la modération.')).toBeVisible()
+  expect(api.appelsVers('POST', /\/offres$/)[0]!.corps).toMatchObject({ produitId: PRODUIT, garantieMois: 24 })
+})

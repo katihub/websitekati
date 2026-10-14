@@ -57,6 +57,22 @@ export function demandeClient(surcharge: Record<string, unknown> = {}) {
   }
 }
 
+const garantie = (mois: number, heritee = false) => ({ mois, unite: mois % 12 === 0 && mois ? 'annees' : 'mois', heritee, libelle: mois === 12 ? '1 an' : mois % 12 === 0 && mois ? `${mois / 12} ans` : `${mois} mois` })
+
+/** L'arbre des categories tel que `GET /marketplace/categories` le rend. */
+export function categories() {
+  return [
+    {
+      id: '00000000-0000-4000-8000-000000000401', nom: 'Électronique', slug: 'electronique', garantie: garantie(12),
+      sousCategories: [
+        { id: '00000000-0000-4000-8000-000000000402', nom: 'Téléphones', slug: 'electronique-telephones', garantie: garantie(12, true) },
+        { id: '00000000-0000-4000-8000-000000000403', nom: 'Téléviseurs', slug: 'electronique-televiseurs', garantie: garantie(24) },
+      ],
+    },
+    { id: '00000000-0000-4000-8000-000000000404', nom: 'Mode & Style', slug: 'mode-style', garantie: garantie(0), sousCategories: [] },
+  ]
+}
+
 export function boutique() {
   return {
     id: IDS.boutique, vendeurId: '00000000-0000-4000-8000-000000000009', nom: 'Maison Kati', slug: 'maison-kati', description: null,
