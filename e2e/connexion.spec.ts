@@ -18,7 +18,9 @@ test.afterEach(() => {
 const OFFRE = '00000000-0000-4000-8000-000000000202'
 
 test('un visiteur non connecté passe de la commande à la connexion, avec le retour vers sa commande', async ({ page }) => {
-  api = (await simulerApi(page)).quand('POST', /^\/marketplace\/panier\/verifier$/, [])
+  api = (await simulerApi(page))
+    .quand('POST', /^\/marketplace\/panier\/verifier$/, [])
+    .quand('GET', /^\/marketplace\/livraison\/tarifs$/, [])
   await page.addInitScript((offre) => {
     localStorage.setItem('nowtech.panier.v1', JSON.stringify([{ slug: 'galaxy-a15', name: 'Samsung Galaxy A15', price: 149_000, image: null, qty: 1, offerId: offre, boutiqueId: 'b1', boutiqueNom: 'TechMall' }]))
   }, OFFRE)
