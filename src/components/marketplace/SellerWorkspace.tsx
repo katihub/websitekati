@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { api, ErreurApi, telechargerApi } from '@/lib/api'
 import {
@@ -10,7 +10,7 @@ import {
 } from '@/lib/connexion-locale'
 import { supabase } from '@/lib/supabase'
 import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
-import { ApercuPieces, TYPES_PIECES, verifierPieces, type VerificationPieces } from './ApercuPieces'
+import { ApercuPieces, TYPES_PIECES, taillePiece, verifierPieces, type VerificationPieces } from './ApercuPieces'
 import { MerchantLogin } from './MerchantLogin'
 import { VILLES_CAMEROUN } from '@/constants/villes'
 import { EditeurFicheProduit } from './vendeur/EditeurFicheProduit'
@@ -50,6 +50,11 @@ type SellerDocument = {
   motifDecision: string | null
   creeLe: string
   modifieLe: string
+  /** Renseignes quand le fichier a ete depose depuis l'espace vendeur. */
+  nomFichier?: string | null
+  typeMime?: string | null
+  tailleOctets?: number | null
+  statutAnalyse?: 'non_analysee' | 'en_quarantaine' | 'saine' | 'infectee'
 }
 
 type ProductProposal = {
@@ -682,20 +687,43 @@ function MemberRow({ shopId, member, canManage, onRefresh }: {
 
 function VerificationPanel({ shopId, documents, onRefresh }: { shopId: string; documents: SellerDocument[]; onRefresh: () => Promise<void> }) {
   const [type, setType] = useState('identite')
-  const [storageKey, setStorageKey] = useState('')
+  const [fichier, setFichier] = useState<File | null>(null)
+  const [refus, setRefus] = useState('')
   const [expiry, setExpiry] = useState('')
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
+  const champ = useRef<HTMLInputElement>(null)
+  const verification = useMemo<VerificationPieces>(() => fichier ? verifierPieces([fichier]) : { acceptees: [], refus: [] }, [fichier])
+
+  function choisir(liste: FileList | null) {
+    const premier = liste?.[0] ?? null
+    const controle = premier ? verifierPieces([premier]) : null
+    setRefus(controle?.refus[0] ? `${controle.refus[0].nom} : ${controle.refus[0].raison}.` : '')
+    setFichier(controle?.acceptees[0] ?? null)
+    setMessage('')
+  }
 
   async function submit(event: FormEvent) {
-    event.preventDefault(); setPending(true); setMessage('')
+    event.preventDefault()
+    if (!fichier) return setMessage('Choisissez le fichier du justificatif (PDF ou photo, 10 Mio maximum).')
+    setPending(true); setMessage('')
     try {
-      await api(`/vendeurs/mes-boutiques/${shopId}/documents`, { methode: 'POST', corps: { type, stockageCle: storageKey.trim(), expireLe: expiry || undefined } })
-      setStorageKey(''); setExpiry(''); setMessage('Justificatif ajouté au dossier.'); await onRefresh()
+      const corps = new FormData()
+      corps.append('fichier', fichier)
+      corps.append('type', type)
+      if (expiry) corps.append('expireLe', expiry)
+      await api(`/vendeurs/mes-boutiques/${shopId}/documents/fichier`, { methode: 'POST', corps })
+      setFichier(null); setExpiry(''); if (champ.current) champ.current.value = ''
+      setMessage('Justificatif transmis à KatiHub pour vérification.'); await onRefresh()
     } catch (cause) { setMessage(errorText(cause)) } finally { setPending(false) }
   }
 
-  return <div className={styles.featureGrid}><section className={styles.featureList}><header><h2>Historique des justificatifs</h2><span>{documents.length} document(s)</span></header>{documents.length ? <ul>{documents.map((document) => <li key={document.id}><div><strong>{DOCUMENT_LABELS[document.type] ?? document.type}</strong><small>Soumis le {new Intl.DateTimeFormat('fr-FR').format(new Date(document.creeLe))}</small>{document.motifDecision ? <em>{document.motifDecision}</em> : null}</div><b data-status={document.statut}>{STATUS_LABELS[document.statut] ?? document.statut}</b></li>)}</ul> : <p className={styles.blank}>Aucun document n’a encore été transmis.</p>}</section><section className={styles.actionPanel}><h2>Ajouter un justificatif</h2><p>Le backend attend une clé de stockage privé. Le téléversement direct sera activé dès que le service de stockage sécurisé sera disponible.</p><form onSubmit={submit}><label>Type de document<select value={type} onChange={(e) => setType(e.target.value)}>{Object.entries(DOCUMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Clé du fichier privé<input required minLength={3} value={storageKey} onChange={(e) => setStorageKey(e.target.value)} placeholder="vendeurs/mon-dossier/document.pdf" /></label><label>Date d’expiration, si applicable<input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></label>{message ? <p className={styles.feedback}>{message}</p> : null}<button disabled={pending}>{pending ? 'Envoi…' : 'Ajouter au dossier'}</button></form></section></div>
+  async function telecharger(document: SellerDocument) {
+    try { await telechargerApi(`/vendeurs/mes-boutiques/${shopId}/documents/${document.id}/fichier`, document.nomFichier ?? `justificatif-${document.id}`) }
+    catch (cause) { setMessage(errorText(cause)) }
+  }
+
+  return <div className={styles.featureGrid}><section className={styles.featureList}><header><h2>Historique des justificatifs</h2><span>{documents.length} document(s)</span></header>{documents.length ? <ul>{documents.map((document) => <li key={document.id}><div><strong>{DOCUMENT_LABELS[document.type] ?? document.type}</strong><small>Soumis le {new Intl.DateTimeFormat('fr-FR').format(new Date(document.creeLe))}{document.expireLe ? ` · expire le ${new Intl.DateTimeFormat('fr-FR').format(new Date(document.expireLe))}` : ''}</small>{document.nomFichier ? <small>{document.nomFichier}{document.tailleOctets ? ` · ${taillePiece(document.tailleOctets)}` : ''} · <button type="button" className={styles.lienAction} onClick={() => void telecharger(document)}>Télécharger</button></small> : null}{document.motifDecision ? <em>{document.motifDecision}</em> : null}</div><b data-status={document.statut}>{STATUS_LABELS[document.statut] ?? document.statut}</b></li>)}</ul> : <p className={styles.blank}>Aucun document n’a encore été transmis.</p>}</section><section className={styles.actionPanel}><h2>Ajouter un justificatif</h2><p>Déposez un PDF ou une photo lisible (JPEG, PNG, WebP), 10 Mio maximum. Le fichier est analysé par un antivirus puis conservé chiffré ; seule l’équipe de vérification KatiHub y a accès.</p><form onSubmit={submit}><label>Type de document<select value={type} onChange={(e) => setType(e.target.value)}>{Object.entries(DOCUMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Fichier<input ref={champ} type="file" required accept={TYPES_PIECES.join(',')} onChange={(e) => choisir(e.currentTarget.files)} /></label>{refus ? <p className={styles.feedback} role="alert">{refus}</p> : null}{fichier ? <ApercuPieces verification={verification} /> : null}<label>Date d’expiration, si applicable<input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></label>{message ? <p className={styles.feedback} role="status">{message}</p> : null}<button disabled={pending || !fichier}>{pending ? 'Envoi sécurisé…' : 'Transmettre le justificatif'}</button></form></section></div>
 }
 
 /** Une fiche refusee ou archivee ne se modifie plus : elle ne sera pas publiee. */
