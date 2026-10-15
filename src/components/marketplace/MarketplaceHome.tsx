@@ -8,6 +8,7 @@ import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
 import { MarquesAccueil } from './MarquesAccueil'
 import { ProductCard } from './ProductCardAccueil'
 import { PubAccueil } from './PubAccueil'
+import { NewsletterKatihub, VendreSurKatihub } from './VendreSurKatihub'
 import { RayonsAccueil, type RayonAccueil } from './RayonsAccueil'
 import styles from './marketplace-home-v2.module.css'
 
@@ -60,7 +61,7 @@ export async function MarketplaceHome() {
     <section className={`${styles.shell} ${styles.fashionBanner}`}><Image src="/marketplace-mode-cameroun.png" alt="Une cliente camerounaise présente une sélection mode" fill sizes="(max-width: 800px) 100vw, 1480px" /><div><h2>Le style camerounais,<br /><strong>au quotidien !</strong></h2><p>Vêtements, chaussures et accessoires proposés par des boutiques locales.</p><Link href="/recherche?q=Mode">Découvrir la mode <span>→</span></Link></div></section>
 
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Nouveautés" href="/catalogue?tri=recent" />{fresh.length ? <div className={styles.productGrid}>{fresh.map((offre) => <ProductCard key={offre.id} offre={offre} fresh />)}</div> : null}</section>
-    <section className={`${styles.shell} ${styles.sellerBanner}`}><Image src="/marketplace-vendeur-cameroun.png" alt="Un vendeur camerounais dans sa boutique" fill sizes="420px" /><div><h2>Vendez sur <strong>KatiHub</strong></h2><p>Rejoignez les vendeurs locaux qui développent leur activité en ligne.</p><ul><li>Votre boutique en quelques minutes</li><li>Des clients partout au Cameroun</li><li>Une équipe pour vous accompagner</li></ul></div><Link href="/devenir-vendeur">Créer ma boutique <span>→</span></Link></section>
-    <section className={`${styles.shell} ${styles.newsletter}`}><span>✉</span><div><h2>Restez informé avec KatiHub</h2><p>Recevez nos nouveautés et les offres des boutiques locales.</p></div><form action="/inscription" method="get"><label className="sr-only" htmlFor="newsletter-email">Votre adresse e-mail</label><input id="newsletter-email" name="email" type="email" autoComplete="email" required placeholder="Votre adresse e-mail" /><button type="submit">S’inscrire →</button></form></section>
+    <VendreSurKatihub />
+    <NewsletterKatihub />
   </div>
 }

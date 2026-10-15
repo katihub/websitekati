@@ -1,0 +1,91 @@
+/* Vendez sur KatiHub et la lettre d'information : la charte de l'accueil (bleu nuit, orange). */
+.vendre,.lettre{--navy:#061f4f;--orange:#ff7900;--line:#dce4ef;--muted:#63738e;width:min(100% - 40px,1480px);margin-inline:auto}
+
+/* VENDEZ SUR KATIHUB */
+.vendre{position:relative;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);margin-top:64px;overflow:hidden;border-radius:24px;background:radial-gradient(circle at 12% 0%,#ff79003d,transparent 34%),radial-gradient(circle at 58% 110%,#1d5fbf66,transparent 42%),linear-gradient(135deg,#061f4f 0%,#0a2c6b 60%,#0b3a86 100%);color:#fff;isolation:isolate}
+.vendre:before{content:"";position:absolute;inset:0;z-index:-1;background-image:radial-gradient(#ffffff14 1px,transparent 1px);background-size:22px 22px;mask-image:linear-gradient(90deg,#000 0%,transparent 60%)}
+.vendreTexte{padding:56px 48px 40px 56px}
+.etiquette{display:inline-flex;border:1px solid #ffffff38;border-radius:999px;background:#ffffff14;padding:6px 14px;color:#ffd2a6;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.vendreTexte h2{margin:18px 0 0;font-size:clamp(2rem,3.4vw,3.2rem);font-weight:800;line-height:1.05;letter-spacing:-.04em}
+.vendreTexte h2 strong{color:var(--orange)}
+.vendreTexte>p{max-width:560px;margin:18px 0 0;color:#d5e0f2;font-size:1rem;line-height:1.6}
+.atouts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:28px 0 0;padding:0;list-style:none}
+.atouts li{display:flex;gap:12px;align-items:flex-start;border:1px solid #ffffff1f;border-radius:14px;background:#ffffff0d;padding:14px;transition:background .25s ease,border-color .25s ease,transform .25s ease}
+.atouts li:hover{transform:translateY(-3px);border-color:#ff790080;background:#ffffff17}
+.atouts i{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:11px;background:#ff790026;font-size:1.2rem;font-style:normal}
+.atouts b{display:block;font-size:.88rem}
+.atouts small{display:block;margin-top:3px;color:#bdcce2;font-size:.76rem;line-height:1.45}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.principal,.secondaire{display:inline-flex;align-items:center;gap:14px;min-height:52px;border-radius:12px;padding:0 24px;font-size:.95rem;font-weight:800;transition:transform .25s ease,box-shadow .25s ease,background .25s ease}
+.principal{background:var(--orange);color:#fff;box-shadow:0 12px 26px #ff790052}
+.principal span{transition:transform .25s ease}
+.principal:hover{transform:translateY(-2px);box-shadow:0 16px 32px #ff790073}
+.principal:hover span{transform:translateX(4px)}
+.secondaire{border:1px solid #ffffff4d;color:#fff}
+.secondaire:hover{background:#ffffff14}
+.principal:focus-visible,.secondaire:focus-visible{outline:3px solid #ffd2a6;outline-offset:3px}
+.vendreVisuel{position:relative;min-height:440px;margin:24px 24px 0 0;overflow:hidden;border-radius:20px}
+.vendreVisuel img{object-fit:cover;object-position:center 25%}
+.badge{position:absolute;z-index:1;display:inline-flex;align-items:center;gap:10px;border-radius:12px;background:#fff;padding:11px 15px;color:var(--navy);font-size:.8rem;font-weight:700;box-shadow:0 14px 30px #061f4f3d;animation:flotter 5s ease-in-out infinite}
+.badge i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#e8f7ee;color:#118a43;font-style:normal;font-size:.8rem}
+.badgeHaut{top:22px;left:22px}
+.badgeBas{right:22px;bottom:22px;animation-delay:-2.5s}
+.badgeBas i{background:#fff0e3}
+@keyframes flotter{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.etapes{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:24px 0 0;padding:0;list-style:none;border-top:1px solid #ffffff1f;background:#00000024;counter-reset:etape}
+.etapes li{position:relative;display:flex;align-items:center;gap:12px;padding:20px 24px;color:#d5e0f2;font-size:.85rem;font-weight:600}
+.etapes li+li{border-left:1px solid #ffffff1a}
+.etapes span{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:var(--orange);color:#fff;font-size:.8rem;font-weight:800}
+
+/* LA LETTRE D'INFORMATION */
+.lettre{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(320px,520px);align-items:center;gap:28px;margin-top:20px;border:1px solid #ffe0c2;border-radius:24px;background:linear-gradient(120deg,#fff7ef 0%,#fff 55%,#f3f7fd 100%);padding:34px 40px;color:var(--navy)}
+.lettreIcone{display:grid;place-items:center;width:72px;height:72px;border-radius:20px;background:linear-gradient(145deg,#ff7900,#ffa24d);color:#fff;font-size:1.9rem;box-shadow:0 14px 28px #ff790047;transform:rotate(-6deg)}
+.lettreTexte h2{margin:0;font-size:clamp(1.35rem,2vw,1.8rem);font-weight:800;letter-spacing:-.03em}
+.lettreTexte p{max-width:520px;margin:8px 0 0;color:var(--muted);font-size:.92rem;line-height:1.55}
+.lettreTexte ul{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;list-style:none}
+.lettreTexte li{border-radius:999px;background:#fff;padding:5px 12px;color:#b64e00;font-size:.74rem;font-weight:700;box-shadow:inset 0 0 0 1px #ffd2a6}
+.lettreFormulaire{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.lettreFormulaire input{min-width:0;min-height:56px;border:1px solid #cdd8e6;border-radius:14px;background:#fff;padding:0 18px;color:var(--navy);font:inherit;font-size:.95rem;transition:border-color .2s ease,box-shadow .2s ease}
+.lettreFormulaire input:focus{outline:0;border-color:var(--orange);box-shadow:0 0 0 4px #ff79002b}
+.lettreFormulaire button{display:inline-flex;align-items:center;gap:12px;min-height:56px;border:0;border-radius:14px;background:var(--orange);padding:0 26px;color:#fff;font:inherit;font-size:.95rem;font-weight:800;cursor:pointer;box-shadow:0 10px 22px #ff790047;transition:transform .25s ease,box-shadow .25s ease}
+.lettreFormulaire button span{transition:transform .25s ease}
+.lettreFormulaire button:hover{transform:translateY(-2px);box-shadow:0 14px 28px #ff790066}
+.lettreFormulaire button:hover span{transform:translateX(4px)}
+.lettreFormulaire button:focus-visible{outline:3px solid var(--navy);outline-offset:3px}
+.lettreFormulaire small{grid-column:1/-1;color:var(--muted);font-size:.74rem}
+
+@media(max-width:1100px){
+  .vendre{grid-template-columns:1fr}
+  .vendreTexte{padding:44px 36px 8px}
+  .vendreVisuel{min-height:320px;margin:24px 36px 0}
+  .etapes{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .etapes li:nth-child(3){border-left:0}
+  .etapes li:nth-child(n+3){border-top:1px solid #ffffff1a}
+  .lettre{grid-template-columns:auto minmax(0,1fr)}
+  .lettreFormulaire{grid-column:1/-1}
+}
+@media(max-width:900px){.vendre,.lettre{width:min(100% - 28px,1480px)}.vendre{margin-top:44px}}
+@media(max-width:560px){
+  .vendre,.lettre{width:min(100% - 22px,1480px);border-radius:18px}
+  .vendreTexte{padding:32px 22px 4px}
+  .vendreTexte>p{font-size:.9rem}
+  .atouts{grid-template-columns:1fr}
+  .actions{flex-direction:column}
+  .actions a{justify-content:center}
+  .vendreVisuel{min-height:260px;margin:22px 16px 0}
+  .badge{font-size:.7rem;padding:9px 12px}
+  .badgeHaut{top:14px;left:14px}
+  .badgeBas{right:14px;bottom:14px}
+  .etapes{grid-template-columns:1fr}
+  .etapes li{padding:14px 22px}
+  .etapes li+li{border-left:0;border-top:1px solid #ffffff1a}
+  .lettre{grid-template-columns:1fr;gap:18px;padding:26px 22px}
+  .lettreIcone{width:56px;height:56px;font-size:1.5rem}
+  .lettreFormulaire{grid-template-columns:1fr}
+  .lettreFormulaire button{justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){
+  .badge{animation:none}
+  .atouts li,.principal,.principal span,.lettreFormulaire button,.lettreFormulaire button span{transition:none}
+  .atouts li:hover,.principal:hover,.lettreFormulaire button:hover{transform:none}
+}
