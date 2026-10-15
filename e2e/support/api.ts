@@ -46,7 +46,11 @@ export const POLITIQUE_KATI = {
 
 export async function simulerApi(page: Page): Promise<ApiSimulee> {
   // Une route de fond, lue partout : declaree d'office, un test peut la remplacer.
-  const routes: Route[] = [{ methode: 'GET', motif: /^\/marketplace\/kati\/politique$/, gestionnaire: () => POLITIQUE_KATI }]
+  const routes: Route[] = [
+    { methode: 'GET', motif: /^\/marketplace\/kati\/politique$/, gestionnaire: () => POLITIQUE_KATI },
+    // Les services du panier : sans assurance ni installation par defaut, un test les active.
+    { methode: 'GET', motif: /^\/marketplace\/services-commande\?/, gestionnaire: () => ({ assurance: { active: false, tauxBps: 0 }, installations: [] }) },
+  ]
   const appels: Appel[] = []
   const nonPrevues: string[] = []
   const erreursNavigateur: string[] = []

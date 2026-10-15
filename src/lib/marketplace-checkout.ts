@@ -18,6 +18,7 @@ export interface DeliveryGroup { id: string; name: string; lines: CheckedLine[];
 export interface MarketplaceOrder {
   reference: string; statut: string; totalFermeTtc: number; fraisLivraison: number
   acompteDu: number; acompteRecu: number; resteAPayer: number
+  modePaiementMarketplace?: 'acompte' | 'complet'; assuranceFcfa?: number; installationFcfa?: number; katiUtilises?: number; remiseKatiFcfa?: number
   sousCommandes: Array<{ reference: string; boutiqueId: string; boutique?: { nom: string; slug: string }; totalNetProduits: number; modeLivraison: DeliveryMode; lignes: Array<{ offreTitreCapture: string; quantite: number; totalNetFcfa: number; quantiteRefusee?: number; refus?: { motif: string; remboursementDuFcfa: number; rembourseLe: string | null } | null }> }>
 }
 export function checkLines(lines: readonly CartLine[], products: LiveProduct[]): CheckedLine[] {
