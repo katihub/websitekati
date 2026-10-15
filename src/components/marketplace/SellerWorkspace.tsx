@@ -13,9 +13,10 @@ import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
 import { ApercuPieces, TYPES_PIECES, taillePiece, verifierPieces, type VerificationPieces } from './ApercuPieces'
 import { MerchantLogin } from './MerchantLogin'
 import { VILLES_CAMEROUN } from '@/constants/villes'
-import { CHOIX_VENDEUR, LIBELLE_MODE, MODES_LIVRAISON, estModeLivraison } from '@/lib/modes-livraison'
+import { CHOIX_VENDEUR, MODES_LIVRAISON } from '@/lib/modes-livraison'
 import { EditeurFicheProduit } from './vendeur/EditeurFicheProduit'
 import { DevisBoutique } from './vendeur/DevisBoutique'
+import { LivraisonsBoutique } from './vendeur/LivraisonsBoutique'
 import { cheminCategorie, libelleMois, useCategoriesMarketplace, type CategorieProduit } from './vendeur/categories'
 import { FenetreNouvelleVariante, FenetrePrixVariante, revisionOuverte, type RevisionVariante } from './vendeur/FenetresVariante'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
@@ -350,7 +351,7 @@ export function SellerWorkspace() {
           {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
           {panel === 'offers' ? access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.offers} /> : null}
           {panel === 'orders' ? access.orders === 'allowed' ? <OrdersPanel shopId={space.id} listing={orders} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.orders} /> : null}
-          {panel === 'deliveries' ? access.deliveries === 'allowed' ? <DeliveriesPanel listing={deliveries} /> : <SectionUnavailable access={access.deliveries} /> : null}
+          {panel === 'deliveries' ? access.deliveries === 'allowed' ? <LivraisonsBoutique shopId={space.id} /> : <SectionUnavailable access={access.deliveries} /> : null}
           {panel === 'disputes' ? access.disputes === 'allowed' ? <DisputesPanel disputes={disputes} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.disputes} /> : null}
           {panel === 'payments' ? access.finance === 'allowed' && finance ? <PaymentsPanel shopId={space.id} finance={finance} listing={payments} canWithdraw={space.mesRoles.includes('proprietaire')} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.finance} /> : null}
           {panel === 'reviews' ? access.reviews === 'allowed' ? <ReviewsPanel listing={reviews} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.reviews} /> : null}
@@ -439,10 +440,6 @@ function OrdersPanel({ shopId, listing, onRefresh }: { shopId: string; listing: 
       <ChampTexte nom="motif" libelle="Motif, lu par le client" required minLength={5} maxLength={500} multiligne placeholder="Ex. Article épuisé chez notre fournisseur, retour prévu dans deux semaines." />
     </FenetreAction>
   </section>
-}
-
-function DeliveriesPanel({ listing }: { listing: Listing<ShopDelivery> }) {
-  return <section className={styles.featureList}><header><h2>Suivi des livraisons</h2><span>{listing.total} au total · {listing.elements.length} affichée{listing.elements.length > 1 ? 's' : ''}</span></header>{listing.elements.length ? <ul>{listing.elements.map(delivery => <li key={delivery.id}><div><strong>{delivery.reference}</strong><small>Commande {delivery.sousCommande.reference} · {delivery.ville} · {estModeLivraison(delivery.modeLivraison) ? LIBELLE_MODE[delivery.modeLivraison] : delivery.modeLivraison}{delivery.sousCommande.noteAgence ? ` · agence : ${delivery.sousCommande.noteAgence}` : ''}</small><small>{delivery.livraisonPrevueDebut ? `Prévue le ${new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(delivery.livraisonPrevueDebut))}` : `Créée le ${new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(delivery.creeLe))}`}</small></div><b data-status={delivery.statut}>{STATUS_LABELS[delivery.statut] ?? delivery.statut.replaceAll('_', ' ')}</b></li>)}</ul> : <p className={styles.blank}>Aucune livraison pour cette boutique.</p>}</section>
 }
 
 function PaymentsPanel({ shopId, finance, listing, canWithdraw, onRefresh }: { shopId: string; finance: SellerFinance; listing: Listing<ShopPayment>; canWithdraw: boolean; onRefresh: () => Promise<void> }) {
