@@ -1,8 +1,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { getBanners } from '@/lib/banners'
 import { lireAccueilMarketplace, type OffreMarketplace } from '@/lib/marketplace-data'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
 import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
+import { PubAccueil } from './PubAccueil'
 import styles from './marketplace-home-v2.module.css'
 
 const CATEGORIES = [
@@ -26,14 +28,22 @@ function ProductCard({ offre, fresh = false }: { offre: OffreMarketplace; fresh?
 }
 
 export async function MarketplaceHome() {
-  const { boutiques, offres } = await lireAccueilMarketplace()
+  const [{ boutiques, offres }, bannieres] = await Promise.all([lireAccueilMarketplace(), getBanners()])
   const best = offres.slice(0, 6)
   const fresh = [...offres].reverse().slice(0, 6)
   return <div className={styles.page}>
     <div className={`${styles.shell} ${styles.commerceGrid}`}>
       <aside className={styles.categoryMenu}><h2><span>☰</span>Toutes les catégories</h2>{CATEGORIES.map(([icon, label]) => <Link key={label} href={`/recherche?q=${encodeURIComponent(label)}`}><span>{icon}</span>{label}<b>›</b></Link>)}</aside>
       <div className={styles.centerStage}><MarketplaceHeroCarousel /><div className={styles.trustStrip}><span><i>✓</i><b>Produits vérifiés<small>et de qualité</small></b></span><span><i>▰</i><b>Livraison rapide<small>au Cameroun</small></b></span><span><i>◇</i><b>Paiement sécurisé<small>et fiable</small></b></span><span><i>↶</i><b>Retours faciles<small>sous 5 jours</small></b></span><span><i>◉</i><b>Service client<small>à votre écoute</small></b></span></div></div>
-      <aside className={styles.promoRail}><article className={styles.deliveryPromo}><span>Livraison rapide<br /><b>à domicile</b></span><p>Recevez vos commandes où que vous soyez.</p><Link href="/contact">En savoir plus →</Link><i>🛵</i></article><article className={styles.paymentPromo}><span>Paiement sécurisé</span><p>Mobile Money et partenaires de confiance.</p><div><b>OM</b><b>MoMo</b><b>VISA</b></div></article><article className={styles.supportPromo}><span>Service client 24/7</span><p>Une équipe locale vous répond.</p><Link href="/contact">Nous contacter →</Link></article></aside>
+      {/* La colonne de droite : la publicite choisie par le super admin, puis les engagements KatiHub regroupes. */}
+      <aside className={styles.promoRail} aria-label="Publicité et engagements KatiHub">
+        <PubAccueil pub={bannieres.pubsAccueil[0] ?? null} />
+        <section className={styles.engagements} aria-label="Nos engagements">
+          <article><i aria-hidden="true">🛵</i><div><b>Livraison rapide <em>à domicile</em></b><p>Recevez vos commandes où que vous soyez.</p><Link href="/contact">En savoir plus →</Link></div></article>
+          <article><i aria-hidden="true">🔒</i><div><b>Paiement sécurisé</b><p>Mobile Money et partenaires de confiance.</p><span className={styles.moyens}><small>OM</small><small>MoMo</small><small>VISA</small></span></div></article>
+          <article><i aria-hidden="true">🎧</i><div><b>Service client 24/7</b><p>Une équipe locale vous répond.</p><Link href="/contact">Nous contacter →</Link></div></article>
+        </section>
+      </aside>
     </div>
 
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Meilleures ventes" href="/catalogue" />{best.length ? <div className={styles.productGrid}>{best.map((offre) => <ProductCard key={offre.id} offre={offre} />)}</div> : <p className={styles.empty}>Les offres seront bientôt disponibles.</p>}</section>

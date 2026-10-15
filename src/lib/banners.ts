@@ -41,10 +41,11 @@ export interface BannerVariant {
  * OU LA PIECE S'AFFICHE DANS L'OUVERTURE DE LA PAGE D'ACCUEIL.
  *
  * Le proprietaire a divise la section en deux blocs sur la meme rangee : le
- * carrousel des bannieres et, a cote, celui des promotions. L'emplacement est
- * choisi dans le panel, piece par piece.
+ * carrousel des bannieres et, a cote, celui des promotions. `pub_accueil` est
+ * la publicite de l'accueil KatiHub, dans la colonne de droite. L'emplacement
+ * est choisi dans le panel, piece par piece.
  */
-export type EmplacementBanniere = 'principal' | 'promo'
+export type EmplacementBanniere = 'principal' | 'promo' | 'pub_accueil'
 
 export interface PublishedBanner {
   readonly id: number | string
@@ -62,10 +63,12 @@ export interface PublishedBanner {
   readonly mobile: BannerVariant
 }
 
-/** Les deux carrousels de l'ouverture, dans l'ordre du panel. */
+/** Les pieces de l'ouverture par emplacement, dans l'ordre du panel. */
 export interface BannieresAccueil {
   readonly principales: PublishedBanner[]
   readonly promos: PublishedBanner[]
+  /** Les publicites de l'accueil KatiHub ; la premiere est affichee. */
+  readonly pubsAccueil: PublishedBanner[]
 }
 
 /**
@@ -157,7 +160,7 @@ function normaliser(valeur: unknown): PublishedBanner | null {
     label: b.label,
     alt: b.alt,
     focus: Number(b.focus) || 50,
-    emplacement: b.emplacement === 'promo' ? 'promo' : 'principal',
+    emplacement: b.emplacement === 'promo' || b.emplacement === 'pub_accueil' ? b.emplacement : 'principal',
     large: b.large,
     mobile: estVariante(b.mobile) ? b.mobile : b.large,
   }
@@ -169,6 +172,7 @@ export async function getBanners(): Promise<BannieresAccueil> {
   return {
     principales: toutes.filter((b) => b.emplacement === 'principal'),
     promos: toutes.filter((b) => b.emplacement === 'promo'),
+    pubsAccueil: toutes.filter((b) => b.emplacement === 'pub_accueil'),
   }
 }
 
