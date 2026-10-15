@@ -7,6 +7,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { normalisePhone, useAccount } from '@/lib/account'
 import { ErreurApi, api, apiDisponible, telechargerApi } from '@/lib/api'
 import { LIBELLES_DEVIS, LIBELLES_PARTIE, dateCourte, fcfa, type DevisMarketplace, type PartieDevis } from '@/lib/devis-marketplace'
+import { useLocalites } from '@/lib/localites'
+import { LIBELLE_MODE, livraisonADomicile, type DeliveryMode } from '@/lib/modes-livraison'
+import { memoriserSuivi, useJetonSuivi } from '@/lib/suivi'
 
 /**
  * UN DEVIS MARKETPLACE, VU PAR SON CLIENT.
@@ -15,9 +18,10 @@ import { LIBELLES_DEVIS, LIBELLES_PARTIE, dateCourte, fcfa, type DevisMarketplac
  * confirmees qu'il retient, donne son adresse et le mode de livraison de
  * chaque boutique, et accepte : la commande est creee au prix du devis et il
  * passe au paiement de l'acompte, comme pour toute commande.
+ *
+ * SANS COMPTE (`sansCompte`), le devis s'ouvre par le jeton de son lien : les
+ * memes ecrans, servis par les routes `sans-compte` du backend.
  */
-
-const MODES: Record<'vendeur' | 'katihub', string> = { katihub: 'Livraison KatiHub', vendeur: 'Livraison par la boutique' }
 const ton = (statut: PartieDevis['statut']) =>
   statut === 'confirmee' || statut === 'acceptee' ? 'border-primary text-primary' : statut === 'refusee' ? 'border-warn text-warn' : 'border-rule text-ink-2'
 
@@ -25,38 +29,53 @@ function intersection(listes: string[][]) {
   return listes.length ? listes.reduce((commun, liste) => commun.filter((v) => liste.includes(v))) : []
 }
 
-export function DetailDevis({ reference }: { reference: string }) {
+export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { reference: string; sansCompte?: boolean; jetonUrl?: string }) {
   const { open: ouvrirCompte } = useAccount()
   const router = useRouter()
+  const localites = useLocalites()
+  // Sans compte : le jeton du lien, ou celui garde par ce navigateur ; `undefined` tant qu'il n'est pas resolu.
+  const jeton = useJetonSuivi(reference, jetonUrl, sansCompte)
+  const base = sansCompte ? `/marketplace/devis/sans-compte/${encodeURIComponent(reference)}` : `/marketplace/devis/${encodeURIComponent(reference)}`
+  const acces = jeton ? { jetonSuivi: jeton } : {}
   const [devis, setDevis] = useState<DevisMarketplace | null>(null)
   const [erreur, setErreur] = useState('')
   const [connexion, setConnexion] = useState(false)
   const [retenues, setRetenues] = useState<string[] | null>(null)
-  const [modes, setModes] = useState<Record<string, 'vendeur' | 'katihub'>>({})
+  const [modes, setModes] = useState<Record<string, DeliveryMode>>({})
+  const [notesAgence, setNotesAgence] = useState<Record<string, string>>({})
   const [adresse, setAdresse] = useState({ ville: '', quartier: '', repere: '', telephone: '' })
   const [envoi, setEnvoi] = useState(false)
   const [message, setMessage] = useState<{ type: 'erreur' | 'info'; texte: string; actualiser?: boolean } | null>(null)
   const verrou = useRef(false)
 
   const charger = useCallback(async () => {
+    if (sansCompte && !jeton) {
+      if (jeton === null) setErreur('Ce devis s’ouvre avec le lien reçu par e-mail.')
+      return
+    }
     try {
-      setDevis(await api<DevisMarketplace>(`/marketplace/devis/${encodeURIComponent(reference)}`))
+      setDevis(await api<DevisMarketplace>(base, jeton ? { jetonSuivi: jeton } : {}))
       setErreur('')
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 401) setConnexion(true)
       else setErreur(e instanceof ErreurApi ? e.message : 'Ce devis n’a pas pu être chargé.')
     }
-  }, [reference])
+  }, [base, sansCompte, jeton])
 
   useEffect(() => {
-    if (!apiDisponible) return
+    if (!apiDisponible || jeton === undefined) return
     const minuterie = window.setTimeout(() => void charger(), 0)
     return () => window.clearTimeout(minuterie)
-  }, [charger])
+  }, [charger, jeton])
 
   const acceptables = useMemo(() => devis?.parties.filter((p) => p.acceptable) ?? [], [devis])
   const choisies = acceptables.filter((p) => (retenues ?? acceptables.map((a) => a.id)).includes(p.id))
-  const villes = intersection(choisies.map((p) => p.livraison.villes))
+  const modeDe = (p: PartieDevis): DeliveryMode => modes[p.id] && p.livraison.modes.includes(modes[p.id]!) ? modes[p.id]! : p.livraison.modes[0]!
+  // Seule une livraison a domicile depend des villes desservies ; le retrait et l'agence vont partout.
+  const aDomicile = choisies.some((p) => livraisonADomicile(modeDe(p)))
+  const communes = intersection(choisies.filter((p) => livraisonADomicile(modeDe(p))).map((p) => p.livraison.villes))
+  const villes = aDomicile ? communes : [...new Set([...localites.map((l) => l.ville), ...choisies.flatMap((p) => p.livraison.villes)])]
+  const enAgence = choisies.some((p) => modeDe(p) === 'agence')
   const ville = villes.includes(adresse.ville) ? adresse.ville : villes[0] ?? ''
   const totalRetenu = choisies.reduce((s, p) => s + p.totalFcfa, 0)
 
@@ -67,17 +86,17 @@ export function DetailDevis({ reference }: { reference: string }) {
     </div>
   }
   if (!devis && !erreur) return <p className="text-small text-ink-3" role="status">Chargement du devis…</p>
-  if (!devis) return <div className="rounded-well border border-rule bg-space p-4"><p className="text-small text-ink">{erreur}</p><Link href="/compte/devis" className="mt-3 inline-flex text-micro text-secondary underline">← Mes devis</Link></div>
+  if (!devis) return <div className="rounded-well border border-rule bg-space p-4"><p className="text-small text-ink">{erreur}</p>{sansCompte ? null : <Link href="/compte/devis" className="mt-3 inline-flex text-micro text-secondary underline">← Mes devis</Link>}</div>
 
   async function telecharger() {
-    try { await telechargerApi(`/marketplace/devis/${encodeURIComponent(reference)}/pdf`, `devis-${reference}.pdf`) }
+    try { await telechargerApi(`${base}/pdf`, `devis-${reference}.pdf`, acces) }
     catch (e) { setMessage({ type: 'erreur', texte: e instanceof ErreurApi ? e.message : 'Le PDF n’a pas pu être téléchargé.' }) }
   }
 
   async function actualiser() {
     setEnvoi(true); setMessage(null)
     try {
-      setDevis(await api<DevisMarketplace>(`/marketplace/devis/${encodeURIComponent(reference)}/actualisation`, { methode: 'POST' }))
+      setDevis(await api<DevisMarketplace>(`${base}/actualisation`, { methode: 'POST', ...acces }))
       setMessage({ type: 'info', texte: 'Les prix du devis ont été mis à jour avec les prix publiés.' })
     } catch (e) { setMessage({ type: 'erreur', texte: e instanceof ErreurApi ? e.message : 'L’actualisation a échoué.' }) }
     finally { setEnvoi(false) }
@@ -89,19 +108,23 @@ export function DetailDevis({ reference }: { reference: string }) {
     const telephone = normalisePhone(adresse.telephone)
     if (!choisies.length) return setMessage({ type: 'erreur', texte: 'Choisissez au moins une boutique à retenir.' })
     if (!ville) return setMessage({ type: 'erreur', texte: 'Les boutiques retenues ne livrent pas une même ville : retenez-les séparément.' })
-    if (adresse.quartier.trim().length < 2 || adresse.repere.trim().length < 3) return setMessage({ type: 'erreur', texte: 'Indiquez un quartier et un repère précis pour la livraison.' })
+    if (aDomicile && (adresse.quartier.trim().length < 2 || adresse.repere.trim().length < 3)) return setMessage({ type: 'erreur', texte: 'Indiquez un quartier et un repère précis pour la livraison.' })
+    const sansNote = choisies.find((p) => modeDe(p) === 'agence' && (notesAgence[p.id] ?? '').trim().length < 3)
+    if (sansNote) return setMessage({ type: 'erreur', texte: `Précisez l’agence de voyage où ${sansNote.boutique.nom} doit déposer votre colis.` })
     if (!telephone) return setMessage({ type: 'erreur', texte: 'Indiquez un numéro camerounais valide, commençant par 6.' })
     verrou.current = true; setEnvoi(true); setMessage(null)
     try {
-      const resultat = await api<{ reference: string; commande: string }>(`/marketplace/devis/${encodeURIComponent(reference)}/acceptation`, {
+      const resultat = await api<{ reference: string; commande: string; jetonCommande?: string }>(`${base}/acceptation`, {
         methode: 'POST',
+        ...acces,
         corps: {
           partieIds: choisies.map((p) => p.id),
-          livraisons: choisies.map((p) => ({ boutiqueId: p.boutiqueId, mode: modes[p.id] && p.livraison.modes.includes(modes[p.id]!) ? modes[p.id] : p.livraison.modes[0] })),
-          adresse: { ville, quartier: adresse.quartier.trim(), repere: adresse.repere.trim(), telephoneDestinataire: telephone },
+          livraisons: choisies.map((p) => ({ boutiqueId: p.boutiqueId, mode: modeDe(p), ...(modeDe(p) === 'agence' ? { noteAgence: notesAgence[p.id]!.trim() } : {}) })),
+          adresse: { ville, ...(aDomicile ? { quartier: adresse.quartier.trim(), repere: adresse.repere.trim() } : {}), telephoneDestinataire: telephone },
         },
       })
-      router.push(`/marketplace/commande/${encodeURIComponent(resultat.commande)}/paiement`)
+      if (resultat.jetonCommande) memoriserSuivi(resultat.commande, resultat.jetonCommande)
+      router.push(`/marketplace/commande/${encodeURIComponent(resultat.commande)}/paiement${resultat.jetonCommande ? `?suivi=${encodeURIComponent(resultat.jetonCommande)}` : ''}`)
     } catch (e) {
       const prix = e instanceof ErreurApi && e.code === 409 && /actualisez/i.test(e.message)
       setMessage({ type: 'erreur', texte: e instanceof ErreurApi ? e.message : 'La réponse n’a pas été reçue. Réessayez : une même acceptation ne crée pas deux commandes.', actualiser: prix })
@@ -112,7 +135,7 @@ export function DetailDevis({ reference }: { reference: string }) {
   return <div className="grid gap-8">
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <Link href="/compte/devis" className="text-micro text-secondary underline underline-offset-2">← Mes devis</Link>
+        {sansCompte ? <p className="text-micro text-ink-3">Devis sans compte · gardez le lien reçu par e-mail, il ouvre cette page.</p> : <Link href="/compte/devis" className="text-micro text-secondary underline underline-offset-2">← Mes devis</Link>}
         <h1 className="mt-2 text-h3 font-semibold text-ink">Devis <span className="t-num">{devis.reference}</span></h1>
         <p className="text-small text-ink-2">Demandé le {dateCourte(devis.creeLe)}{devis.entreprise ? ` pour ${devis.entreprise}` : ''} · {LIBELLES_DEVIS[devis.statut]}</p>
       </div>
@@ -172,9 +195,12 @@ export function DetailDevis({ reference }: { reference: string }) {
             }} />
             {partie.boutique.nom} · <span className="t-num">{fcfa(partie.totalFcfa)}</span>
           </label>
-          <select aria-label={`Livraison ${partie.boutique.nom}`} value={modes[partie.id] ?? partie.livraison.modes[0]} onChange={(event) => setModes({ ...modes, [partie.id]: event.currentTarget.value as 'vendeur' | 'katihub' })} className="min-h-11 rounded-control border border-rule bg-surface px-3 text-small">
-            {partie.livraison.modes.map((mode) => <option key={mode} value={mode}>{MODES[mode]}</option>)}
+          <select aria-label={`Livraison ${partie.boutique.nom}`} value={modeDe(partie)} onChange={(event) => setModes({ ...modes, [partie.id]: event.currentTarget.value as DeliveryMode })} className="min-h-11 rounded-control border border-rule bg-surface px-3 text-small">
+            {partie.livraison.modes.map((mode) => <option key={mode} value={mode}>{LIBELLE_MODE[mode]}</option>)}
           </select>
+          {modeDe(partie) === 'agence' && choisies.some((p) => p.id === partie.id) ? <label className="w-full text-small font-semibold">Agence de voyage choisie
+            <input value={notesAgence[partie.id] ?? ''} onChange={(event) => setNotesAgence({ ...notesAgence, [partie.id]: event.currentTarget.value })} maxLength={500} className="mt-1 block min-h-11 w-full rounded-control border border-rule bg-surface px-3 text-small font-normal" placeholder="Ex. Général Express, gare de Bafoussam" />
+          </label> : null}
         </div>)}
       </fieldset>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -183,12 +209,12 @@ export function DetailDevis({ reference }: { reference: string }) {
             {villes.length ? villes.map((v) => <option key={v} value={v}>{v}</option>) : <option value="">Aucune ville commune</option>}
           </select>
         </label>
-        <label className="text-small font-semibold">Quartier
+        {aDomicile ? <><label className="text-small font-semibold">Quartier
           <input value={adresse.quartier} onChange={(event) => setAdresse({ ...adresse, quartier: event.currentTarget.value })} maxLength={80} className="mt-1 block min-h-11 w-full rounded-control border border-rule bg-surface px-3 text-small font-normal" placeholder="Bonanjo" />
         </label>
         <label className="text-small font-semibold sm:col-span-2">Repère
           <input value={adresse.repere} onChange={(event) => setAdresse({ ...adresse, repere: event.currentTarget.value })} maxLength={240} className="mt-1 block min-h-11 w-full rounded-control border border-rule bg-surface px-3 text-small font-normal" placeholder="Immeuble, entrée, point de repère" />
-        </label>
+        </label></> : null}
         <label className="text-small font-semibold">Téléphone du destinataire
           <input value={adresse.telephone} onChange={(event) => setAdresse({ ...adresse, telephone: event.currentTarget.value })} inputMode="tel" autoComplete="tel" className="mt-1 block min-h-11 w-full rounded-control border border-rule bg-surface px-3 text-small font-normal" placeholder="6XX XX XX XX" />
         </label>
@@ -197,7 +223,7 @@ export function DetailDevis({ reference }: { reference: string }) {
         {message.texte}{message.actualiser ? <> <button type="button" className="font-semibold underline" onClick={() => void actualiser()}>Actualiser le devis</button></> : null}
       </p> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-small text-ink-2">Total retenu : <b className="t-num text-ink">{fcfa(totalRetenu)}</b> · un acompte sera demandé, le solde à la livraison.</p>
+        <p className="text-small text-ink-2">Total retenu : <b className="t-num text-ink">{fcfa(totalRetenu)}</b> · {enAgence ? 'l’expédition en agence se paie en totalité à la commande.' : 'un acompte sera demandé, le solde à la livraison.'}</p>
         <button type="submit" disabled={envoi || !choisies.length} className="press min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Création de la commande…' : 'Accepter et commander'}</button>
       </div>
     </form> : null}

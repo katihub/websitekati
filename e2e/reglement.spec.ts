@@ -33,11 +33,10 @@ async function jusquaLaRevue(page: Page) {
   await page.addInitScript(([o, b]) => {
     localStorage.setItem('nowtech.panier.v1', JSON.stringify([{ slug: 'telephone', name: 'Téléphone', price: 149_000, image: null, qty: 2, offerId: o, boutiqueId: b, boutiqueNom: 'TechMall' }]))
   }, [O, B])
+  // La commande tient sur une page : le reglement se lit sans etape intermediaire.
   await page.goto(`/marketplace/commande?articles=${O}`)
-  await page.getByLabel('Quartier').fill('Akwa')
+  await page.getByLabel('Quartier').selectOption('Akwa')
   await page.getByLabel('Repère').fill('Face pharmacie')
-  await page.getByLabel('Téléphone du destinataire').fill('699000001')
-  await page.getByRole('button', { name: 'Continuer vers le paiement' }).click()
   await expect(page.getByTestId('reglement-commande')).toBeVisible()
 }
 

@@ -1,5 +1,6 @@
 'use client'
 
+import type { DeliveryMode } from './modes-livraison'
 import {
   createContext,
   useCallback,
@@ -45,7 +46,7 @@ export interface CartLine {
   readonly offerId?: string
   readonly boutiqueId?: string
   readonly boutiqueNom?: string
-  readonly modesLivraison?: Array<'vendeur' | 'katihub'>
+  readonly modesLivraison?: DeliveryMode[]
   readonly villesLivraison?: string[]
   /** MOQ de l'offre : la ligne ne descend pas en dessous. */
   readonly quantiteMinimale?: number

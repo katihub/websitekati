@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { api } from '@/lib/api'
-import type { DeliveryMode } from '@/lib/marketplace-checkout'
+import type { DeliveryMode } from '@/lib/modes-livraison'
 
 /**
  * LA GRILLE DES FRAIS DE LIVRAISON, LUE POUR LES AFFICHER AVANT LA COMMANDE.
@@ -15,8 +15,9 @@ import type { DeliveryMode } from '@/lib/marketplace-checkout'
 
 export interface TarifLivraison { ville: string; mode: DeliveryMode; montantFcfa: number; gratuitDesFcfa: number | null }
 
-/** Les frais d'une boutique ; `null` quand ce mode n'est pas propose dans cette ville. Meme regle que le serveur. */
+/** Les frais d'une boutique ; `null` quand ce mode n'est pas propose dans cette ville. Meme regle que le serveur : le retrait est gratuit. */
 export function fraisBoutique(tarifs: readonly TarifLivraison[], ville: string, mode: DeliveryMode, totalProduitsFcfa: number): number | null {
+  if (mode === 'retrait') return 0
   const cle = ville.trim().toLocaleLowerCase('fr')
   const tarif = tarifs.find((t) => t.mode === mode && t.ville.trim().toLocaleLowerCase('fr') === cle)
   if (!tarif) return null

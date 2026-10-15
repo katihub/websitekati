@@ -27,7 +27,8 @@ test('un visiteur non connecté passe de la commande à la connexion, avec le re
 
   await page.goto(`/marketplace/commande?articles=${OFFRE}`)
   const retour = encodeURIComponent(`/marketplace/commande?articles=${OFFRE}`)
-  const invite = page.locator('section', { hasText: 'Un compte client est nécessaire pour commander.' })
+  // Sans compte, la commande reste possible ; la page propose aussi de se connecter.
+  const invite = page.getByTestId('arguments-compte')
   await expect(invite.getByRole('link', { name: 'Créer un compte' })).toHaveAttribute('href', `/inscription?retour=${retour}`)
 
   await invite.getByRole('button', { name: 'Se connecter' }).click()

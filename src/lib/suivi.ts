@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useSyncExternalStore } from 'react'
+
 /**
  * LES COMMANDES PASSEES SANS COMPTE, ET LEUR CLE.
  *
@@ -58,6 +60,22 @@ export function resoudreJeton(reference: string, jetonUrl: string | undefined): 
     return jetonUrl
   }
   return jetonMemorise(reference)
+}
+
+const sansAbonnement = () => () => {}
+
+/**
+ * Le jeton d'une page sans compte, pour un composant : celui du lien, sinon
+ * celui garde par ce navigateur. `undefined` au rendu serveur, le temps que le
+ * navigateur le lise ; `null` sans jeton, ou quand `actif` est faux.
+ */
+export function useJetonSuivi(reference: string, jetonUrl: string | undefined, actif = true): string | null | undefined {
+  useEffect(() => { if (actif && jetonUrl) memoriserSuivi(reference, jetonUrl) }, [actif, reference, jetonUrl])
+  return useSyncExternalStore(
+    sansAbonnement,
+    () => (actif ? jetonUrl ?? jetonMemorise(reference) : null),
+    () => (actif ? undefined : null),
+  )
 }
 
 /** La page de la commande — ou `page` en dessous, `/paiement` — jeton compris quand il y en a un. */

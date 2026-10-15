@@ -1,5 +1,6 @@
 'use client'
 
+import type { DeliveryMode } from '@/lib/modes-livraison'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 
@@ -80,7 +81,7 @@ export type MarketplaceProduct = {
     libelleVariante?: string | null
     attributsVariante?: Record<string, string> | null
     ordreVariante?: number
-    modesLivraison: Array<'vendeur' | 'katihub'>
+    modesLivraison: DeliveryMode[]
     villesLivraison: string[]
     delaiMaxJours: number | null
     disponible: number
@@ -89,7 +90,7 @@ export type MarketplaceProduct = {
     /** KatiHub a recu et teste l'article de cette boutique. */
     verifieParKatiLe?: string | null
     /** `ville` : la ville de la boutique, montree au client a la place de son nom. */
-    boutique: { id: string; nom: string; slug: string; ville?: string | null }
+    boutique: { id: string; nom: string; slug: string; ville?: string | null; adresseRetrait?: string | null }
   }>
 }
 
@@ -119,7 +120,7 @@ export function MarketplacePreview({ product }: { product?: MarketplaceProduct }
         rating: 'Nouveau',
         sales: `${offre.disponible} en stock`,
         price: offre.prixFcfa,
-        delivery: offre.modesLivraison.includes('katihub') ? 'Livré par KatiHub' : 'Livraison vendeur',
+        delivery: offre.modesLivraison.includes('katihub') ? 'Kati Express' : offre.modesLivraison.includes('retrait') && !offre.modesLivraison.includes('vendeur') ? 'Retrait en boutique' : 'Livraison vendeur',
         window: offre.delaiMaxJours === 0 ? 'Aujourd’hui' : `Sous ${offre.delaiMaxJours ?? 3} jour(s)`,
         recommended: index === 0,
       }])

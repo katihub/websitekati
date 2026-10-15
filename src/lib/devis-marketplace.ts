@@ -1,3 +1,5 @@
+import type { DeliveryMode } from './modes-livraison'
+
 /**
  * LES DEVIS MARKETPLACE, COTE CLIENT ET COTE BOUTIQUE : les formes que l'API
  * rend, et les libelles qu'on en montre.
@@ -36,7 +38,7 @@ export interface PartieDevis {
   expiree: boolean
   acceptable: boolean
   prixAJour: boolean
-  livraison: { modes: Array<'vendeur' | 'katihub'>; villes: string[] }
+  livraison: { modes: DeliveryMode[]; villes: string[] }
 }
 
 export interface DevisMarketplace {

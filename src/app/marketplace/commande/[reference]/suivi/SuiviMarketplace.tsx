@@ -8,12 +8,26 @@ import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
 import { ErreurApi, api, telechargerApi } from '@/lib/api'
 import { formatPrice } from '@/lib/format'
 import { formatKati, type KatiCommande } from '@/lib/kati'
+import { LIBELLE_MODE, type DeliveryMode } from '@/lib/modes-livraison'
+import { useJetonSuivi } from '@/lib/suivi'
 
 type Evenement = { id: string; type: string; versStatut: string | null; motif: string | null; creeLe: string }
 type Ligne = { id: string; offreTitreCapture: string; quantite: number; quantiteLivree: number; quantiteRetournee: number; quantiteRemboursee: number; totalNetFcfa: number; quantiteRefusee?: number; refus?: { motif: string; remboursementDuFcfa: number; rembourseLe: string | null } | null }
 type Expedition = { id: string; reference: string; statut: string; ville: string; montantACollecterFcfa: number; livreeLe: string | null; evenements: Evenement[] }
-type SousCommande = { id: string; reference: string; statut: string; boutique: { nom: string; slug: string }; lignes: Ligne[]; expeditions: Expedition[] }
+type SousCommande = { id: string; reference: string; statut: string; modeLivraison?: DeliveryMode; noteAgence?: string | null; boutique: { nom: string; slug: string }; lignes: Ligne[]; expeditions: Expedition[] }
 type Commande = { id: string; reference: string; statut: string; totalFermeTtc: number; acompteDu: number; acompteRecu: number; resteAPayer: number; sousCommandes: SousCommande[]; kati?: KatiCommande }
+
+/**
+ * La commande : celle du compte connecte, ou, avec le jeton de son lien, une
+ * commande passee sans compte. Les reclamations demandent un compte.
+ */
+async function lireCommande(reference: string, jeton: string | null, signal?: AbortSignal) {
+  const commande = jeton
+    ? await api<Commande>(`/marketplace/commandes/sans-compte/${encodeURIComponent(reference)}`, { signal, jetonSuivi: jeton })
+    : await api<Commande>(`/marketplace/commandes/${encodeURIComponent(reference)}`, { signal })
+  const demandes = jeton ? [] : await api<Demande[]>(`/marketplace/demandes-client?commandeId=${encodeURIComponent(commande.id)}`, { signal })
+  return { commande, demandes }
+}
 type Retour = { id: string; statut: string; quantite: number; montantRembourseFcfa: number; referenceRetour: string | null; motifDecision?: string | null; motifArbitrage?: string | null; motifContestation?: string | null }
 type Piece = { id: string; nomCapture: string; typeMime: string; tailleOctets: number; empreinteSha256: string }
 type Message = { id: string; auteurType: string; contenu: string; creeLe: string; pieces: Piece[] }
@@ -37,7 +51,9 @@ type Fenetre =
   | { type: 'pieces'; demande: Demande; message: Message; verification: VerificationPieces }
   | null
 
-export function SuiviMarketplace({ reference }: { reference: string }) {
+export function SuiviMarketplace({ reference, jetonUrl }: { reference: string; jetonUrl?: string }) {
+  // Le jeton du lien, ou celui garde par ce navigateur ; `undefined` tant qu'il n'est pas resolu.
+  const jeton = useJetonSuivi(reference, jetonUrl)
   const [commande, setCommande] = useState<Commande | null>(null)
   const [demandes, setDemandes] = useState<Demande[]>([])
   const [erreur, setErreur] = useState('')
@@ -48,28 +64,24 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
   const charger = useCallback(async (signal?: AbortSignal) => {
     setErreur('')
     try {
-      const prochaine = await api<Commande>(`/marketplace/commandes/${encodeURIComponent(reference)}`, { signal })
-      const dossiers = await api<Demande[]>(`/marketplace/demandes-client?commandeId=${encodeURIComponent(prochaine.id)}`, { signal })
-      setCommande(prochaine)
-      setDemandes(dossiers)
+      const lu = await lireCommande(reference, jeton ?? null, signal)
+      setCommande(lu.commande)
+      setDemandes(lu.demandes)
     } catch (cause) {
       if (!signal?.aborted) setErreur(cause instanceof ErreurApi ? cause.message : 'Le suivi est momentanément indisponible.')
     } finally {
       if (!signal?.aborted) setChargement(false)
     }
-  }, [reference])
+  }, [reference, jeton])
 
   useEffect(() => {
+    if (jeton === undefined) return
     const controleur = new AbortController()
-    api<Commande>(`/marketplace/commandes/${encodeURIComponent(reference)}`, { signal: controleur.signal })
-      .then(async (prochaine) => {
-        const dossiers = await api<Demande[]>(
-          `/marketplace/demandes-client?commandeId=${encodeURIComponent(prochaine.id)}`,
-          { signal: controleur.signal },
-        )
+    lireCommande(reference, jeton, controleur.signal)
+      .then((lu) => {
         if (!controleur.signal.aborted) {
-          setCommande(prochaine)
-          setDemandes(dossiers)
+          setCommande(lu.commande)
+          setDemandes(lu.demandes)
           setErreur('')
         }
       })
@@ -82,7 +94,7 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
         if (!controleur.signal.aborted) setChargement(false)
       })
     return () => controleur.abort()
-  }, [reference])
+  }, [reference, jeton])
 
   function ouvrir(prochaine: Fenetre) {
     setErreur('')
@@ -192,13 +204,18 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
           </p>
         ) : null}
 
+      {jeton ? (
+        <div className="mt-6 rounded-well border border-rule bg-space px-4 py-3 text-small text-ink" data-testid="arguments-compte">
+          Commande passée sans compte : gardez le lien reçu par e-mail, il ouvre cette page.{commande.acompteRecu < commande.acompteDu ? <> <Link href={`/marketplace/commande/${encodeURIComponent(commande.reference)}/paiement?suivi=${encodeURIComponent(jeton)}`} className="text-secondary underline underline-offset-2">Régler la commande</Link>.</> : null} Avec un compte KatiHub, vous gagnez des KATI sur chaque commande, vous retrouvez vos adresses et vous pouvez signaler un problème en ligne. <Link href="/inscription" className="text-secondary underline underline-offset-2">Créer un compte</Link>
+        </div>
+      ) : null}
       {erreur ? <p className="mt-5 rounded-well border border-warn p-3 text-small text-warn" role="alert">{erreur}</p> : null}
       <p role="status" className={succes ? 'mt-5 rounded-well border border-primary p-3 text-small text-primary' : 'sr-only'}>{succes}</p>
 
       <section className="mt-8 grid gap-5">
         {commande.sousCommandes.map((groupe) => (
           <article key={groupe.id} className="rounded-well border border-rule bg-space p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-h4 font-semibold">{groupe.boutique.nom}</h2><p className="text-micro text-ink-3">{groupe.reference} · {libelle(groupe.statut)}</p></div></div>
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-h4 font-semibold">{groupe.boutique.nom}</h2><p className="text-micro text-ink-3">{groupe.reference} · {libelle(groupe.statut)}{groupe.modeLivraison ? ` · ${LIBELLE_MODE[groupe.modeLivraison]}` : ''}{groupe.noteAgence ? ` · ${groupe.noteAgence}` : ''}</p></div></div>
             <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.1fr]">
               <ul className="divide-y divide-rule">
                 {groupe.lignes.map((ligne) => (
@@ -209,7 +226,7 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
                       <p className="mt-1 text-micro text-warn" data-testid="ligne-refusee">Article indisponible, retiré de la commande{ligne.refus ? ` : ${ligne.refus.motif}` : ''}.{ligne.refus?.remboursementDuFcfa ? (ligne.refus.rembourseLe ? ` ${formatPrice(ligne.refus.remboursementDuFcfa)} d’acompte vous ont été remboursés.` : ` ${formatPrice(ligne.refus.remboursementDuFcfa)} d’acompte vous seront remboursés par Mobile Money.`) : ' Le montant à régler à la livraison est réduit d’autant.'}</p>
                     ) : <>
                       <p className="mt-1 text-micro text-ink-3">Livré : {ligne.quantiteLivree} · Retourné : {ligne.quantiteRetournee} · Remboursé : {ligne.quantiteRemboursee}</p>
-                      <button type="button" className="mt-1 min-h-11 text-small font-semibold text-secondary underline" onClick={() => ouvrir({ type: 'ouverture', sousCommande: groupe, ligne, expedition: groupe.expeditions[0] })}>Signaler un problème</button>
+                      {jeton ? null : <button type="button" className="mt-1 min-h-11 text-small font-semibold text-secondary underline" onClick={() => ouvrir({ type: 'ouverture', sousCommande: groupe, ligne, expedition: groupe.expeditions[0] })}>Signaler un problème</button>}
                     </>}
                   </li>
                 ))}

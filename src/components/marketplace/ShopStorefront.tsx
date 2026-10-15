@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { LIBELLE_MODE, estModeLivraison } from '@/lib/modes-livraison'
 import { imageProduit } from '@/lib/image-produit'
 import Link from 'next/link'
 import { useState, useSyncExternalStore } from 'react'
@@ -116,5 +117,5 @@ function CategoryRail({ categories, shop, select }: { categories: string[]; shop
   return categories.length ? <div className={styles.categoryRail}>{categories.map(item=><button key={item} onClick={()=>select(item)}><ShopIcon name={categoryIcon(item)}/><span><b>{item}</b><small>{shop.offres.filter(offer=>offer.produit.categorie===item).length} produit(s)<ShopIcon name="arrow"/></small></span></button>)}</div> : <p className={styles.emptyCategories}>Les catégories apparaîtront avec les premières offres de cette boutique.</p>
 }
 function ShopAbout({ shop, expanded=false }: { shop: BoutiquePubliqueMarketplace; expanded?:boolean }) {
-  return <section className={`${styles.about} ${expanded ? styles.aboutExpanded : ''}`}><SectionTitle title={`À propos de ${shop.nom}`} icon="info"/><p>{shop.description ?? `${shop.nom} vous accueille sur KatiHub. Explorez ses produits et les conditions de chaque offre.`}</p><dl><div><dt>Zones de livraison</dt><dd>{shop.villesLivraison.join(' · ') || 'À confirmer avec le vendeur'}</dd></div><div><dt>Livraison assurée par</dt><dd>{shop.modesLivraison.map(mode => mode==='katihub' ? 'KatiHub' : mode==='vendeur' ? 'La boutique' : mode).join(' · ') || 'À confirmer'}</dd></div></dl><Link href="/boutiques">Découvrir les autres boutiques<ShopIcon name="arrow"/></Link></section>
+  return <section className={`${styles.about} ${expanded ? styles.aboutExpanded : ''}`}><SectionTitle title={`À propos de ${shop.nom}`} icon="info"/><p>{shop.description ?? `${shop.nom} vous accueille sur KatiHub. Explorez ses produits et les conditions de chaque offre.`}</p><dl><div><dt>Zones de livraison</dt><dd>{shop.villesLivraison.join(' · ') || 'À confirmer avec le vendeur'}</dd></div><div><dt>Livraison assurée par</dt><dd>{shop.modesLivraison.map(mode => estModeLivraison(mode) ? LIBELLE_MODE[mode] : mode).join(' · ') || 'À confirmer'}</dd></div></dl><Link href="/boutiques">Découvrir les autres boutiques<ShopIcon name="arrow"/></Link></section>
 }

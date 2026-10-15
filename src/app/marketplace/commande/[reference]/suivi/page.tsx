@@ -7,7 +7,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function Page({ params }: { params: Promise<{ reference: string }> }) {
+export default async function Page({ params, searchParams }: { params: Promise<{ reference: string }>; searchParams: Promise<{ suivi?: string }> }) {
   const { reference } = await params
-  return <SuiviMarketplace reference={decodeURIComponent(reference)} />
+  const { suivi } = await searchParams
+  return <SuiviMarketplace reference={decodeURIComponent(reference)} jetonUrl={suivi} />
 }

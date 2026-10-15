@@ -37,6 +37,12 @@ function estReponse(valeur: unknown): valeur is Reponse {
   return Boolean(valeur) && typeof valeur === 'object' && 'body' in (valeur as object) && Object.keys(valeur as object).every((cle) => cle === 'body' || cle === 'status')
 }
 
+/** Les villes et quartiers des listes deroulantes (commande, creation de boutique). */
+export const LOCALITES = [
+  { ville: 'Douala', quartiers: ['Akwa', 'Bonanjo', 'Bonamoussadi'] },
+  { ville: 'Yaoundé', quartiers: ['Bastos', 'Mvan'] },
+]
+
 /** La politique KATI publique : lue par le panier et la fiche produit sur toutes les pages. */
 export const POLITIQUE_KATI = {
   version: 1, katiParFcfa: 10, gainClientBps: 100, commissionParrainBps: 50, assiette: 'produits', liberationApresLivraisonJours: 5,
@@ -50,6 +56,7 @@ export async function simulerApi(page: Page): Promise<ApiSimulee> {
     { methode: 'GET', motif: /^\/marketplace\/kati\/politique$/, gestionnaire: () => POLITIQUE_KATI },
     // Les services du panier : sans assurance ni installation par defaut, un test les active.
     { methode: 'GET', motif: /^\/marketplace\/services-commande\?/, gestionnaire: () => ({ assurance: { active: false, tauxBps: 0 }, installations: [] }) },
+    { methode: 'GET', motif: /^\/marketplace\/localites$/, gestionnaire: () => LOCALITES },
   ]
   const appels: Appel[] = []
   const nonPrevues: string[] = []

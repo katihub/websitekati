@@ -111,7 +111,9 @@ export function ChampTexte({ nom, libelle, aide, multiligne, ...attributs }: {
   pattern?: string
   placeholder?: string
   defaultValue?: string
-  inputMode?: 'text' | 'numeric'
+  inputMode?: 'text' | 'numeric' | 'tel' | 'email'
+  type?: 'text' | 'tel' | 'email'
+  autoComplete?: string
 }) {
   const id = useId()
   const classe = 'mt-1 w-full rounded-control border border-rule bg-surface p-3 text-small font-normal'

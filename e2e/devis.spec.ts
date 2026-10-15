@@ -135,7 +135,7 @@ test('la boutique confirme sa partie du devis, sans voir celle des autres', asyn
   })
 })
 
-test('depuis le panier, un visiteur non connecté est mené à la connexion avant de demander un devis', async ({ page, request }) => {
+test('depuis le panier, un visiteur non connecté peut se connecter avant de demander un devis', async ({ page, request }) => {
   // Le panier est rendu cote serveur depuis le backend : sans backend local, rien a verifier ici.
   const backend = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3101'
   test.skip(!(await request.get(`${backend}/v1/marketplace/accueil`).then((r) => r.ok()).catch(() => false)), 'backend local injoignable')
@@ -146,6 +146,9 @@ test('depuis le panier, un visiteur non connecté est mené à la connexion avan
   })
   await page.goto('/panier')
   await page.getByRole('button', { name: 'Demander un devis pour la sélection' }).click()
+  // Sans compte, la fenetre demande les coordonnees ; « se connecter » mene a la connexion.
+  await expect(page.getByRole('dialog').getByLabel('E-mail')).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: 'se connecter' }).click()
   await page.waitForURL(/\/connexion\?retour=%2Fpanier$/)
   expect(api.appelsVers('POST', /^\/marketplace\/devis$/)).toHaveLength(0)
   api.erreursNavigateur.length = 0

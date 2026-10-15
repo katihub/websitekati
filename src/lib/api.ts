@@ -122,9 +122,10 @@ export async function api<T>(chemin: string, options: Options = {}): Promise<T> 
   return donnees as T
 }
 
-export async function telechargerApi(chemin: string, nom: string): Promise<void> {
+/** `jetonSuivi` : le document d'un devis ou d'une commande sans compte, ouvert par son lien. */
+export async function telechargerApi(chemin: string, nom: string, options: { jetonSuivi?: string } = {}): Promise<void> {
   if (!BASE) throw new ErreurApi(0, "Le service n'est pas configure")
-  const reponse = await fetch(`${BASE}/v1${chemin}`, { headers: await enteteAutorisation() })
+  const reponse = await fetch(`${BASE}/v1${chemin}`, { headers: options.jetonSuivi ? { 'X-Jeton-Suivi': options.jetonSuivi } : await enteteAutorisation() })
   if (!reponse.ok) {
     const donnees = safeJson(await reponse.text())
     throw new ErreurApi(reponse.status, extraireMessage(donnees) ?? `Le service a repondu ${reponse.status}`)

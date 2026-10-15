@@ -46,12 +46,14 @@ export function useDisponibleKati(actif: boolean) {
  * et KATI a utiliser sur les produits. Les montants affiches sont estimes ; le
  * serveur les recalcule a la commande.
  */
-export function ReglementCommande({ produitsFcfa, options, disponibleKati, choix, onChange }: {
+export function ReglementCommande({ produitsFcfa, options, disponibleKati, choix, onChange, completImpose = false }: {
   produitsFcfa: number
   options: OptionsServices | null
   disponibleKati: number | null
   choix: ChoixReglement
   onChange: (choix: ChoixReglement) => void
+  /** Une expedition en agence : tout se paie a la commande. */
+  completImpose?: boolean
 }) {
   const politique = usePolitiqueKati()
   const maxKati = politique && disponibleKati !== null
@@ -64,8 +66,9 @@ export function ReglementCommande({ produitsFcfa, options, disponibleKati, choix
     <h2><ShopIcon name="shield"/>Paiement et options</h2>
     <fieldset className={styles.choixReglement}>
       <legend>Comment voulez-vous payer ?</legend>
-      <label><input type="radio" name="mode-paiement" checked={choix.mode === 'acompte'} onChange={() => onChange({ ...choix, mode: 'acompte' })}/><span><b>Un acompte maintenant</b><small>Le reste et les frais de livraison se règlent à la livraison.</small></span></label>
-      <label><input type="radio" name="mode-paiement" checked={choix.mode === 'complet'} onChange={() => onChange({ ...choix, mode: 'complet' })}/><span><b>Tout payer maintenant</b><small>Rien à régler au livreur.</small></span></label>
+      <label><input type="radio" name="mode-paiement" disabled={completImpose} checked={!completImpose && choix.mode === 'acompte'} onChange={() => onChange({ ...choix, mode: 'acompte' })}/><span><b>Un acompte maintenant</b><small>Le reste et les frais de livraison se règlent à la livraison.</small></span></label>
+      <label><input type="radio" name="mode-paiement" checked={completImpose || choix.mode === 'complet'} onChange={() => onChange({ ...choix, mode: 'complet' })}/><span><b>Tout payer maintenant</b><small>Rien à régler au livreur.</small></span></label>
+      {completImpose ? <p className={styles.note} data-testid="complet-impose">L’expédition en agence se paie en totalité à la commande : rien n’est encaissé à l’agence.</p> : null}
     </fieldset>
 
     {options?.assurance.active && assurance > 0 ? <label className={styles.optionService}>
