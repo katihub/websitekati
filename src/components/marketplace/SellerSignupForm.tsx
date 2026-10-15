@@ -12,7 +12,7 @@ type Receipt = { reference: string; statut: 'candidature_recue'; boutique: { nom
 type Values = {
   owner: string; email: string; phone: string; password: string; confirmation: string
   legal: string; type: 'personne_physique' | 'entreprise'; niu: string; rccm: string
-  shop: string; description: string; city: string; delivery: 'katihub' | 'vendeur'
+  shop: string; description: string; city: string; delivery: 'katihub' | 'vendeur'; stock: 'suivi' | 'non_suivi'
 }
 
 const steps = ['Vos coordonnées', 'Votre boutique', 'Votre activité', 'Vérification']
@@ -21,7 +21,7 @@ const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036
 
 export function SellerSignupForm() {
   const [step, setStep] = useState(0)
-  const [values, setValues] = useState<Values>({ owner: '', email: '', phone: '', password: '', confirmation: '', legal: '', type: 'personne_physique', niu: '', rccm: '', shop: '', description: '', city: 'Douala', delivery: 'katihub' })
+  const [values, setValues] = useState<Values>({ owner: '', email: '', phone: '', password: '', confirmation: '', legal: '', type: 'personne_physique', niu: '', rccm: '', shop: '', description: '', city: 'Douala', delivery: 'katihub', stock: 'suivi' })
   const [accepted, setAccepted] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -91,7 +91,7 @@ export function SellerSignupForm() {
           corps: {
             type: values.type, nomLegal: values.legal.trim(),
             niu: values.niu.trim() || undefined, rccm: values.rccm.trim() || undefined,
-            boutique: { nom: values.shop.trim(), slug, description: values.description.trim(), modesLivraison: [values.delivery], villesLivraison: [values.city], ville: values.city },
+            boutique: { nom: values.shop.trim(), slug, description: values.description.trim(), modesLivraison: [values.delivery], villesLivraison: [values.city], ville: values.city, suiviStock: values.stock === 'suivi' },
             proprietaire: { courriel: values.email.trim().toLowerCase(), nom: values.owner.trim(), telephone: values.phone.replace(/[\s().-]/g, '') },
           },
         })
@@ -139,6 +139,7 @@ export function SellerSignupForm() {
             <label>Ville principale <b>*</b><select value={values.city} onChange={set('city')}>{cities.map(city => <option key={city}>{city}</option>)}</select></label>
             <label className={styles.wide}>Que vendrez-vous ? <b>*</b><textarea rows={4} value={values.description} onChange={set('description')} placeholder="Ex. Je propose des vêtements cousus à Douala et des accessoires faits à la main." /><small>Décrivez vos produits et ce qui rend votre boutique particulière.</small></label>
             <label className={styles.wide}>Comment livrerez-vous vos commandes ? <b>*</b><select value={values.delivery} onChange={set('delivery')}><option value="katihub">Avec la livraison KatiHub</option><option value="vendeur">Avec mon propre service de livraison</option></select></label>
+            <label className={styles.wide}>Suivez-vous votre stock sur KatiHub ? <b>*</b><select value={values.stock} onChange={set('stock')}><option value="suivi">Oui, je tiens mes quantités à jour</option><option value="non_suivi">Non, je confirme chaque commande et refuse un article manquant</option></select></label>
           </div>
           {slug ? <p className={styles.shopPreview}>Adresse prévue : <strong>katihub.cm/boutiques/{slug}</strong></p> : null}
         </> : null}
@@ -150,7 +151,7 @@ export function SellerSignupForm() {
         </> : null}
         {step === 3 ? <>
           <div className={styles.sectionHead}><h2 id="signup-form-title">Tout est bon pour vous ?</h2><p>Relisez les informations avant d’envoyer votre candidature.</p></div>
-          <dl className={styles.review}><div><dt>Contact</dt><dd>{values.owner}<br />{values.email}<br />{values.phone}</dd><button type="button" onClick={() => setStep(0)}>Modifier</button></div><div><dt>Boutique</dt><dd>{values.shop} · {values.city}<br />{values.description}<br />{values.delivery === 'katihub' ? 'Livraison KatiHub' : 'Livraison par la boutique'}</dd><button type="button" onClick={() => setStep(1)}>Modifier</button></div><div><dt>Activité</dt><dd>{values.legal}<br />{values.type === 'entreprise' ? `Entreprise · NIU ${values.niu} · RCCM ${values.rccm}` : 'Vendeur individuel'}</dd><button type="button" onClick={() => setStep(2)}>Modifier</button></div></dl>
+          <dl className={styles.review}><div><dt>Contact</dt><dd>{values.owner}<br />{values.email}<br />{values.phone}</dd><button type="button" onClick={() => setStep(0)}>Modifier</button></div><div><dt>Boutique</dt><dd>{values.shop} · {values.city}<br />{values.description}<br />{values.delivery === 'katihub' ? 'Livraison KatiHub' : 'Livraison par la boutique'} · {values.stock === 'suivi' ? 'stock suivi' : 'stock non suivi'}</dd><button type="button" onClick={() => setStep(1)}>Modifier</button></div><div><dt>Activité</dt><dd>{values.legal}<br />{values.type === 'entreprise' ? `Entreprise · NIU ${values.niu} · RCCM ${values.rccm}` : 'Vendeur individuel'}</dd><button type="button" onClick={() => setStep(2)}>Modifier</button></div></dl>
           <label className={styles.terms}><input type="checkbox" checked={accepted} onChange={event => { setAccepted(event.target.checked); setError('') }} /><span>J’accepte le <Link href="/contrat-vendeurs" target="_blank">contrat vendeur</Link> et j’ai pris connaissance de la <Link href="/politique-confidentialite" target="_blank">politique de confidentialité</Link>. <b>*</b></span></label>
         </> : null}
         {error ? <p className={styles.error} role="alert">{error}</p> : null}

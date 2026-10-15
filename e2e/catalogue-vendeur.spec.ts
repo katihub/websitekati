@@ -46,10 +46,10 @@ test('le marchand ajoute une photo, écrit son référencement et soumet la fich
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
-  await page.getByRole('button', { name: 'Photos et référencement' }).click()
+  await page.getByRole('button', { name: 'Fiche et photos' }).click()
   await expect(page.getByRole('heading', { name: 'Samsung Galaxy A15' })).toBeVisible()
 
-  await page.locator('input[type=file]').setInputFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL.split(',')[1]!, 'base64') })
+  await page.locator('input[type=file][accept^="image"]').setInputFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL.split(',')[1]!, 'base64') })
   await expect(page.getByTestId(`fiche-photo-${PHOTO}`)).toBeVisible()
   await expect(page.getByText('Image principale · nouvelle')).toBeVisible()
   await page.getByLabel('Texte alternatif').fill('Vue de face, coloris noir')
@@ -103,16 +103,19 @@ test('le marchand crée une variante avec son prix, puis change le prix d’une 
     referenceVendeur: 'A15-256-BLEU', prixFcfa: 179_000, quantiteInitiale: 3,
   })
 
-  await page.getByRole('button', { name: 'Modifier le prix' }).click()
-  const prix = page.getByRole('dialog', { name: 'Modifier le prix' })
+  await page.getByRole('button', { name: 'Prix et minimum' }).click()
+  const prix = page.getByRole('dialog', { name: 'Prix et minimum de commande' })
   await prix.getByLabel('Prix FCFA').fill('139000')
   await prix.getByLabel('Prix barré').fill('149000')
-  await prix.getByRole('button', { name: 'Soumettre le nouveau prix' }).click()
+  // Le MOQ part de celui de l'offre (1 ici) ; le marchand le releve en meme temps que le prix.
+  await expect(prix.getByLabel(/^Minimum de commande/)).toHaveValue('1')
+  await prix.getByLabel(/^Minimum de commande/).fill('3')
+  await prix.getByRole('button', { name: 'Soumettre', exact: true }).click()
   await expect(prix).toBeHidden()
 
   expect(api.appelsVers('POST', /\/revisions$/)[0]!.corps).toMatchObject({
     titre: 'Samsung Galaxy A15 128 Go', prixFcfa: 139_000, prixReferenceFcfa: 149_000, etat: 'neuf', garantieMois: 12,
-    modesLivraison: ['katihub'], villesLivraison: ['Douala'], delaiMaxJours: 2, libelleVariante: '128 Go', attributsVariante: { Capacité: '128 Go' },
+    modesLivraison: ['katihub'], villesLivraison: ['Douala'], delaiMaxJours: 2, quantiteMinimale: 3, libelleVariante: '128 Go', attributsVariante: { Capacité: '128 Go' },
   })
 })
 

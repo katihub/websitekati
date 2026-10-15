@@ -6,9 +6,12 @@ import { simulerApi, type ApiSimulee } from './support/api'
  * CE QUE LA FICHE PRODUIT PROMET : un favori qui reste, et les vrais avis.
  */
 
-let api: ApiSimulee
+let api: ApiSimulee | undefined
 
+// Un test saute sans backend local avant d'installer ses simulations : rien a verifier alors.
+test.beforeEach(() => { api = undefined })
 test.afterEach(() => {
+  if (!api) return
   expect(api.nonPrevues, 'appels non simules').toEqual([])
   expect(api.erreursNavigateur, 'erreurs du navigateur').toEqual([])
 })
@@ -51,4 +54,18 @@ test('sur la fiche, le favori survit au rechargement et l’onglet avis montre l
   await page.getByRole('tab', { name: 'Avis clients' }).click()
   await expect(page.getByText('Conforme à la description, très bon produit.')).toBeVisible()
   await expect(page.getByText('Awa M.')).toBeVisible()
+})
+
+test('la fiche montre l’onglet « Fiche technique » à la place de « Caractéristiques »', async ({ page, request }) => {
+  const backend = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3101'
+  const accueil = await request.get(`${backend}/v1/marketplace/offres`).then((r) => (r.ok() ? r.json() : null)).catch(() => null) as { offres?: Array<{ produit: { slug: string } }> } | null
+  const slug = accueil?.offres?.[0]?.produit.slug
+  test.skip(!slug, 'backend local injoignable')
+
+  api = await simulerApi(page)
+  await page.goto(`/marketplace/produits/${slug}`)
+  await expect(page.getByRole('tab', { name: 'Caractéristiques' })).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Fiche technique' }).click()
+  await expect(page.getByRole('heading', { name: 'Fiche technique', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Informations de l’offre' })).toBeVisible()
 })

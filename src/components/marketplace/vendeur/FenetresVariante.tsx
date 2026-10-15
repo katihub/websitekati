@@ -28,6 +28,7 @@ export type RevisionVariante = {
   modesLivraison: string[]
   villesLivraison: string[]
   delaiMaxJours: number
+  quantiteMinimale?: number
   libelleVariante: string | null
   attributsVariante: Record<string, string> | null
 }
@@ -38,7 +39,9 @@ export type OffreVariante = {
   prixFcfa: number | null
   libelleVariante: string | null
   attributsVariante: Record<string, string> | null
-  produit: { id: string; nom: string }
+  quantiteMinimale?: number
+  /** `attributsVariante` : ceux que la categorie du produit propose (« Capacite », « Couleur »). */
+  produit: { id: string; nom: string; attributsVariante?: string[] }
   revisions: RevisionVariante[]
 }
 
@@ -82,7 +85,9 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
   onFermer: () => void
   onCreee: () => Promise<void>
 }) {
-  const [lignes, setLignes] = useState(LIGNES_VISIBLES)
+  // Les attributs de la categorie sont proposes d'office ; le marchand peut en ajouter.
+  const proposes = (origine?.produit.attributsVariante ?? []).slice(0, LIGNES_ATTRIBUTS)
+  const [lignes, setLignes] = useState(Math.max(LIGNES_VISIBLES, proposes.length))
   async function valider(donnees: FormData) {
     if (!origine) return
     const attributs = attributsDepuisFormulaire(donnees)
@@ -119,7 +124,7 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         <legend className="text-small font-semibold">Attributs <span className="font-normal text-ink-3">(facultatif, jusqu’à {LIGNES_ATTRIBUTS})</span></legend>
         {Array.from({ length: lignes }, (_, i) => (
           <div key={i} className="grid grid-cols-2 gap-2">
-            <input name={`attribut-nom-${i}`} maxLength={40} aria-label={`Nom de l’attribut ${i + 1}`} placeholder={['Capacité', 'Couleur', 'Taille', 'Matière', 'Garantie fabricant', 'Connectivité'][i]} className="rounded-control border border-rule bg-surface p-3 text-small" />
+            <input name={`attribut-nom-${i}`} maxLength={40} aria-label={`Nom de l’attribut ${i + 1}`} defaultValue={proposes[i]} placeholder={['Capacité', 'Couleur', 'Taille', 'Matière', 'Garantie fabricant', 'Connectivité'][i]} className="rounded-control border border-rule bg-surface p-3 text-small" />
             <input name={`attribut-valeur-${i}`} maxLength={60} aria-label={`Valeur de l’attribut ${i + 1}`} placeholder={['128 Go', 'Noir', 'XL', 'Coton', '2 ans', '5G'][i]} className="rounded-control border border-rule bg-surface p-3 text-small" />
           </div>
         ))}
@@ -162,6 +167,7 @@ export function FenetrePrixVariante({ boutiqueId, offre, onFermer, onSoumis }: {
         modesLivraison: base.modesLivraison,
         villesLivraison: base.villesLivraison,
         delaiMaxJours: base.delaiMaxJours,
+        quantiteMinimale: entier(donnees, 'minimum', false) || base.quantiteMinimale || offre.quantiteMinimale || 1,
         libelleVariante: base.libelleVariante ?? offre.libelleVariante ?? undefined,
         attributsVariante: base.attributsVariante ?? offre.attributsVariante ?? undefined,
       },
@@ -173,9 +179,9 @@ export function FenetrePrixVariante({ boutiqueId, offre, onFermer, onSoumis }: {
   return (
     <FenetreAction
       ouverte={Boolean(offre)}
-      titre="Modifier le prix"
-      description={offre ? <>{offre.produit.nom}{offre.libelleVariante ? <> — <strong>{offre.libelleVariante}</strong></> : null}. Le nouveau prix s’affiche après validation par KatiHub ; d’ici là, le prix actuel reste en vigueur.</> : null}
-      libelleValider="Soumettre le nouveau prix"
+      titre="Prix et minimum de commande"
+      description={offre ? <>{offre.produit.nom}{offre.libelleVariante ? <> — <strong>{offre.libelleVariante}</strong></> : null}. Le nouveau prix et le nouveau minimum s’appliquent après validation par KatiHub ; d’ici là, les conditions actuelles restent en vigueur.</> : null}
+      libelleValider="Soumettre"
       onValider={valider}
       onFermer={onFermer}
     >
@@ -183,6 +189,7 @@ export function FenetrePrixVariante({ boutiqueId, offre, onFermer, onSoumis }: {
         <ChampTexte nom="prix" libelle="Prix FCFA" required inputMode="numeric" pattern="[0-9]+" defaultValue={String(base?.prixFcfa ?? offre?.prixFcfa ?? '')} />
         <ChampTexte nom="prix-reference" libelle="Prix barré" inputMode="numeric" pattern="[0-9]*" defaultValue={base?.prixReferenceFcfa ? String(base.prixReferenceFcfa) : ''} />
       </div>
+      <ChampTexte nom="minimum" libelle="Minimum de commande" aide="La plus petite quantité qu’un client peut commander ou demander en devis." required inputMode="numeric" pattern="[1-9][0-9]{0,3}" defaultValue={String(base?.quantiteMinimale ?? offre?.quantiteMinimale ?? 1)} />
     </FenetreAction>
   )
 }

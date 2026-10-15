@@ -5,18 +5,22 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ErreurApi, api } from '@/lib/api'
 
 /**
- * LA FICHE PRODUIT VUE PAR LE MARCHAND QUI L'A PROPOSEE : PHOTOS ET REFERENCEMENT.
+ * LA FICHE PRODUIT VUE PAR LE MARCHAND QUI L'A PROPOSEE : PHOTOS, TEXTES ET REFERENCEMENT.
  *
  * Rien n'est publie d'ici. Les photos deposees attendent ; le marchand compose
- * la galerie (ordre, texte alternatif), ecrit le meta title et la meta
- * description, et soumet le tout. KatiHub valide, puis la fiche publique change.
- * Tant qu'une proposition est en cours, elle est affichee et l'edition attend.
+ * la galerie (ordre, texte alternatif), ecrit la description courte, la fiche
+ * technique (texte et/ou PDF), le meta title et la meta description, et soumet
+ * le tout. KatiHub valide, puis la fiche publique change. Tant qu'une
+ * proposition est en cours, elle est affichee et l'edition attend.
  */
 
 export type ImageFiche = { id: string; url: string; texteAlternatif: string | null; ordre: number; statut: 'proposee' | 'publiee'; tailleOctets: number }
 type Revision = { id: string; numero: number; statut: string; motifDecision: string | null; soumisLe: string; decideLe: string | null }
 export type ContenuFiche = {
-  produit: { id: string; nom: string; slug: string; metaTitre: string | null; metaDescription: string | null }
+  produit: {
+    id: string; nom: string; slug: string; metaTitre: string | null; metaDescription: string | null
+    descriptionCourte?: string | null; ficheTechnique?: string | null; ficheTechniquePdfUrl?: string | null; ficheTechniquePdfCle?: string | null
+  }
   images: ImageFiche[]
   revisionOuverte: Revision | null
   revisions: Revision[]
@@ -25,6 +29,8 @@ type Element = { imageId: string; texteAlternatif: string }
 
 export const META_TITRE = { min: 10, max: 70 }
 export const META_DESCRIPTION = { min: 50, max: 170 }
+export const DESCRIPTION_COURTE = { min: 10, max: 300 }
+const PDF_MAX = 25 * 1024 * 1024
 const IMAGES_MAX = 12
 const STATUTS: Record<string, string> = { soumise: 'en attente de validation', en_verification: 'en cours de vérification', approuvee: 'approuvée', refusee: 'refusée', modification_demandee: 'à corriger' }
 
@@ -45,6 +51,9 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
   const [galerie, setGalerie] = useState<Element[]>([])
   const [metaTitre, setMetaTitre] = useState('')
   const [metaDescription, setMetaDescription] = useState('')
+  const [descriptionCourte, setDescriptionCourte] = useState('')
+  const [ficheTechnique, setFicheTechnique] = useState('')
+  const [pdf, setPdf] = useState<{ cle: string; url: string } | null>(null)
   const [chargement, setChargement] = useState(true)
   const [envoi, setEnvoi] = useState(false)
   const [message, setMessage] = useState<{ type: 'succes' | 'erreur'; texte: string } | null>(null)
@@ -57,6 +66,9 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
       setGalerie(galerieInitiale(prochain.images))
       setMetaTitre(prochain.produit.metaTitre ?? '')
       setMetaDescription(prochain.produit.metaDescription ?? '')
+      setDescriptionCourte(prochain.produit.descriptionCourte ?? '')
+      setFicheTechnique(prochain.produit.ficheTechnique ?? '')
+      setPdf(prochain.produit.ficheTechniquePdfCle && prochain.produit.ficheTechniquePdfUrl ? { cle: prochain.produit.ficheTechniquePdfCle, url: prochain.produit.ficheTechniquePdfUrl } : null)
     } catch (cause) {
       setMessage({ type: 'erreur', texte: erreur(cause) })
     } finally {
@@ -94,6 +106,26 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
     }
   }
 
+  /** Le PDF est controle (vrai PDF, antivirus) au depot ; il n'est publie qu'avec la fiche validee. */
+  async function deposerPdf(fichier: File | undefined) {
+    if (!fichier) return
+    setMessage(null)
+    if (fichier.type !== 'application/pdf') return setMessage({ type: 'erreur', texte: 'La fiche technique doit être un PDF.' })
+    if (fichier.size > PDF_MAX) return setMessage({ type: 'erreur', texte: 'La fiche technique fait 25 Mio au plus.' })
+    setEnvoi(true)
+    try {
+      const corps = new FormData()
+      corps.append('fichier', fichier)
+      const depot = await api<{ cle: string; url: string; appliquee: boolean }>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/fiche-technique`, { methode: 'POST', corps })
+      setPdf({ cle: depot.cle, url: depot.url })
+      setMessage({ type: 'succes', texte: depot.appliquee ? 'PDF ajouté à votre proposition de produit.' : 'PDF déposé. Soumettez la fiche pour le publier.' })
+    } catch (cause) {
+      setMessage({ type: 'erreur', texte: erreur(cause) })
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
   function deplacer(index: number, sens: -1 | 1) {
     setGalerie((actuelle) => {
       const cible = index + sens
@@ -112,6 +144,9 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
         corps: {
           metaTitre: metaTitre.trim() || undefined,
           metaDescription: metaDescription.trim() || undefined,
+          descriptionCourte: descriptionCourte.trim() || undefined,
+          ficheTechnique: ficheTechnique.trim() || undefined,
+          ficheTechniquePdfCle: pdf?.cle,
           images: galerie.map((e) => ({ imageId: e.imageId, texteAlternatif: e.texteAlternatif.trim() || undefined })),
         },
       })
@@ -133,6 +168,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
   const titreValide = !metaTitre.trim() || (metaTitre.trim().length >= META_TITRE.min && metaTitre.trim().length <= META_TITRE.max)
   const descriptionValide = !metaDescription.trim() || (metaDescription.trim().length >= META_DESCRIPTION.min && metaDescription.trim().length <= META_DESCRIPTION.max)
   const altValides = galerie.every((e) => !e.texteAlternatif.trim() || e.texteAlternatif.trim().length >= 3)
+  const courteValide = !descriptionCourte.trim() || (descriptionCourte.trim().length >= DESCRIPTION_COURTE.min && descriptionCourte.trim().length <= DESCRIPTION_COURTE.max)
   const derniere = contenu.revisions[0]
 
   return (
@@ -141,7 +177,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
         <div>
           <p className="t-label text-ink-3">Fiche produit</p>
           <h2 id="fiche-titre" className="text-h3 font-semibold">{contenu.produit.nom}</h2>
-          <p className="text-micro text-ink-3">Photos et référencement sont publiés après validation par KatiHub.</p>
+          <p className="text-micro text-ink-3">Photos, textes et référencement sont publiés après validation par KatiHub.</p>
         </div>
         <button type="button" onClick={onFermer} className="min-h-11 rounded-control border border-rule px-4 text-small font-semibold">← Retour aux produits</button>
       </header>
@@ -199,6 +235,30 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
         ) : null}
       </section>
 
+      <section aria-labelledby="textes-titre" className="grid gap-4">
+        <h3 id="textes-titre" className="text-h4 font-semibold">Description courte et fiche technique</h3>
+        <label className="block text-small font-semibold">Description courte
+          <textarea value={descriptionCourte} rows={3} maxLength={DESCRIPTION_COURTE.max} disabled={verrouille} onChange={(event) => setDescriptionCourte(event.currentTarget.value)}
+            aria-describedby="courte-aide" aria-invalid={!courteValide} placeholder="Ex. Smartphone endurant : batterie 5 000 mAh, 128 Go, double SIM."
+            className="mt-1 w-full rounded-control border border-rule bg-surface p-3 text-small font-normal" />
+          <span id="courte-aide" className={`mt-1 block text-micro font-normal ${courteValide ? 'text-ink-3' : 'text-warn'}`}>{descriptionCourte.trim().length}/{DESCRIPTION_COURTE.max} caractères · affichée sous le titre de la fiche, trois lignes au plus.</span>
+        </label>
+        <label className="block text-small font-semibold">Fiche technique
+          <textarea value={ficheTechnique} rows={8} maxLength={20000} disabled={verrouille} onChange={(event) => setFicheTechnique(event.currentTarget.value)}
+            aria-describedby="fiche-aide" placeholder={'Écran : 6,5 pouces\nBatterie : 5 000 mAh\nMémoire : 128 Go'}
+            className="mt-1 w-full rounded-control border border-rule bg-surface p-3 font-mono text-small font-normal" />
+          <span id="fiche-aide" className="mt-1 block text-micro font-normal text-ink-3">Une caractéristique par ligne, « Nom : valeur ». Elle remplace l’onglet « Caractéristiques » de la fiche.</span>
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          {pdf ? <a href={pdf.url} target="_blank" rel="noopener noreferrer" className="text-small font-semibold text-primary underline" data-testid="fiche-pdf">Fiche technique (PDF)</a> : <span className="text-small text-ink-3">Aucun PDF</span>}
+          <label className={`inline-flex min-h-11 items-center rounded-control border border-rule px-4 text-small font-semibold ${verrouille ? 'opacity-50' : 'cursor-pointer'}`}>
+            {pdf ? 'Remplacer le PDF' : 'Ajouter un PDF'}
+            <input type="file" accept="application/pdf" className="sr-only" disabled={verrouille} onChange={(event) => { void deposerPdf(event.currentTarget.files?.[0]); event.currentTarget.value = '' }} />
+          </label>
+          {pdf ? <button type="button" disabled={verrouille} onClick={() => setPdf(null)} className="min-h-11 rounded-control border border-rule px-4 text-small font-semibold disabled:opacity-40">Retirer le PDF</button> : null}
+        </div>
+      </section>
+
       <section aria-labelledby="seo-titre" className="grid gap-4 lg:grid-cols-[1fr_minmax(0,22rem)]">
         <div className="grid gap-4">
           <h3 id="seo-titre" className="text-h4 font-semibold">Référencement</h3>
@@ -222,7 +282,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
       </section>
 
       <div className="flex flex-wrap justify-end gap-2 border-t border-rule pt-4">
-        <button type="button" onClick={() => void soumettre()} disabled={verrouille || !titreValide || !descriptionValide || !altValides}
+        <button type="button" onClick={() => void soumettre()} disabled={verrouille || !titreValide || !descriptionValide || !altValides || !courteValide}
           className="min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Envoi…' : 'Soumettre la fiche à validation'}</button>
       </div>
     </section>

@@ -47,6 +47,8 @@ export interface CartLine {
   readonly boutiqueNom?: string
   readonly modesLivraison?: Array<'vendeur' | 'katihub'>
   readonly villesLivraison?: string[]
+  /** MOQ de l'offre : la ligne ne descend pas en dessous. */
+  readonly quantiteMinimale?: number
 }
 
 export const cartLineKey = (line: Pick<CartLine, 'slug' | 'offerId'>) => line.offerId ?? line.slug
@@ -142,12 +144,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const current = parse(readRaw())
     const key = cartLineKey(line)
     const existing = current.find((l) => cartLineKey(l) === key)
+    const minimum = Math.max(1, line.quantiteMinimale ?? 1)
+    const maximum = Math.max(MAX_QTY, minimum)
     writeRaw(
       existing
         ? current.map((l) =>
-            cartLineKey(l) === key ? { ...l, ...line, qty: Math.min(l.qty + qty, MAX_QTY) } : l,
+            cartLineKey(l) === key ? { ...l, ...line, qty: Math.min(Math.max(l.qty + qty, minimum), maximum) } : l,
           )
-        : [...current, { ...line, qty }],
+        : [...current, { ...line, qty: Math.min(Math.max(qty, minimum), maximum) }],
     )
     setLastAdded(key)
     setOpen(true)
@@ -158,7 +162,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     writeRaw(
       qty <= 0
         ? current.filter((l) => cartLineKey(l) !== slug)
-        : current.map((l) => (cartLineKey(l) === slug ? { ...l, qty: Math.min(qty, MAX_QTY) } : l)),
+        : current.map((l) => {
+            if (cartLineKey(l) !== slug) return l
+            // Le MOQ est un plancher : on retire la ligne, on ne la passe pas en dessous.
+            const minimum = Math.max(1, l.quantiteMinimale ?? 1)
+            return { ...l, qty: Math.min(Math.max(qty, minimum), Math.max(MAX_QTY, minimum)) }
+          }),
     )
   }, [])
 

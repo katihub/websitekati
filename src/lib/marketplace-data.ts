@@ -19,6 +19,8 @@ export interface OffreMarketplace {
   etat: string | null
   delaiMaxJours: number | null
   disponible: number
+  quantiteMinimale?: number
+  verifieParKatiLe?: string | null
   modesLivraison?: string[]
   villesLivraison?: string[]
   produit: { nom: string; slug: string; marque: string | null; categorie: string | null; images?: Array<{ url: string; texteAlternatif: string | null }> }

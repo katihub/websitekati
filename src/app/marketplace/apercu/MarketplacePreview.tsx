@@ -60,7 +60,12 @@ export type MarketplaceProduct = {
   categorie: string | null
   /** Le referencement valide par KatiHub ; absent, la page compose le sien. */
   /** La categorie KatiHub du produit et la garantie minimale qu'elle impose. */
-  categorieDetail?: { nom: string; slug: string; parent: { nom: string; slug: string } | null; garantieMinimaleMois: number; garantie: string } | null
+  categorieDetail?: { nom: string; slug: string; parent: { nom: string; slug: string } | null; garantieMinimaleMois: number; garantie: string; attributsVariante?: string[] } | null
+  /** Sous le titre de la fiche : trois lignes au plus, ecrites par le marchand. */
+  descriptionCourte?: string | null
+  /** La fiche technique en texte (une caracteristique par ligne) et/ou en PDF. */
+  ficheTechnique?: string | null
+  ficheTechniquePdfUrl?: string | null
   metaTitre?: string | null
   metaDescription?: string | null
   /** Les photos publiees, la premiere est l'image principale. */
@@ -79,6 +84,10 @@ export type MarketplaceProduct = {
     villesLivraison: string[]
     delaiMaxJours: number | null
     disponible: number
+    /** MOQ : la quantite minimale commandable chez cette boutique. */
+    quantiteMinimale?: number
+    /** KatiHub a recu et teste l'article de cette boutique. */
+    verifieParKatiLe?: string | null
     /** `ville` : la ville de la boutique, montree au client a la place de son nom. */
     boutique: { id: string; nom: string; slug: string; ville?: string | null }
   }>

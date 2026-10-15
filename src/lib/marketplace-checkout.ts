@@ -9,6 +9,7 @@ export interface LiveOffer {
   modesLivraison: DeliveryMode[]
   villesLivraison: string[]
   delaiMaxJours: number | null
+  quantiteMinimale?: number
   boutique: { id: string; nom: string; slug: string }
 }
 export interface LiveProduct { nom: string; slug: string; offres: LiveOffer[] }
@@ -17,7 +18,7 @@ export interface DeliveryGroup { id: string; name: string; lines: CheckedLine[];
 export interface MarketplaceOrder {
   reference: string; statut: string; totalFermeTtc: number; fraisLivraison: number
   acompteDu: number; acompteRecu: number; resteAPayer: number
-  sousCommandes: Array<{ reference: string; boutiqueId: string; boutique?: { nom: string; slug: string }; totalNetProduits: number; modeLivraison: DeliveryMode; lignes: Array<{ offreTitreCapture: string; quantite: number; totalNetFcfa: number }> }>
+  sousCommandes: Array<{ reference: string; boutiqueId: string; boutique?: { nom: string; slug: string }; totalNetProduits: number; modeLivraison: DeliveryMode; lignes: Array<{ offreTitreCapture: string; quantite: number; totalNetFcfa: number; quantiteRefusee?: number; refus?: { motif: string; remboursementDuFcfa: number; rembourseLe: string | null } | null }> }>
 }
 export function checkLines(lines: readonly CartLine[], products: LiveProduct[]): CheckedLine[] {
   const bySlug = new Map(products.map(p => [p.slug, p]))
@@ -26,6 +27,7 @@ export function checkLines(lines: readonly CartLine[], products: LiveProduct[]):
     const issue = !line.offerId ? 'Cet article appartient au catalogue historique. Commandez-le séparément.'
       : !offer || offer.prixFcfa === null ? 'Cette offre n’est plus disponible.'
       : offer.boutique.id !== line.boutiqueId ? 'La boutique de cette offre a changé. Retirez puis ajoutez cet article.'
+      : line.qty < (offer.quantiteMinimale ?? 1) ? `Minimum de commande : ${offer.quantiteMinimale} unités. Ajustez la quantité.`
       : offer.disponible < line.qty ? `Stock disponible : ${offer.disponible} unité(s). Ajustez la quantité.`
       : null
     return { line, offer, issue }

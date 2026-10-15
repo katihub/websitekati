@@ -9,7 +9,7 @@ import { ErreurApi, api, telechargerApi } from '@/lib/api'
 import { formatPrice } from '@/lib/format'
 
 type Evenement = { id: string; type: string; versStatut: string | null; motif: string | null; creeLe: string }
-type Ligne = { id: string; offreTitreCapture: string; quantite: number; quantiteLivree: number; quantiteRetournee: number; quantiteRemboursee: number; totalNetFcfa: number }
+type Ligne = { id: string; offreTitreCapture: string; quantite: number; quantiteLivree: number; quantiteRetournee: number; quantiteRemboursee: number; totalNetFcfa: number; quantiteRefusee?: number; refus?: { motif: string; remboursementDuFcfa: number; rembourseLe: string | null } | null }
 type Expedition = { id: string; reference: string; statut: string; ville: string; montantACollecterFcfa: number; livreeLe: string | null; evenements: Evenement[] }
 type SousCommande = { id: string; reference: string; statut: string; boutique: { nom: string; slug: string }; lignes: Ligne[]; expeditions: Expedition[] }
 type Commande = { id: string; reference: string; statut: string; totalFermeTtc: number; acompteDu: number; acompteRecu: number; resteAPayer: number; sousCommandes: SousCommande[] }
@@ -197,9 +197,14 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
               <ul className="divide-y divide-rule">
                 {groupe.lignes.map((ligne) => (
                   <li key={ligne.id} className="py-3">
-                    <div className="flex justify-between gap-4"><span>{ligne.offreTitreCapture} × {ligne.quantite}</span><strong className="t-num">{formatPrice(ligne.totalNetFcfa)}</strong></div>
-                    <p className="mt-1 text-micro text-ink-3">Livré : {ligne.quantiteLivree} · Retourné : {ligne.quantiteRetournee} · Remboursé : {ligne.quantiteRemboursee}</p>
-                    <button type="button" className="mt-1 min-h-11 text-small font-semibold text-secondary underline" onClick={() => ouvrir({ type: 'ouverture', sousCommande: groupe, ligne, expedition: groupe.expeditions[0] })}>Signaler un problème</button>
+                    <div className="flex justify-between gap-4"><span className={ligne.quantiteRefusee ? 'line-through text-ink-3' : undefined}>{ligne.offreTitreCapture} × {ligne.quantite}</span><strong className="t-num">{formatPrice(ligne.totalNetFcfa)}</strong></div>
+                    {ligne.quantiteRefusee ? (
+                      // La boutique n'avait pas l'article : la ligne est sortie de la commande.
+                      <p className="mt-1 text-micro text-warn" data-testid="ligne-refusee">Article indisponible, retiré de la commande{ligne.refus ? ` : ${ligne.refus.motif}` : ''}.{ligne.refus?.remboursementDuFcfa ? (ligne.refus.rembourseLe ? ` ${formatPrice(ligne.refus.remboursementDuFcfa)} d’acompte vous ont été remboursés.` : ` ${formatPrice(ligne.refus.remboursementDuFcfa)} d’acompte vous seront remboursés par Mobile Money.`) : ' Le montant à régler à la livraison est réduit d’autant.'}</p>
+                    ) : <>
+                      <p className="mt-1 text-micro text-ink-3">Livré : {ligne.quantiteLivree} · Retourné : {ligne.quantiteRetournee} · Remboursé : {ligne.quantiteRemboursee}</p>
+                      <button type="button" className="mt-1 min-h-11 text-small font-semibold text-secondary underline" onClick={() => ouvrir({ type: 'ouverture', sousCommande: groupe, ligne, expedition: groupe.expeditions[0] })}>Signaler un problème</button>
+                    </>}
                   </li>
                 ))}
               </ul>
