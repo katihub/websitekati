@@ -37,8 +37,16 @@ function estReponse(valeur: unknown): valeur is Reponse {
   return Boolean(valeur) && typeof valeur === 'object' && 'body' in (valeur as object) && Object.keys(valeur as object).every((cle) => cle === 'body' || cle === 'status')
 }
 
+/** La politique KATI publique : lue par le panier et la fiche produit sur toutes les pages. */
+export const POLITIQUE_KATI = {
+  version: 1, katiParFcfa: 10, gainClientBps: 100, commissionParrainBps: 50, assiette: 'produits', liberationApresLivraisonJours: 5,
+  parrainageDureeMois: 12, depenseMinimumKati: 10_000, depensePlafondBps: 5_000, expirationGainsMois: 12, rechargeActive: false,
+  rechargeMinimumFcfa: 1_000, rechargeMaximumFcfa: 500_000,
+}
+
 export async function simulerApi(page: Page): Promise<ApiSimulee> {
-  const routes: Route[] = []
+  // Une route de fond, lue partout : declaree d'office, un test peut la remplacer.
+  const routes: Route[] = [{ methode: 'GET', motif: /^\/marketplace\/kati\/politique$/, gestionnaire: () => POLITIQUE_KATI }]
   const appels: Appel[] = []
   const nonPrevues: string[] = []
   const erreursNavigateur: string[] = []

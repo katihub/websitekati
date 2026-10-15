@@ -7,12 +7,13 @@ import { ApercuPieces, PIECES_MAX_PAR_MESSAGE, TYPES_PIECES, taillePiece, verifi
 import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
 import { ErreurApi, api, telechargerApi } from '@/lib/api'
 import { formatPrice } from '@/lib/format'
+import { formatKati, type KatiCommande } from '@/lib/kati'
 
 type Evenement = { id: string; type: string; versStatut: string | null; motif: string | null; creeLe: string }
 type Ligne = { id: string; offreTitreCapture: string; quantite: number; quantiteLivree: number; quantiteRetournee: number; quantiteRemboursee: number; totalNetFcfa: number; quantiteRefusee?: number; refus?: { motif: string; remboursementDuFcfa: number; rembourseLe: string | null } | null }
 type Expedition = { id: string; reference: string; statut: string; ville: string; montantACollecterFcfa: number; livreeLe: string | null; evenements: Evenement[] }
 type SousCommande = { id: string; reference: string; statut: string; boutique: { nom: string; slug: string }; lignes: Ligne[]; expeditions: Expedition[] }
-type Commande = { id: string; reference: string; statut: string; totalFermeTtc: number; acompteDu: number; acompteRecu: number; resteAPayer: number; sousCommandes: SousCommande[] }
+type Commande = { id: string; reference: string; statut: string; totalFermeTtc: number; acompteDu: number; acompteRecu: number; resteAPayer: number; sousCommandes: SousCommande[]; kati?: KatiCommande }
 type Retour = { id: string; statut: string; quantite: number; montantRembourseFcfa: number; referenceRetour: string | null; motifDecision?: string | null; motifArbitrage?: string | null; motifContestation?: string | null }
 type Piece = { id: string; nomCapture: string; typeMime: string; tailleOctets: number; empreinteSha256: string }
 type Message = { id: string; auteurType: string; contenu: string; creeLe: string; pieces: Piece[] }
@@ -185,6 +186,11 @@ export function SuiviMarketplace({ reference }: { reference: string }) {
         <div><p className="t-label text-ink-3">Suivi marketplace</p><h1 className="mt-2 text-h2 font-semibold text-ink">Commande {commande.reference}</h1><p className="mt-2 text-small text-ink-2">Statut : {libelle(commande.statut)}</p></div>
         <div className="rounded-well bg-ink px-5 py-4 text-white"><span className="block text-micro opacity-70">Solde à la livraison</span><strong className="t-num text-h4">{formatPrice(commande.resteAPayer)}</strong></div>
       </header>
+      {commande.kati && commande.kati.points > 0 ? (
+          <p className="mt-6 rounded-well border border-rule bg-space px-4 py-3 text-small text-ink" data-testid="kati-commande">
+            Cette commande vous a rapporté <strong>{formatKati(commande.kati.points)}</strong>{commande.kati.liberes ? ', déjà disponibles' : commande.kati.disponibleLe ? `, disponibles le ${new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(commande.kati.disponibleLe))}` : ''}. <Link href="/compte/kati" className="text-secondary underline underline-offset-2">Mes KATI</Link>
+          </p>
+        ) : null}
 
       {erreur ? <p className="mt-5 rounded-well border border-warn p-3 text-small text-warn" role="alert">{erreur}</p> : null}
       <p role="status" className={succes ? 'mt-5 rounded-well border border-primary p-3 text-small text-primary' : 'sr-only'}>{succes}</p>
