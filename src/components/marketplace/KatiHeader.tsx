@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { CartButton } from '@/components/layout/CartButton'
 import { lireCategoriesMarketplace } from '@/lib/marketplace-data'
 import { KatiLogo } from './KatiLogo'
+import { CaptureParrainage } from './kati/CaptureParrainage'
 import styles from './marketplace-shell-v2.module.css'
 
 function Icon({ children }: { children: ReactNode }) {
@@ -14,6 +15,7 @@ export async function KatiHeader() {
   const categories = (await lireCategoriesMarketplace()).slice(0, 6)
   return (
     <header className={styles.header} data-marketplace-header>
+      <CaptureParrainage />
       <div className={styles.topbar} data-marketplace-topbar><div className={styles.shell}>
         <span>▣ Livraison rapide partout au Cameroun</span><span>◇ Paiement sécurisé</span><span>◉ Une équipe à votre écoute 24/7</span>
         <em>En toute confiance !</em>

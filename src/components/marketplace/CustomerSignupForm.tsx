@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState, useSyncExternalStore, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { VILLES_CAMEROUN, villeValide } from '@/constants/villes'
 import { connexionLocaleActive, seConnecterLocalement } from '@/lib/connexion-locale'
 import { enregistrerFiche } from '@/lib/profil'
+import { garderParrainage, lireParrainageGarde, oublierParrainage, rattacher } from '@/lib/parrainage'
 import { avecRetour, useRetourDemande } from '@/lib/retour'
 import { supabase } from '@/lib/supabase'
 import styles from '@/app/inscription/signup.module.css'
+
+const sansAbonnement = () => () => {}
 
 export function CustomerSignupForm() {
   const router = useRouter()
@@ -17,6 +20,23 @@ export function CustomerSignupForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  // Le code du lien suivi avant l'inscription : vide au rendu serveur, lu ensuite dans le navigateur.
+  const codeGarde = useSyncExternalStore(sansAbonnement, () => lireParrainageGarde()?.code ?? '', () => '')
+
+  /** Le code est garde ; il est rattache tout de suite si l'inscription ouvre une session, sinon a la premiere visite de « Mes KATI ». */
+  async function parrainer(code: string, session: boolean) {
+    if (!code) return ''
+    const garde = lireParrainageGarde()
+    if (garde && garde.code !== code) oublierParrainage()
+    const retenu = garderParrainage(code)
+    if (!session) return ' Votre code de parrainage sera enregistré à votre première connexion.'
+    try {
+      await rattacher(code, retenu?.code === code ? retenu.jeton : undefined)
+      return ' Votre parrain est enregistré.'
+    } catch {
+      return ' Votre code de parrainage n’a pas pu être enregistré : vérifiez-le dans « Mes KATI ».'
+    }
+  }
   const local = connexionLocaleActive && !supabase()
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -28,6 +48,7 @@ export function CustomerSignupForm() {
     const phone = String(data.get('phone') ?? '').replace(/[\s().-]/g, '')
     const city = villeValide(String(data.get('city') ?? ''))
     const password = String(data.get('password') ?? '')
+    const code = String(data.get('parrain') ?? '').trim().toUpperCase().replace(/\s+/g, '')
     if (name.length < 2) return setError('Indiquez votre prénom et votre nom.')
     if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Vérifiez votre adresse e-mail.')
     if (!/^(?:\+?237)?6\d{8}$/.test(phone)) return setError('Saisissez un mobile camerounais à 9 chiffres, commençant par 6.')
@@ -42,7 +63,8 @@ export function CustomerSignupForm() {
         if (authError) throw authError
         if (auth.user?.identities?.length === 0) throw new Error('Cette adresse est peut-être déjà utilisée. Essayez de vous connecter.')
         if (auth.session) await enregistrerFiche({ nom: name, telephone: phone, ville: city })
-        setSuccess(auth.session ? 'Votre compte est prêt. Vous pouvez reprendre vos achats.' : 'Vérifiez votre boîte e-mail pour confirmer votre compte.')
+        const parrainage = await parrainer(code, Boolean(auth.session))
+        setSuccess(`${auth.session ? 'Votre compte est prêt. Vous pouvez reprendre vos achats.' : 'Vérifiez votre boîte e-mail pour confirmer votre compte.'}${parrainage}`)
       } else if (connexionLocaleActive) {
         await seConnecterLocalement(email, password)
         await enregistrerFiche({ nom: name, telephone: phone, ville: city })
@@ -66,6 +88,7 @@ export function CustomerSignupForm() {
       <datalist id="villes-inscription">{VILLES_CAMEROUN.map(ville => <option key={ville} value={ville} />)}</datalist>
       <label>{local ? 'Mot de passe de démonstration' : 'Mot de passe'}<span className={styles.password}><input name="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={local ? 'Accès fourni par l’équipe' : '8 caractères minimum'} /><button type="button" onClick={() => setShowPassword(value => !value)}>{showPassword ? 'Masquer' : 'Afficher'}</button></span></label>
       {!local ? <p className={styles.hint}>Au moins une majuscule, une minuscule et un chiffre.</p> : <p className={styles.hint}>Cette version locale utilise un accès partagé, pas un compte personnel.</p>}
+      <label>Code de parrainage <small>(facultatif)</small><input key={codeGarde} name="parrain" defaultValue={codeGarde} maxLength={40} placeholder="KATI-AMINA-7Q2K" autoComplete="off" /></label>
       <label className={styles.check}><input name="terms" type="checkbox" /><span>J’accepte les <Link href="/conditions" target="_blank">conditions d’utilisation</Link> et j’ai lu la <Link href="/politique-confidentialite" target="_blank">politique de confidentialité</Link>.</span></label>
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       <button className={styles.primary} disabled={pending}>{pending ? 'Un instant…' : local ? 'Continuer en démonstration' : 'Créer mon compte'}</button>

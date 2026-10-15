@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useAccount } from '@/lib/account'
 import { ErreurApi, api, apiDisponible } from '@/lib/api'
 import { formatKati, usePolitiqueKati, type HistoriqueKati, type OperationKati, type PortefeuilleKati } from '@/lib/kati'
+import { CarteParrainage } from '@/components/marketplace/kati/CarteParrainage'
 
 type Etat = { phase: 'chargement' } | { phase: 'connexion' } | { phase: 'refus'; message: string } | { phase: 'prete'; portefeuille: PortefeuilleKati; historique: HistoriqueKati }
 
@@ -98,6 +99,8 @@ export function MesKati() {
         </li>)}
       </ul>
     </section> : null}
+
+    <CarteParrainage />
 
     <section aria-labelledby="kati-historique-titre">
       <h2 id="kati-historique-titre" className="text-h4 font-semibold text-ink">Historique</h2>

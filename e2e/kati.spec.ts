@@ -20,6 +20,11 @@ const operation = (id: string, type: string, variations: { disponible?: number; 
   disponible: variations.disponible ?? 0, enAttente: variations.enAttente ?? 0, reserve: 0,
 })
 
+const PARRAINAGE = {
+  code: 'KATI-AWA-7Q2K', lien: 'https://katihub.cm/?p=KATI-AWA-7Q2K', commissionBps: 50, dureeMois: 12,
+  parrain: null, peutEtreParraine: false, filleuls: 2, commissionsGagnees: 29_800,
+}
+
 test('le portefeuille montre les soldes, leur valeur, les gains à venir et l’historique signé', async ({ page }) => {
   const premiere = [
     operation('t3', 'annulation', { disponible: -14_900 }),
@@ -32,6 +37,7 @@ test('le portefeuille montre les soldes, leur valeur, les gains à venir et l’
       gainsEnAttente: [{ id: 'g1', libelle: 'Commande CM-NEW : 1 %', commande: 'CM-NEW', commission: false, points: 18_000, disponibleLe: '2026-10-22T10:00:00.000Z' }],
     })
     .quand('GET', /^\/marketplace\/kati\/moi\/historique$/, { total: 21, page: 1, taille: 20, elements: premiere })
+    .quand('GET', /^\/marketplace\/kati\/parrainage$/, PARRAINAGE)
     .quand('GET', /^\/marketplace\/kati\/moi\/historique\?page=2$/, { total: 21, page: 2, taille: 20, elements: [operation('t1', 'attribution', { enAttente: 29_800 })] })
 
   await page.goto('/compte/kati')
@@ -83,4 +89,54 @@ test('le suivi dit ce que la commande a rapporté et quand ce sera utilisable', 
   await page.goto('/marketplace/commande/CM-E2E/suivi')
   await expect(page.getByTestId('kati-commande')).toContainText(/20[\s  ]000 KATI/)
   await expect(page.getByTestId('kati-commande')).toContainText('disponibles le')
+})
+
+test('la carte de parrainage donne le code, le lien à partager et le bilan', async ({ page }) => {
+  api = (await simulerApi(page))
+    .quand('GET', /^\/marketplace\/kati\/moi$/, { disponible: 0, enAttente: 0, reserve: 0, valeurFcfa: { disponible: 0, enAttente: 0 }, katiParFcfa: 10, gainsEnAttente: [] })
+    .quand('GET', /^\/marketplace\/kati\/moi\/historique$/, { total: 0, page: 1, taille: 20, elements: [] })
+    .quand('GET', /^\/marketplace\/kati\/parrainage$/, PARRAINAGE)
+  await page.goto('/compte/kati')
+  const carte = page.getByTestId('carte-parrainage')
+  await expect(carte.getByTestId('code-parrainage')).toHaveText('KATI-AWA-7Q2K')
+  await expect(carte).toContainText('https://katihub.cm/?p=KATI-AWA-7Q2K')
+  await expect(carte).toContainText('0,5 %')
+  await expect(carte.getByTestId('bilan-parrainage')).toContainText(/2 filleuls · 29[\s  ]800 KATI/)
+  await expect(carte.getByRole('link', { name: 'Partager sur WhatsApp' })).toHaveAttribute('href', /wa\.me\/\?text=.*KATI-AWA-7Q2K/)
+  // Deja livre ou deja parraine : pas de saisie de code.
+  await expect(carte.getByRole('button', { name: 'Valider le code' })).toHaveCount(0)
+})
+
+test('un lien de parrainage est gardé, son clic noté, puis le code est proposé et rattaché une fois connecté', async ({ page }) => {
+  let rattache = false
+  api = (await simulerApi(page))
+    .quand('GET', /^\/marketplace\/demandes-client/, [])
+    .quand('POST', /^\/marketplace\/kati\/parrainage\/clics$/, { valide: true })
+    .quand('GET', /^\/marketplace\/kati\/moi$/, { disponible: 0, enAttente: 0, reserve: 0, valeurFcfa: { disponible: 0, enAttente: 0 }, katiParFcfa: 10, gainsEnAttente: [] })
+    .quand('GET', /^\/marketplace\/kati\/moi\/historique$/, { total: 0, page: 1, taille: 20, elements: [] })
+    .quand('GET', /^\/marketplace\/kati\/parrainage$/, () => ({ ...PARRAINAGE, code: 'KATI-BOB-AAAA', peutEtreParraine: !rattache, filleuls: 0, commissionsGagnees: 0 }))
+    .quand('POST', /^\/marketplace\/kati\/parrainage$/, () => { rattache = true; return { depuis: '2026-10-17T10:00:00.000Z', jusquau: '2027-10-17T10:00:00.000Z' } })
+
+  await page.goto('/compte/favoris?p=kati-awa-7q2k')
+  await expect.poll(() => api.appelsVers('POST', /\/parrainage\/clics$/).length).toBe(1)
+  const clic = api.appelsVers('POST', /\/parrainage\/clics$/)[0]!.corps as { code: string; jeton: string }
+  expect(clic.code).toBe('KATI-AWA-7Q2K')
+  expect(clic.jeton).toMatch(/^[0-9a-f]{48}$/)
+  // Le code ne reste pas dans l'adresse : un lien partage ensuite ne le transmet pas.
+  await expect(page).toHaveURL(/\/compte\/favoris$/)
+
+  await page.goto('/compte/kati')
+  const carte = page.getByTestId('carte-parrainage')
+  await expect(carte.getByLabel(/Son code de parrainage/)).toHaveValue('KATI-AWA-7Q2K')
+  await carte.getByRole('button', { name: 'Valider le code' }).click()
+  await expect(carte.getByRole('status')).toContainText(/récompensé de vos commandes jusqu’au/)
+  expect(api.appelsVers('POST', /\/kati\/parrainage$/)[0]!.corps).toEqual({ code: 'KATI-AWA-7Q2K', jeton: clic.jeton })
+  await expect(carte.getByRole('button', { name: 'Valider le code' })).toHaveCount(0)
+})
+
+test('le formulaire d’inscription reprend le code du lien suivi', async ({ page }) => {
+  api = await simulerApi(page)
+  await page.addInitScript(() => localStorage.setItem('katihub.parrainage.v1', JSON.stringify({ code: 'KATI-AWA-7Q2K', jeton: 'a'.repeat(48), le: Date.now() })))
+  await page.goto('/inscription')
+  await expect(page.getByLabel(/Code de parrainage/)).toHaveValue('KATI-AWA-7Q2K')
 })
