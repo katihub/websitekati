@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getBanners } from '@/lib/banners'
 import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
+import { DerniersArrivages } from './DerniersArrivages'
 import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
 import { MarquesAccueil } from './MarquesAccueil'
 import { ProductCard } from './ProductCardAccueil'
@@ -52,6 +53,7 @@ export async function MarketplaceHome() {
     <MarketplaceAvantages />
     {rayons.length ? <RayonsAccueil rayons={rayons} initial={{ slug: premier!.slug, offres: offresPremier }} /> : null}
     <MarquesAccueil marques={comptes.facettes?.marques ?? []} totalOffres={comptes.pagination.total} />
+    <DerniersArrivages />
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Catégories populaires" href="/catalogue" label="Voir toutes les catégories" /><div className={styles.categoryRail}>{POPULAR.map(([icon, name]) => <Link href={`/recherche?q=${encodeURIComponent(name)}`} key={name}><span>{icon}</span><b>{name}</b></Link>)}</div></section>
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Boutiques recommandées" href="/boutiques" label="Voir toutes les boutiques" /><div className={styles.shopGrid}>{boutiques.slice(0, 6).map((shop, index) => <Link href={`/boutiques/${shop.slug}`} className={styles.shopCard} key={shop.id}><span data-color={index % 5}>{initials(shop.nom)}</span><strong>{shop.nom}</strong><small>{shop.description ?? 'Boutique locale vérifiée'}</small><em>⌖ {shop.villesLivraison[0] ?? 'Cameroun'}</em><b>Visiter la boutique →</b></Link>)}</div></section>
 
