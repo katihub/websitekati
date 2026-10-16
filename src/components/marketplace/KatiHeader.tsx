@@ -29,8 +29,8 @@ export async function KatiHeader() {
           <button type="submit" aria-label="Lancer la recherche">⌕</button>
         </form>
         <div className={styles.actions} data-marketplace-actions>
-          <Link href="/connexion" className={styles.account}><Icon><path d="M12 21a8 8 0 0 0-16 0M12 11a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" transform="translate(4 1) scale(.67)" fill="none" stroke="currentColor" strokeWidth="1.8"/></Icon><span>Mon compte</span></Link>
-          <Link href="/compte/favoris" className={styles.favorite}><Icon><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l7.8-7.5a5.5 5.5 0 0 0 1-8.9Z" fill="none" stroke="currentColor" strokeWidth="1.8"/></Icon><span>Mes favoris</span></Link>
+          <Link href="/connexion" className={styles.actionLien} aria-label="Connexion"><Icon><path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></Icon><span>Connexion</span></Link>
+          <Link href="/espace-vendeur" className={styles.actionLien} aria-label="Compte marchand"><Icon><path d="M3 9.5 4.5 4h15L21 9.5M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M4.5 12.5V20h15v-7.5M9.5 20v-4.5h5V20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></Icon><span>Compte marchand</span></Link>
           <CartButton href="/panier" />
         </div>
       </div>
