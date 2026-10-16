@@ -9,9 +9,11 @@ import { espaceVendeur } from './support/espace-vendeur'
  * la boutique repond a sa seule partie.
  */
 
-let api: ApiSimulee
+let api: ApiSimulee | undefined
 
+test.beforeEach(() => { api = undefined })
 test.afterEach(() => {
+  if (!api) return
   expect(api.nonPrevues, 'appels non simules').toEqual([])
   expect(api.erreursNavigateur, 'erreurs du navigateur').toEqual([])
 })

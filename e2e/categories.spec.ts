@@ -7,9 +7,11 @@ import { simulerApi, type ApiSimulee } from './support/api'
  * d'une sous-categorie. Pages rendues cote serveur : il faut le backend local.
  */
 
-let api: ApiSimulee
+let api: ApiSimulee | undefined
 
+test.beforeEach(() => { api = undefined })
 test.afterEach(() => {
+  if (!api) return
   expect(api.nonPrevues, 'appels non simules').toEqual([])
 })
 
