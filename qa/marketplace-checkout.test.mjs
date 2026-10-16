@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { checkLines, groupDeliveries, commonCities, estimatedDeposit, checkedTotal } from '../src/lib/marketplace-checkout.ts'
+import { checkLines, groupDeliveries, livrableDans, estimatedDeposit, checkedTotal } from '../src/lib/marketplace-checkout.ts'
 
 const line = { slug: 'telephone', name: 'Téléphone', price: 10000, qty: 2, offerId: 'offre-a', boutiqueId: 'boutique-a' }
 const offer = { id: 'offre-a', titre: 'Téléphone', prixFcfa: 12000, disponible: 3, modesLivraison: ['vendeur', 'katihub'], villesLivraison: ['Douala', 'Yaoundé'], boutique: { id: 'boutique-a', nom: 'Boutique A', slug: 'boutique-a' } }
@@ -12,9 +12,11 @@ assert.equal(checkLines([{ ...line, boutiqueId: 'autre' }], [product])[0].issue.
 assert.equal(checkLines([line], [])[0].issue.includes('disponible'), true)
 const second = { ...offer, id: 'offre-b', modesLivraison: ['katihub'], villesLivraison: ['douala'] }
 const both = checkLines([line, { ...line, offerId: 'offre-b' }], [{ ...product, offres: [offer, second] }])
-assert.deepEqual(groupDeliveries(both)[0].modes, ['katihub'])
-assert.deepEqual(commonCities(both), ['Douala'])
-assert.deepEqual(commonCities(checkLines([line], [{ ...product, offres: [{ ...offer, villesLivraison: [] }] }])), [])
+const groupe = groupDeliveries(both)[0]
+assert.deepEqual(groupe.modes, ['katihub'])
+assert.equal(livrableDans(groupe, 'Douala'), true)
+const sansVille = groupDeliveries(checkLines([line], [{ ...product, offres: [{ ...offer, villesLivraison: [] }] }]))[0]
+assert.equal(livrableDans(sansVille, 'Douala'), false)
 assert.equal(estimatedDeposit(149001), 14901)
 assert.equal(estimatedDeposit(500), 500)
 assert.equal(estimatedDeposit(1001), 1000)

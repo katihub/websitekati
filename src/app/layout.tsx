@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
-import { IBM_Plex_Mono, Poppins } from 'next/font/google'
+import { IBM_Plex_Mono, Manrope } from 'next/font/google'
 
 import './globals.css'
 import { KatiFooter } from '@/components/marketplace/KatiFooter'
@@ -13,46 +13,19 @@ import { AccountProvider } from '@/lib/account'
 import { CartProvider } from '@/lib/cart'
 import { SessionProvider } from '@/lib/session'
 
-/**
- * Poppins carries the text and the display sizes.
- *
- * It is the face of the reference the storefront was drawn from, identified off
- * the mockup rather than guessed: single-storey `a`, perfectly circular bowls on
- * `o`, `p` and `d`, monolinear strokes, a flat-barred `G`. That is a geometric
- * sans, and among the geometric sans on Google Fonts it is the one this family
- * of commercial templates uses.
- *
- * It changes the register on purpose. Archivo was a grotesque: neutral, tight,
- * engineering. Poppins is round and open, which is warmer and reads younger, and
- * it is what the brief asked for. Two consequences are handled rather than
- * fought: its x-height is large, so the fine end of the scale looks a step
- * bigger than the same numbers in Archivo did, and it sets wide, so measures in
- * `ch` come out shorter in characters than they did.
- *
- * Weights are the three the site actually asks for. `font-extrabold` appears
- * twice; 800 is loaded for it rather than letting the browser fake it, since
- * the body sets `font-synthesis-weight: none`.
- *
- * IBM Plex Mono carries every numeral the customer compares: price, port count,
- * VA rating, reference. Tabular figures are what let a column running from
- * 1 000 to 11 800 000 FCFA stay legible as a column.
- *
- * 400 and 700, not 400 and 500. Prices ask for `font-bold`, the body sets
- * `font-synthesis-weight: none` so nothing is faked, and 500 was the heaviest
- * weight in the file: every price on the site rendered at Medium while claiming
- * to be bold. Nothing asks for 500, so it is dropped rather than added to.
- */
-const poppins = Poppins({
+/** Manrope carries the interface and display sizes across every KatiHub surface. */
+const manrope = Manrope({
   // `subsets` governs preloading, not what the stylesheet contains: the
   // latin-ext faces stay declared with their own unicode-range and load on
   // demand. French needs none of them, and preloading both halves cost 50 380
   // bytes of the 105 432 the page spends on type before it can paint.
   subsets: ['latin'],
   weight: ['400', '600', '700', '800'],
-  variable: '--font-poppins',
+  variable: '--font-manrope',
   display: 'swap',
 })
 
+/** IBM Plex Mono is reserved for references, identifiers and comparable figures. */
 const plexMono = IBM_Plex_Mono({
   subsets: ['latin'],
   weight: ['400', '700'],
@@ -94,7 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
      memoire de `cache` fait que l'en-tete et le pied de page relisent les memes
      reponses sans second appel. */
   return (
-    <html lang="fr" className={`${poppins.variable} ${plexMono.variable}`}>
+    <html lang="fr" className={`${manrope.variable} ${plexMono.variable}`}>
       {/* `data-habillage` dit si le menu des rayons a pu etre lu. Le travailleur
           de service le lit avant de garder /hors-ligne : une copie sans rayons,
           prise pendant une panne, resterait sur le telephone du client. */}

@@ -15,6 +15,7 @@ import { MerchantLogin } from './MerchantLogin'
 import { VILLES_CAMEROUN } from '@/constants/villes'
 import { CHOIX_VENDEUR, MODES_LIVRAISON } from '@/lib/modes-livraison'
 import { EditeurFicheProduit } from './vendeur/EditeurFicheProduit'
+import { AdministrationProduits } from './vendeur/AdministrationProduits'
 import { DevisBoutique } from './vendeur/DevisBoutique'
 import { LivraisonsBoutique } from './vendeur/LivraisonsBoutique'
 import { cheminCategorie, libelleMois, useCategoriesMarketplace, type CategorieProduit } from './vendeur/categories'
@@ -337,7 +338,7 @@ export function SellerWorkspace() {
         {error ? <div className={styles.error} role="alert">{error}<button onClick={() => void load()}>Réessayer</button></div> : null}
         {space ? <>
           <header className={styles.pageHead}>
-            <div><h1>{panel === 'overview' ? `Bonjour, ${space.nom}` : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Produits proposés' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? 'Voici ce qui se passe dans votre boutique.' : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
+            <div><h1>{panel === 'overview' ? `Bonjour, ${space.nom}` : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Catalogue vendeur' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? 'Voici ce qui se passe dans votre boutique.' : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
             <div className={styles.headTools}><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> Voir ma boutique</Link></div>
           </header>
 
@@ -347,7 +348,7 @@ export function SellerWorkspace() {
             onPanel={setPanel}
           /> : null}
           {panel === 'verification' ? access.documents === 'allowed' ? <VerificationPanel shopId={space.id} documents={documents} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.documents} /> : null}
-          {panel === 'products' ? access.products === 'allowed' ? <ProductsPanel shopId={space.id} products={products} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.products} /> : null}
+          {panel === 'products' ? access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.products} /> : null}
           {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
           {panel === 'offers' ? access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.offers} /> : null}
           {panel === 'orders' ? access.orders === 'allowed' ? <OrdersPanel shopId={space.id} listing={orders} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.orders} /> : null}
@@ -755,7 +756,7 @@ function VerificationPanel({ shopId, documents, onRefresh }: { shopId: string; d
 /** Une fiche refusee ou archivee ne se modifie plus : elle ne sera pas publiee. */
 const FICHE_EDITABLE = ['soumis', 'en_verification', 'actif', 'modification_demandee']
 
-function ProductsPanel({ shopId, products, canPublish, onRefresh }: { shopId: string; products: ProductProposal[]; canPublish: boolean; onRefresh: () => Promise<void> }) {
+export function ProductsPanel({ shopId, products, canPublish, onRefresh }: { shopId: string; products: ProductProposal[]; canPublish: boolean; onRefresh: () => Promise<void> }) {
   const [values, setValues] = useState({ nom: '', marque: '', categorie: '', sousCategorie: '', description: '', descriptionCourte: '', ficheTechnique: '' })
   const [pdf, setPdf] = useState<File | null>(null)
   const [pending, setPending] = useState(false)

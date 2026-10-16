@@ -100,3 +100,9 @@
 .hint{margin:-6px 0 0;color:#64748b;font-size:11px;line-height:1.45}
 .actionPanel label small{color:#64748b;font-size:11px;font-weight:500}
 .lignesCommande{list-style:none;margin:6px 0;padding:0;display:grid;gap:4px}.lignesCommande li{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;color:#33445f}.lignesCommande em{font-style:normal;color:#b42318;font-weight:600}.verifie{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:#e7f6ee;color:#146c3b;font-weight:700}
+
+/* L'espace vendeur suit la charte KatiHub bleu nuit + orange, sans vert. */
+.workspace{--primary:#0b5dcc}
+.shopStatus[data-tone=good]{color:#0b5dcc}
+.statusBox span[data-tone=good],.documentSummary li b[data-status=valide],.featureList li>b[data-status=actif],.offerMeta b[data-status=publiee],.orderTable td span[data-status=acceptee],.orderTable td span[data-status=livree],.deliverySpotlight>span[data-status=livree],.memberControls>b,.verifie{background:#eaf2ff;color:#1458a6}
+.metricStrip button:nth-child(3) .metricIcon{background:#eaf2ff;color:#215eb7}

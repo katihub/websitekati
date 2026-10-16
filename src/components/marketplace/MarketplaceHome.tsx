@@ -1,23 +1,54 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { getBanners } from '@/lib/banners'
+import { getBanners, type PublishedBanner } from '@/lib/banners'
 import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
+import { MarketplaceCategoryMenu } from './MarketplaceCategoryMenu'
 import { DerniersArrivages } from './DerniersArrivages'
 import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
 import { MarquesAccueil } from './MarquesAccueil'
 import { ProductCard } from './ProductCardAccueil'
+import { ProductCarouselAccueil } from './ProductCarouselAccueil'
+import { ShopCarouselAccueil } from './ShopCarouselAccueil'
+import { PromosCarrousel } from './PromosCarrousel'
 import { PubAccueil } from './PubAccueil'
 import { NewsletterKatihub, VendreSurKatihub } from './VendreSurKatihub'
 import { RayonsAccueil, type RayonAccueil } from './RayonsAccueil'
 import styles from './marketplace-home-v2.module.css'
 
-const CATEGORIES = [
-  ['▯', 'Électronique'], ['♙', 'Mode & Style'], ['⌂', 'Maison & Décoration'], ['✿', 'Beauté & Santé'], ['◉', 'Sports & Loisirs'], ['▱', 'Auto & Moto'], ['♧', 'Jardinage'], ['♙', 'Enfants & Jouets'], ['⌁', 'Alimentation'], ['▦', 'High-Tech'], ['⌕', 'Bricolage & Outillage'], ['▦', 'Plus de catégories'],
-] as const
 const POPULAR = [['📱', 'Smartphones'], ['💻', 'Ordinateurs'], ['👗', 'Mode & Vêtements'], ['🛋️', 'Maison & Décoration'], ['🧴', 'Beauté & Soins'], ['🏋️', 'Sports & Fitness'], ['🧸', 'Enfants & Jouets'], ['🍳', 'Électroménager']]
-const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
-
+const PROMOS_KATIHUB: PublishedBanner[] = [
+  {
+    id: 'katihub-high-tech',
+    href: '/recherche?q=High-Tech',
+    label: 'Le meilleur de la high-tech',
+    alt: 'Une sélection high-tech KatiHub dans les couleurs bleu nuit et orange',
+    focus: 50,
+    emplacement: 'promo',
+    large: { url: '/marketplace-shop-tech-cover.png', largeur: 2172, hauteur: 724 },
+    mobile: { url: '/marketplace-shop-tech-cover.png', largeur: 2172, hauteur: 724 },
+  },
+  {
+    id: 'katihub-mode',
+    href: '/recherche?q=Mode',
+    label: 'Le style camerounais au quotidien',
+    alt: 'Une cliente camerounaise avec ses achats KatiHub',
+    focus: 50,
+    emplacement: 'promo',
+    large: { url: '/marketplace-mode-cameroun.png', largeur: 2172, hauteur: 724 },
+    mobile: { url: '/marketplace-mode-cameroun.png', largeur: 2172, hauteur: 724 },
+  },
+  {
+    id: 'katihub-selection',
+    href: '/catalogue',
+    label: 'Vos essentiels, réunis au même endroit',
+    alt: 'Une sélection de produits disponibles sur KatiHub',
+    focus: 50,
+    emplacement: 'promo',
+    large: { url: '/marketplace-catalogue-cover.png', largeur: 2172, hauteur: 724 },
+    mobile: { url: '/marketplace-catalogue-cover.png', largeur: 2172, hauteur: 724 },
+  },
+]
 function SectionHead({ title, href, label = 'Voir tout' }: { title: string; href: string; label?: string }) {
   return <header className={styles.sectionHead}><h2>{title}</h2><Link href={href}>{label}<span>→</span></Link></header>
 }
@@ -33,12 +64,19 @@ export async function MarketplaceHome() {
     .sort((a, b) => b.nombre - a.nombre || a.nom.localeCompare(b.nom, 'fr'))
   const premier = rayons.find((r) => r.nombre > 0) ?? rayons[0]
   const offresPremier = premier ? (await lireOffresMarketplace({ categorieSlug: premier.slug, taille: 8 })).offres : []
-  const best = offres.slice(0, 6)
+  const best = offres.slice(0, 20)
   const fresh = [...offres].reverse().slice(0, 6)
+  // Les promotions du panel restent prioritaires. Tant qu'aucune n'est
+  // publiée, cette sélection KatiHub évite de recréer un grand vide sous les
+  // engagements sans réintroduire les anciennes créations hors charte.
+  const promosAccueil = bannieres.promos.length ? bannieres.promos : PROMOS_KATIHUB
   return <div className={styles.page}>
     <div className={`${styles.shell} ${styles.commerceGrid}`}>
-      <aside className={styles.categoryMenu}><h2><span>☰</span>Toutes les catégories</h2>{CATEGORIES.map(([icon, label]) => <Link key={label} href={`/recherche?q=${encodeURIComponent(label)}`}><span>{icon}</span>{label}<b>›</b></Link>)}</aside>
-      <div className={styles.centerStage}><MarketplaceHeroCarousel /><div className={styles.trustStrip}><span><i>✓</i><b>Produits vérifiés<small>et de qualité</small></b></span><span><i>▰</i><b>Livraison rapide<small>au Cameroun</small></b></span><span><i>◇</i><b>Paiement sécurisé<small>et fiable</small></b></span><span><i>↶</i><b>Retours faciles<small>sous 5 jours</small></b></span><span><i>◉</i><b>Service client<small>à votre écoute</small></b></span></div></div>
+      <MarketplaceCategoryMenu rayons={rayons} />
+      <div className={styles.centerStage}>
+        <MarketplaceHeroCarousel />
+        <PromosCarrousel promos={promosAccueil} afficherLibelles={!bannieres.promos.length} />
+      </div>
       {/* La colonne de droite : la publicite choisie par le super admin, puis les engagements KatiHub regroupes. */}
       <aside className={styles.promoRail} aria-label="Publicité et engagements KatiHub">
         <PubAccueil pub={bannieres.pubsAccueil[0] ?? null} />
@@ -50,13 +88,13 @@ export async function MarketplaceHome() {
       </aside>
     </div>
 
-    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Meilleures ventes" href="/catalogue" />{best.length ? <div className={styles.productGrid}>{best.map((offre) => <ProductCard key={offre.id} offre={offre} />)}</div> : <p className={styles.empty}>Les offres seront bientôt disponibles.</p>}</section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Meilleures ventes" href="/catalogue" />{best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}>Les offres seront bientôt disponibles.</p>}</section>
     <MarketplaceAvantages />
     {rayons.length ? <RayonsAccueil rayons={rayons} initial={{ slug: premier!.slug, offres: offresPremier }} /> : null}
     <MarquesAccueil marques={comptes.facettes?.marques ?? []} totalOffres={comptes.pagination.total} />
     <DerniersArrivages />
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Catégories populaires" href="/catalogue" label="Voir toutes les catégories" /><div className={styles.categoryRail}>{POPULAR.map(([icon, name]) => <Link href={`/recherche?q=${encodeURIComponent(name)}`} key={name}><span>{icon}</span><b>{name}</b></Link>)}</div></section>
-    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Boutiques recommandées" href="/boutiques" label="Voir toutes les boutiques" /><div className={styles.shopGrid}>{boutiques.slice(0, 6).map((shop, index) => <Link href={`/boutiques/${shop.slug}`} className={styles.shopCard} key={shop.id}><span data-color={index % 5}>{initials(shop.nom)}</span><strong>{shop.nom}</strong><small>{shop.description ?? 'Boutique locale vérifiée'}</small><em>⌖ {shop.villesLivraison[0] ?? 'Cameroun'}</em><b>Visiter la boutique →</b></Link>)}</div></section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Boutiques recommandées" href="/boutiques" label="Voir toutes les boutiques" />{boutiques.length ? <ShopCarouselAccueil boutiques={boutiques.slice(0, 20)} /> : <p className={styles.empty}>Les boutiques seront bientôt disponibles.</p>}</section>
 
     <section className={`${styles.shell} ${styles.fashionBanner}`}><Image src="/marketplace-mode-cameroun.png" alt="Une cliente camerounaise présente une sélection mode" fill sizes="(max-width: 800px) 100vw, 1480px" /><div><h2>Le style camerounais,<br /><strong>au quotidien !</strong></h2><p>Vêtements, chaussures et accessoires proposés par des boutiques locales.</p><Link href="/recherche?q=Mode">Découvrir la mode <span>→</span></Link></div></section>
 

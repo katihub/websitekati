@@ -5,7 +5,7 @@ import Link from 'next/link'
  * The wordmark.
  *
  * The mark itself now, not a stand-in for it. It was a drawn lozenge and the
- * name set in Poppins, which held the slot honestly while no file existed;
+ * name set in Manrope, which held the slot honestly while no file existed;
  * `public/logo/now-tech.png` exists, so the drawing is gone. The same file is
  * the favicon and the touch icon, from `src/app/icon.png`.
  *

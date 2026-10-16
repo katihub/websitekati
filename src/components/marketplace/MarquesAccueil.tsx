@@ -25,10 +25,10 @@ export function MarquesAccueil({ marques, totalOffres }: { marques: Array<{ nom:
   return <section className={styles.section} aria-labelledby="marques-titre">
     <header className={styles.entete}>
       <div>
-        <h2 id="marques-titre">Les marques de nos boutiques</h2>
-        <p>{nombre.format(totalOffres)} offre{totalOffres > 1 ? 's' : ''} de {nombre.format(marques.length)} marque{marques.length > 1 ? 's' : ''}, grandes enseignes et créateurs d’ici, vendues par les boutiques vérifiées de KatiHub.</p>
+        <h2 id="marques-titre">Les marques qui font votre quotidien</h2>
+        <p>{nombre.format(totalOffres)} offre{totalOffres > 1 ? 's' : ''} auprès de {nombre.format(marques.length)} marque{marques.length > 1 ? 's' : ''}, proposées par les boutiques de KatiHub.</p>
       </div>
-      <Link href="/catalogue">Toutes les marques</Link>
+      <Link href="/marques">Explorer toutes les marques <span aria-hidden="true">→</span></Link>
     </header>
     <ul className={styles.grille}>
       {affichees.map((marque, index) => {
@@ -38,8 +38,8 @@ export function MarquesAccueil({ marques, totalOffres }: { marques: Array<{ nom:
             <span aria-hidden="true" className={styles.visuel}>{logo
               ? <span className={styles.logo} style={{ '--mark-src': `url(/brands/${logo.file}.svg)`, '--mark-ink': logo.paint } as React.CSSProperties} />
               : <span className={styles.monogramme}>{initiales(marque.nom)}</span>}</span>
-            <b>{marque.nom}</b>
-            <small>{nombre.format(marque.nombre)} offre{marque.nombre > 1 ? 's' : ''}</small>
+            <span className={styles.identite}><b>{marque.nom}</b><small>{nombre.format(marque.nombre)} offre{marque.nombre > 1 ? 's' : ''}</small></span>
+            <span className={styles.fleche} aria-hidden="true">→</span>
           </Link>
         </li>
       })}

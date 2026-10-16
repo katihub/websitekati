@@ -157,7 +157,7 @@
      obviously a different level. Weight and space do the ranking; scale only
      confirms it. */
   /* `display` is spent in one place, the opening headline, and it is sized to
-     the column it lives in rather than to the page. Measured: at 44px in Poppins
+     the column it lives in rather than to the page. Measured: at 44px in Manrope
      a twenty-character line wants 500 pixels, the column gave it 440, and every
      one of the twelve headlines came out on four lines instead of the two they
      are written as. The column is widened and the ceiling comes down to 40, so
@@ -351,7 +351,7 @@
   --spacing-band: var(--s-band);
   --spacing-stack: var(--s-stack);
 
-  --font-sans: var(--font-poppins), system-ui, sans-serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
   --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
@@ -420,7 +420,7 @@ body {
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-family: var(--font-manrope), system-ui, sans-serif;
   font-synthesis-weight: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

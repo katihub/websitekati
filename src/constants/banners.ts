@@ -4,7 +4,7 @@
  * Five finished pieces, each 14179 x 3000, each carrying its own headline, its
  * own line of copy and the shop's mark inside the picture. The stage therefore
  * sets no type on them and none beside them: a poster that already says
- * "Imprimez sans limites" next to a heading saying the same thing in Poppins is
+ * "Imprimez sans limites" next to a heading saying the same thing in Manrope is
  * one sentence twice in two voices.
  *
  * WHERE EACH ONE LEADS. To the narrowest true destination, not to the department

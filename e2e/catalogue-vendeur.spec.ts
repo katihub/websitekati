@@ -125,9 +125,10 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
   await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
   await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
-  await page.getByRole('button', { name: 'Envoyer à la modération' }).click()
+  await page.getByRole('button', { name: 'Soumettre à la validation' }).click()
   // Le navigateur bloque l'envoi tant que la sous-categorie manque.
   expect(await page.getByRole('combobox', { name: /^Sous-catégorie/ }).evaluate((champ: HTMLSelectElement) => champ.validity.valueMissing)).toBe(true)
   expect(api.appelsVers('POST', /propositions-produits$/)).toHaveLength(0)
@@ -136,12 +137,90 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
   await expect(page.getByTestId('garantie-categorie')).toContainText('2 ans')
   await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléphones' })
   await expect(page.getByTestId('garantie-categorie')).toContainText('1 an')
-  await page.getByRole('button', { name: 'Envoyer à la modération' }).click()
+  await page.getByRole('button', { name: 'Soumettre à la validation' }).click()
   await expect(page.getByText('Produit envoyé à la modération.')).toBeVisible()
 
   expect(api.appelsVers('POST', /propositions-produits$/)[0]!.corps).toEqual({
     nom: 'Samsung Galaxy A25', slug: 'samsung-galaxy-a25', categorieId: '00000000-0000-4000-8000-000000000402',
   })
+})
+
+test('la création reflète instantanément les données et la photo dans l’aperçu client', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25 5G')
+  await page.getByLabel('Marque').fill('Samsung')
+  await page.getByLabel('Description courte').fill('Un smartphone 5G endurant avec un écran lumineux et 128 Go de stockage.')
+  await page.locator('input[type=file][accept^="image"]').setInputFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL.split(',')[1]!, 'base64') })
+
+  const apercu = page.getByRole('complementary').filter({ hasText: 'Aperçu client en direct' })
+  await expect(apercu).toContainText('Samsung Galaxy A25 5G')
+  await expect(apercu).toContainText('Samsung')
+  await expect(page.getByAltText('Aperçu principal du produit')).toBeVisible()
+  await expect(page.getByText('Prix ajouté après validation')).toBeVisible()
+  if (process.env.CAPTURE_SELLER_PRODUCTS) await page.screenshot({ path: 'test-results/katihub-ajout-produit.png', fullPage: true })
+})
+
+test('le copilote KatiHub génère toute la fiche, signale les faits à vérifier et permet de revenir en arrière', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+  await page.route('**/api/marchand/assistant-produit', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ suggestion: {
+        nom: 'HP Omen 16-an0008tx', marque: 'HP', categorieId: '00000000-0000-4000-8000-000000000402',
+        descriptionCourte: 'Ordinateur portable HP Omen avec 16 Go de mémoire et un SSD de 1 To.',
+        description: 'Conçu pour les usages exigeants, ce HP Omen associe une mémoire de 16 Go à un stockage SSD de 1 To.\n\nLes caractéristiques non fournies restent à confirmer avant publication.',
+        ficheTechnique: 'Mémoire : 16 Go\nStockage : SSD 1 To',
+        metaTitre: 'HP Omen 16-an0008tx 16 Go et SSD 1 To',
+        metaDescription: 'Découvrez le HP Omen 16-an0008tx avec 16 Go de mémoire et un SSD de 1 To sur KatiHub.',
+        pointsAValider: ['Confirmer le processeur exact et la taille de l’écran.'],
+      } }),
+    })
+  })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Informations source à respecter').fill('HP Omen 16-an0008tx, mémoire 16 Go, stockage SSD 1 To.')
+  await page.getByRole('button', { name: 'Générer toute la fiche' }).click()
+
+  await expect(page.getByTestId('assistant-produit-resultat')).toContainText('8 champs proposés et appliqués')
+  await expect(page.getByTestId('assistant-produit-resultat')).toContainText('Confirmer le processeur exact')
+  await expect(page.getByLabel('Nom du produit')).toHaveValue('HP Omen 16-an0008tx')
+  await expect(page.getByLabel('Marque')).toHaveValue('HP')
+  await expect(page.getByLabel('Meta title')).toHaveValue('HP Omen 16-an0008tx 16 Go et SSD 1 To')
+  await expect(page.getByRole('complementary').filter({ hasText: 'Aperçu client en direct' })).toContainText('HP Omen 16-an0008tx')
+  if (process.env.CAPTURE_SELLER_PRODUCTS) await page.screenshot({ path: 'test-results/katihub-assistant-produit.png', fullPage: true })
+
+  await page.getByRole('button', { name: 'Annuler l’application' }).click()
+  await expect(page.getByLabel('Nom du produit')).toHaveValue('')
+  await expect(page.getByTestId('assistant-produit-resultat')).toHaveCount(0)
+})
+
+test('le marchand modifie prix, stock et minimum en lot depuis Produits', async ({ page }) => {
+  api = (await espaceVendeur(page, []))
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [offre])
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/stock$`), { quantite: 9, quantiteReservee: 1 })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/revisions$`), { id: 'rev-lot', statut: 'soumise' })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: 'Modification en lot' }).click()
+  await page.getByLabel('Prix de Samsung Galaxy A15').fill('139000')
+  await page.getByLabel('Stock de Samsung Galaxy A15').fill('9')
+  await page.getByLabel('Minimum de Samsung Galaxy A15').fill('3')
+  await expect(page.getByText('3 modification(s) non enregistrée(s)')).toBeVisible()
+  if (process.env.CAPTURE_SELLER_PRODUCTS) await page.screenshot({ path: 'test-results/katihub-produits-lot.png', fullPage: true })
+  await page.getByRole('button', { name: 'Enregistrer 3 modification(s)' }).click()
+  await expect(page.getByText(/1 offre\(s\) traitée\(s\)/)).toBeVisible()
+
+  expect(api.appelsVers('POST', /\/stock$/)[0]!.corps).toMatchObject({ quantite: 9 })
+  expect(api.appelsVers('POST', /\/revisions$/)[0]!.corps).toMatchObject({ prixFcfa: 139_000, quantiteMinimale: 3 })
 })
 
 test('l’offre part de la garantie minimale de la catégorie et ne peut pas descendre en dessous', async ({ page }) => {

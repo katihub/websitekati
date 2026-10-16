@@ -25,6 +25,11 @@ l'adresse et la clé publique de Supabase, le secret partagé avec l'API, et un
 complément facultatif d'adresses d'images. En production, elles se collent dans
 Vercel ; le générateur du kit d'installation de l'API les écrit toutes.
 
+La rédaction assistée des fiches du catalogue marchand utilise `OPENAI_API_KEY`
+uniquement côté serveur. `OPENAI_PRODUCT_COPY_MODEL` permet de changer de modèle
+sans modifier le code. Ces deux variables doivent être configurées dans
+l'environnement d'hébergement, puis le site doit être redéployé.
+
 ## Développer
 
 Il faut Node.js 20.9 ou plus récent.
