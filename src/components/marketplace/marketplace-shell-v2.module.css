@@ -3,3 +3,17 @@
 @media(max-width:700px){.shell{width:min(100% - 28px,1480px)}.topbar .shell{min-height:34px;justify-content:space-between;gap:12px}.topbar .shell span:nth-child(2),.topbar a:first-of-type{display:none}.topbar span,.topbar a{font-size:.62rem}.mainbar{min-height:0;display:grid;grid-template-columns:auto 1fr;padding-block:10px;gap:10px}.logoMark{width:45px;height:42px}.logoMark img{width:54px!important;height:54px!important}.logoText{display:flex}.logoText strong{font-size:1rem}.logoText small{display:none}.search{grid-row:2;grid-column:1/-1;width:100%;max-width:none;height:44px}.actions{justify-self:end}.actions .actionLien span{display:none}.nav .shell{height:42px}.nav a:nth-of-type(n+5){display:none}.footer{margin-top:46px}.footerGrid{grid-template-columns:1fr;gap:32px}.footerGrid>div:first-child{grid-column:auto}.legal{flex-direction:column;gap:8px}}
 .logoMark img{transform:scale(1.48);transform-origin:50% 0}
 .footerGrid{grid-template-columns:1.4fr repeat(4,minmax(0,1fr));gap:38px}.legal nav{display:flex;flex-wrap:wrap;gap:8px 14px}.legal nav a{font-size:inherit}.legal nav a+a:before{content:'|';color:#7d90b0;margin-right:14px}@media(max-width:1050px){.footerGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}.footerGrid>div:first-child{grid-column:1/-1}}@media(max-width:700px){.footerGrid{grid-template-columns:1fr}.footerGrid>div:first-child{grid-column:auto}.legal nav{gap:8px 10px}.legal nav a+a:before{margin-right:10px}}
+
+/* Le compte dans l'en-tete : le menu du client connecte, et la place reservee pendant la lecture de la session. */
+.actions button.actionLien{display:flex;align-items:center;gap:7px;border:0;background:none;color:#071d4c;font:inherit;font-size:.72rem;font-weight:600;white-space:nowrap;cursor:pointer}
+.actionsAttente{display:block;width:230px;height:37px}
+.menuCompte{position:relative}
+.menuCompteListe{position:absolute;top:calc(100% + 8px);right:0;z-index:60;display:grid;min-width:220px;border:1px solid #dce4ef;border-radius:12px;background:#fff;padding:6px;box-shadow:0 16px 36px #071d4c24}
+.menuCompteListe p{margin:0;padding:8px 10px 10px;border-bottom:1px solid #edf1f7;color:#63738e;font-size:.68rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menuCompteListe a,.menuCompteListe button{display:block;width:100%;border:0;border-radius:8px;background:none;padding:9px 10px;color:#071d4c!important;font:inherit;font-size:.74rem!important;font-weight:600;text-align:left;cursor:pointer}
+.menuCompteListe a:hover,.menuCompteListe button:hover,.menuCompteListe a:focus-visible,.menuCompteListe button:focus-visible{background:#fff4e8;color:#b64e00!important;outline:0}
+.menuCompteListe button{margin-top:4px;border-top:1px solid #edf1f7;border-radius:0 0 8px 8px;color:#b42318!important}
+.salutation{font-weight:700}
+.lienBarre{border:0;background:none;padding:0;color:inherit;font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:1050px){.actions button.actionLien span{display:none}.actionsAttente{width:110px}}
+@media(max-width:700px){.salutation{display:none}}
