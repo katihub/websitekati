@@ -17,3 +17,47 @@
 .lienBarre{border:0;background:none;padding:0;color:inherit;font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:1050px){.actions button.actionLien span{display:none}.actionsAttente{width:110px}}
 @media(max-width:700px){.salutation{display:none}}
+
+/* Navigation des rayons : la barre garde son defilement, tandis que le bouton
+   mobile ouvre un panneau complet hors de cette zone de scroll. */
+.navInner{position:relative;overflow:visible!important}
+.navScroll{display:flex;min-width:0;flex:1;align-items:center;gap:29px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.navScroll::-webkit-scrollbar{display:none}
+.mobileCategories{display:none}
+
+@media(max-width:1050px){
+  .navInner{gap:18px!important}
+  .nav .allCategories{display:none}
+  .navScroll{gap:22px}
+  .mobileCategories{display:block;flex:none}
+  .mobileCategoriesButton{display:flex;min-height:42px;align-items:center;gap:7px;border:0;background:#fff;color:#061f4f;font:inherit;font-size:.72rem;font-weight:800;white-space:nowrap;cursor:pointer}
+  .mobileCategoriesButton svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;transition:transform .16s ease}
+  .mobileCategoriesButton[aria-expanded=true] svg{transform:rotate(180deg)}
+  .mobileMegaMenu{position:absolute;top:calc(100% + 1px);right:0;left:0;z-index:80;max-height:min(68dvh,680px);overflow-y:auto;border:1px solid #dce4ef;border-radius:0 0 14px 14px;background:#fff;padding:22px;box-shadow:0 24px 55px #071d4c2b;white-space:normal}
+  .mobileMegaMenu>header{display:flex;align-items:start;justify-content:space-between;gap:18px;padding-bottom:16px;border-bottom:1px solid #e5ebf3}
+  .mobileMegaMenu>header strong{display:block;color:#061f4f;font-size:1rem}
+  .mobileMegaMenu>header p{margin:4px 0 0;color:#63738e;font-size:.68rem}
+  .mobileMegaMenu>header>button{display:grid;width:34px;height:34px;place-items:center;border:1px solid #dce4ef;border-radius:50%;background:#fff;color:#061f4f;font:500 1.25rem/1 inherit;cursor:pointer}
+  .mobileMegaGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 30px;padding-block:20px}
+  .mobileMegaCategory{min-width:0}
+  .mobileMegaTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#061f4f!important;font-size:.76rem!important;font-weight:850!important}
+  .mobileMegaTitle span{color:#ff7900}
+  .mobileMegaCategory ul{display:grid;gap:7px;margin:10px 0 0;padding:0;list-style:none}
+  .mobileMegaCategory ul a{display:block;overflow:hidden;color:#536985;font-size:.66rem;font-weight:550;text-overflow:ellipsis}
+  .mobileMegaCategory ul a:hover,.mobileMegaCategory ul a:focus-visible{color:#b64e00;outline:0;text-decoration:underline;text-underline-offset:3px}
+  .mobileMegaEmpty{display:block;margin-top:9px;color:#7a8ba3;font-size:.64rem}
+  .mobileMegaAll{display:flex;align-items:center;justify-content:space-between;border-radius:8px;background:#061f4f;padding:12px 14px;color:#fff!important;font-size:.7rem!important;font-weight:800!important}
+  .mobileCategoriesButton:focus-visible,.mobileMegaMenu>header>button:focus-visible,.mobileMegaAll:focus-visible{outline:3px solid #ff9f48;outline-offset:2px}
+}
+
+@media(max-width:700px){
+  .navInner{gap:14px!important}
+  .navScroll a:nth-of-type(n+4){display:none}
+  .mobileMegaMenu{right:calc((100vw - 100%)/-2);left:calc((100vw - 100%)/-2);max-height:64dvh;padding:18px 14px}
+  .mobileMegaGrid{grid-template-columns:1fr;gap:0;padding-block:10px}
+  .mobileMegaCategory{padding:12px 2px;border-bottom:1px solid #e8edf4}
+  .mobileMegaCategory ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+  .mobileMegaCategory ul a{white-space:normal}
+}
+
+@media(prefers-reduced-motion:reduce){.mobileCategoriesButton svg{transition:none}}

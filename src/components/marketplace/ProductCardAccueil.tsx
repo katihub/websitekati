@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import { imageProduit } from '@/lib/image-produit'
 import type { OffreMarketplace } from '@/lib/marketplace-data'
+import { productCardSpecs } from '@/lib/product-card-specs'
 import styles from './marketplace-home-v2.module.css'
 
 /**
@@ -13,12 +14,13 @@ import styles from './marketplace-home-v2.module.css'
 export const CATEGORY_ICON: Record<string, string> = { 'Électronique': '📱', Informatique: '💻', 'Électroménager': '🍳', 'Maison & Déco': '🛋️', 'Maison et énergie': '💡', 'Sports & Loisirs': '👟', 'Mode & Style': '👜', 'Beauté & Santé': '🧴', 'Auto & Moto': '🚗', Puériculture: '🧸', 'Sécurité & Surveillance': '📹' }
 export const money = (value: number | null) => value === null ? 'Prix sur demande' : `${new Intl.NumberFormat('fr-FR').format(value)} FCFA`
 
-export function ProductCard({ offre, fresh = false }: { offre: Pick<OffreMarketplace, 'id' | 'titre' | 'prixFcfa' | 'prixReferenceFcfa' | 'disponible' | 'produit' | 'boutique'>; fresh?: boolean }) {
+export function ProductCard({ offre, fresh = false }: { offre: Pick<OffreMarketplace, 'id' | 'titre' | 'prixFcfa' | 'prixReferenceFcfa' | 'disponible' | 'attributsVariante' | 'produit' | 'boutique'>; fresh?: boolean }) {
   const icon = CATEGORY_ICON[offre.produit.categorie ?? ''] ?? '📦'
   // La photo publiee du produit ; le pictogramme de categorie seulement a defaut.
   const visuel = imageProduit(offre.produit)
+  const specs = productCardSpecs(offre)
   return <article className={styles.productCard}>
     <Link href={`/marketplace/produits/${offre.produit.slug}`} className={styles.productVisual}>{visuel ? <Image src={visuel.url} alt={visuel.alt} fill sizes="(max-width: 560px) 45vw, (max-width: 1200px) 24vw, 200px" className={styles.productPhoto}/> : <><span>{icon}</span><small>{offre.produit.categorie ?? 'Marketplace'}</small></>}{fresh ? <b>Nouveau</b> : null}</Link>
-    <div className={styles.productBody}><small>Par {offre.boutique.nom}</small><h3><Link href={`/marketplace/produits/${offre.produit.slug}`}>{offre.titre ?? offre.produit.nom}</Link></h3><p className={styles.rating}>★★★★★ <span>({Math.max(12, offre.disponible * 3)})</span></p><div className={styles.productBuy}><span><strong>{money(offre.prixFcfa)}</strong>{offre.prixReferenceFcfa ? <del>{money(offre.prixReferenceFcfa)}</del> : null}</span><Link href={`/marketplace/produits/${offre.produit.slug}`} aria-label={`Voir ${offre.produit.nom}`}>＋</Link></div></div>
+    <div className={styles.productBody}><small>Par {offre.boutique.nom}</small><h3><Link href={`/marketplace/produits/${offre.produit.slug}`}>{offre.titre ?? offre.produit.nom}</Link></h3><p className={styles.rating}>★★★★★ <span>({Math.max(12, offre.disponible * 3)})</span></p>{specs.length ? <ul className={styles.productSpecs} aria-label="Caractéristiques principales">{specs.map((spec) => <li key={spec}>{spec}</li>)}</ul> : null}<div className={styles.productBuy}><span><strong>{money(offre.prixFcfa)}</strong>{offre.prixReferenceFcfa ? <del>{money(offre.prixReferenceFcfa)}</del> : null}</span><Link href={`/marketplace/produits/${offre.produit.slug}`} aria-label={`Voir ${offre.produit.nom}`}>＋</Link></div></div>
   </article>
 }

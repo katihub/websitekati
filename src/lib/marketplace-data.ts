@@ -23,10 +23,12 @@ export interface OffreMarketplace {
   verifieParKatiLe?: string | null
   modesLivraison?: string[]
   villesLivraison?: string[]
+  /** Caracteristiques propres a la variante, par exemple RAM ou capacite. */
+  attributsVariante?: Record<string, string> | null
   /** La date de publication de l'offre (liste du catalogue). */
   publieLe?: string | null
   produit: {
-    nom: string; slug: string; marque: string | null; categorie: string | null; images?: Array<{ url: string; texteAlternatif: string | null }>
+    nom: string; slug: string; marque: string | null; categorie: string | null; ficheTechnique?: string | null; images?: Array<{ url: string; texteAlternatif: string | null }>
     /** La categorie KatiHub du produit, avec son rayon parent quand c'est une sous-categorie. */
     categorieRef?: { nom: string; slug: string; parent: { nom: string; slug: string } | null } | null
   }

@@ -5,3 +5,18 @@
 .choice{clear:both;min-height:22px}.hero h1{font-weight:750}.promo h2,.delivery h2{font-weight:750}.brands a{overflow-wrap:anywhere}.moreBrands{clear:both}.moreBrands summary{font-size:11px;font-weight:500;color:#165ca7;padding:6px 0;cursor:pointer}.visual{height:105px}.productBody{padding:7px}.productBody h2{font-size:11px;line-height:1.3;min-height:29px}.seller{margin-bottom:5px}.stock{margin:5px 0}.productBody .primary{min-height:28px;font-size:10px}.skeleton{min-height:380px;border-radius:8px;background:#e8eff8;animation:pulse 1s ease-in-out infinite alternate}.loading{padding:24px;display:grid;grid-template-columns:240px 1fr;gap:16px;min-height:650px}.loading>div:last-child{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.loading>div:last-child .skeleton{min-height:245px}@keyframes pulse{to{opacity:.55}}
 @media(max-width:760px){.heroCopy{width:65%}.hero h1{font-size:22px;max-width:210px}.hero p{font-size:11px;line-height:1.45;max-width:180px}.heroTrust{display:none}.filters .choice{min-height:32px}.visual{height:140px}.productBody .primary{min-height:38px;font-size:11px}.productBody h2{font-size:12px;min-height:34px}.loading{grid-template-columns:1fr}.loading>div:first-child{display:none}.loading>div:last-child{grid-template-columns:1fr 1fr}}
 @media(prefers-reduced-motion:reduce){.grid,.skeleton{animation:none}.productCard,.primary,.categories>a{transition:none}.productCard:hover,.primary:active{transform:none}}
+
+.productSpecs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 7px;padding:0;list-style:none}
+.productSpecs li{max-width:100%;overflow:hidden;border-radius:4px;background:#eef2f6;padding:3px 5px;color:#52627a;font-size:9px;font-weight:650;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+
+/* La colonne de filtres peut etre beaucoup plus haute que le catalogue. Une
+   premiere ligne fixe l'empeche d'etirer l'espace situe sous le bandeau. */
+@media(min-width:761px){.layout{grid-template-rows:170px auto}}
+
+/* Les photos sont le point focal de la carte : davantage de hauteur, presque
+   aucun retrait et un leger agrandissement sans recadrage agressif. */
+.visual{height:168px;background:#fff}
+.visual>img{object-fit:contain;padding:6px 9px 10px;transform:scale(1.04);transition:transform .2s ease}
+.productCard:hover .visual>img{transform:scale(1.08)}
+@media(max-width:760px){.visual{height:155px}}
+@media(prefers-reduced-motion:reduce){.visual>img{transition:none}.productCard:hover .visual>img{transform:scale(1.04)}}

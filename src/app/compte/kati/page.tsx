@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
+import { lireAccueilMarketplace } from '@/lib/marketplace-data'
 import { MesKati } from './MesKati'
+import styles from './kati.module.css'
 
 /**
  * LE PORTEFEUILLE KATI DU CLIENT : soldes disponible et en attente, leur
@@ -14,13 +16,14 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   await connection()
+  const accueil = await lireAccueilMarketplace()
   return (
-    <main className="mx-auto w-full max-w-[48rem] px-4 pt-10 pb-band md:pt-14">
-      <p className="t-label text-ink-3">Mon compte</p>
-      <h1 className="mt-1 text-h3 font-semibold tracking-[-0.01em] text-ink">Mes KATI</h1>
-      <p className="mt-2 text-small text-ink-2">Vos points de fidélité KatiHub : gagnés sur chaque commande livrée, utilisables pour payer une partie de vos achats.</p>
-      <div className="mt-7">
-        <MesKati />
+    <main className={styles.page}>
+      <div className={styles.shell}>
+        <nav className={styles.breadcrumb} aria-label="Fil d’Ariane">
+          <span>Mon compte</span><b aria-hidden="true">/</b><span aria-current="page">Mes KATI</span>
+        </nav>
+        <MesKati recommendations={accueil.offres.slice(0, 10)} />
       </div>
     </main>
   )

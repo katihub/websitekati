@@ -1,6 +1,7 @@
 'use client'
 
 import type { DeliveryMode } from '@/lib/modes-livraison'
+import { libelleDelaiMarketplace } from '@/lib/marketplace-delivery'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 
@@ -121,7 +122,7 @@ export function MarketplacePreview({ product }: { product?: MarketplaceProduct }
         sales: `${offre.disponible} en stock`,
         price: offre.prixFcfa,
         delivery: offre.modesLivraison.includes('katihub') ? 'Kati Express' : offre.modesLivraison.includes('retrait') && !offre.modesLivraison.includes('vendeur') ? 'Retrait en boutique' : 'Livraison vendeur',
-        window: offre.delaiMaxJours === 0 ? 'Aujourd’hui' : `Sous ${offre.delaiMaxJours ?? 3} jour(s)`,
+        window: libelleDelaiMarketplace(offre.delaiMaxJours),
         recommended: index === 0,
       }])
     : demoSellers, [product])

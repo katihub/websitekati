@@ -3,12 +3,13 @@ import { CartButton } from '@/components/layout/CartButton'
 import { lireCategoriesMarketplace } from '@/lib/marketplace-data'
 import { ActionsCompte, LiensBarreHaut } from './KatiHeaderCompte'
 import { KatiLogo } from './KatiLogo'
+import { MobileCategoriesMenu } from './MobileCategoriesMenu'
 import { CaptureParrainage } from './kati/CaptureParrainage'
 import styles from './marketplace-shell-v2.module.css'
 
-/** Le menu suit l'arbre des categories tenu par KatiHub : les six premieres, dans leur ordre. */
+/** Les six premieres categories restent dans la barre ; l'arbre entier alimente le mega-menu responsive. */
 export async function KatiHeader() {
-  const categories = (await lireCategoriesMarketplace()).slice(0, 6)
+  const categories = await lireCategoriesMarketplace()
   return (
     <header className={styles.header} data-marketplace-header>
       <CaptureParrainage />
@@ -29,11 +30,17 @@ export async function KatiHeader() {
           <CartButton href="/panier" />
         </div>
       </div>
-      <nav className={styles.nav} aria-label="Catégories principales" data-marketplace-nav><div className={styles.shell}>
-        <Link href="/categories" className={styles.allCategories}>▦ Toutes les catégories</Link>
-        {categories.map((categorie) => <Link key={categorie.id} href={`/categories/${categorie.slug}`}>{categorie.nom}</Link>)}
-        <Link href="/boutiques">Boutiques</Link><Link href="/devenir-vendeur">Vendre sur KatiHub</Link>
-      </div></nav>
+      <nav className={styles.nav} aria-label="Catégories principales" data-marketplace-nav>
+        <div className={`${styles.shell} ${styles.navInner}`}>
+          <Link href="/categories" className={styles.allCategories}>▦ Toutes les catégories</Link>
+          <MobileCategoriesMenu categories={categories} />
+          <div className={styles.navScroll}>
+            {categories.slice(0, 6).map((categorie) => <Link key={categorie.id} href={`/categories/${categorie.slug}`}>{categorie.nom}</Link>)}
+            <Link href="/boutiques">Boutiques</Link>
+            <Link href="/devenir-vendeur">Vendre sur KatiHub</Link>
+          </div>
+        </div>
+      </nav>
     </header>
   )
 }

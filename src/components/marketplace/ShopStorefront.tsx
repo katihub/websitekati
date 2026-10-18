@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useState, useSyncExternalStore } from 'react'
 import type { BoutiquePubliqueMarketplace, OffreBoutiqueMarketplace } from '@/lib/marketplace-data'
 import { filterShopOffers, hasShopDiscount, type ShopSort } from '@/lib/shop-catalogue'
+import { productCardSpecs } from '@/lib/product-card-specs'
 import { useCart } from '@/lib/cart'
 import { AvisBoutique } from './AvisBoutique'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
@@ -46,6 +47,7 @@ function StoreProductCard({ offer, shop, compact = false }: { offer: OffreBoutiq
   const discount = hasShopDiscount(offer) ? Math.round((1 - offer.prixFcfa! / offer.prixReferenceFcfa!) * 100) : null
   const alreadyAdded = cart.lines.find(line => line.offerId === offer.id)?.qty ?? 0
   const canAdd = offer.prixFcfa !== null && alreadyAdded < Math.min(offer.disponible, 99)
+  const specs = productCardSpecs(offer, compact ? 2 : 3)
   function add() {
     if (!canAdd || offer.prixFcfa === null) return
     cart.add({ slug: offer.produit.slug, name: offer.titre ?? offer.produit.nom, price: offer.prixFcfa, image: illustration, offerId: offer.id, boutiqueId: shop.id, boutiqueNom: shop.nom, modesLivraison: shop.modesLivraison.filter((mode): mode is 'vendeur' | 'katihub' => mode === 'vendeur' || mode === 'katihub'), villesLivraison: shop.villesLivraison })
@@ -56,7 +58,7 @@ function StoreProductCard({ offer, shop, compact = false }: { offer: OffreBoutiq
       {discount ? <b className={styles.discount}>−{discount}%</b> : null}
       {!compact ? <small>{illustration ? 'Visuel illustratif' : 'Photo à venir'}</small> : null}
     </Link>
-    <div className={styles.productBody}><small className={styles.productCategory}>{offer.produit.categorie ?? 'Dans cette boutique'}</small><h3><Link href={href}>{offer.titre ?? offer.produit.nom}</Link></h3><div className={styles.productPrice}><strong>{money(offer.prixFcfa)}</strong>{discount ? <del>{money(offer.prixReferenceFcfa)}</del> : null}</div>{!compact ? <><p className={styles.productStock}><i/>En stock <span>· {offer.disponible} disponible(s)</span></p>{offer.prixFcfa === null ? <Link className={styles.cardAction} href={href}>Voir l’offre<ShopIcon name="arrow"/></Link> : <button className={styles.cardAction} onClick={add} disabled={!canAdd}><ShopIcon name="bag"/>{canAdd ? 'Ajouter au panier' : 'Quantité maximale'}</button>}</> : <Link className={styles.compactLink} href={href}>Voir l’offre<ShopIcon name="arrow"/></Link>}</div>
+    <div className={styles.productBody}><small className={styles.productCategory}>{offer.produit.categorie ?? 'Dans cette boutique'}</small><h3><Link href={href}>{offer.titre ?? offer.produit.nom}</Link></h3>{specs.length ? <ul className={styles.productSpecs} aria-label="Caractéristiques principales">{specs.map((spec) => <li key={spec}>{spec}</li>)}</ul> : null}<div className={styles.productPrice}><strong>{money(offer.prixFcfa)}</strong>{discount ? <del>{money(offer.prixReferenceFcfa)}</del> : null}</div>{!compact ? <><p className={styles.productStock}><i/>En stock <span>· {offer.disponible} disponible(s)</span></p>{offer.prixFcfa === null ? <Link className={styles.cardAction} href={href}>Voir l’offre<ShopIcon name="arrow"/></Link> : <button className={styles.cardAction} onClick={add} disabled={!canAdd}><ShopIcon name="bag"/>{canAdd ? 'Ajouter au panier' : 'Quantité maximale'}</button>}</> : <Link className={styles.compactLink} href={href}>Voir l’offre<ShopIcon name="arrow"/></Link>}</div>
   </article>
 }
 

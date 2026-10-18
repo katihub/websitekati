@@ -23,7 +23,14 @@ test('du menu à une sous-catégorie, avec le fil d’Ariane et la garantie', as
 
   api = await simulerApi(page)
   await page.goto('/')
-  await page.getByRole('navigation', { name: 'Catégories principales' }).getByRole('link', { name: 'Toutes les catégories' }).click()
+  const navigation = page.getByRole('navigation', { name: 'Catégories principales' })
+  const lienToutes = navigation.getByRole('link').filter({ hasText: 'Toutes les catégories' })
+  if (await lienToutes.isVisible()) {
+    await lienToutes.click()
+  } else {
+    await navigation.getByRole('button', { name: 'Toutes les catégories', exact: true }).click()
+    await page.getByRole('link', { name: 'Voir la page de toutes les catégories' }).click()
+  }
   await page.waitForURL('**/categories')
   const carte = page.getByTestId('categories').getByRole('listitem').filter({ has: page.getByRole('heading', { name: racine!.nom }) })
   await expect(carte).toBeVisible()

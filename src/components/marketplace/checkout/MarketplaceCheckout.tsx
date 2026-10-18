@@ -15,6 +15,7 @@ import { DESCRIPTION_MODE, LIBELLE_MODE, livraisonADomicile, type DeliveryMode }
 import { usePolitiqueKati } from '@/lib/kati'
 import { estimerReglement, montantAssurance } from '@/lib/reglement'
 import { minimumDe } from '@/lib/stock'
+import { delaiLivraisonMarketplace } from '@/lib/marketplace-delivery'
 import { memoriserSuivi } from '@/lib/suivi'
 import { ReglementCommande, useDisponibleKati, useOptionsServices, type ChoixReglement } from './ReglementCommande'
 import { ShopIcon } from '../ShopIcon'
@@ -232,7 +233,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
           <fieldset><legend>Mode de livraison</legend>{group.modes.length ? group.modes.map(mode => {
             const { fee, raison } = feeFor(group, mode)
             return <label key={mode} data-unavailable={fee === null}><input type="radio" name={`delivery-${group.id}`} disabled={fee === null || pending} checked={deliveryMode(group) === mode} onChange={() => setModes({ ...modes, [group.id]: mode })}/><span>{LIBELLE_MODE[mode]} · <b data-testid={`frais-${group.id}-${mode}`}>{fee === null ? raison : fee ? money(fee) : mode === 'retrait' ? 'gratuit' : 'offerte'}</b>
-              <small>{mode === 'retrait' && group.adresseRetrait ? `À retirer : ${group.adresseRetrait}${group.ville ? `, ${group.ville}` : ''}.` : livraisonADomicile(mode) ? (group.lines.every(item => item.offer?.delaiMaxJours) ? `Délai annoncé : jusqu’à ${Math.max(...group.lines.map(item => item.offer!.delaiMaxJours!))} jours.` : 'Délai à confirmer avec la boutique.') : DESCRIPTION_MODE[mode]}</small></span></label>
+              <small>{mode === 'retrait' && group.adresseRetrait ? `À retirer : ${group.adresseRetrait}${group.ville ? `, ${group.ville}` : ''}.` : livraisonADomicile(mode) ? `Livraison sous ${Math.max(...group.lines.map(item => delaiLivraisonMarketplace(item.offer?.delaiMaxJours)))} jours maximum.` : DESCRIPTION_MODE[mode]}</small></span></label>
           }) : <p className={styles.warning}>Aucun mode commun pour ces articles.</p>}
           {deliveryMode(group) === 'agence' ? <label className={styles.noteAgence}>Agence de voyage choisie<textarea required minLength={3} maxLength={500} rows={2} value={notesAgence[group.id] ?? ''} placeholder="Ex. Général Express, gare routière de Bafoussam" data-testid={`note-agence-${group.id}`} onChange={event => setNotesAgence({ ...notesAgence, [group.id]: event.target.value })}/></label> : null}
           {tarifs && group.modes.length && group.modes.every(mode => feeFor(group, mode).fee === null) ? <p className={styles.warning}>Cette boutique ne livre pas encore à {ville}.</p> : null}</fieldset>

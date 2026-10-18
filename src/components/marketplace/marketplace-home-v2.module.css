@@ -143,6 +143,15 @@
 @media(max-width:560px){.shopCarousel{--shop-gap:8px}.shopSlide{flex-basis:calc((100% - 8px)/2)}.shopCard{min-height:122px;padding:14px 12px 11px}.shopAvatar{width:38px;height:38px;border-radius:10px}.shopCard .shopName>strong{font-size:.6rem}.shopCardFooter{padding-top:13px}.shopCardFooter>span{font-size:.43rem}}
 @media(prefers-reduced-motion:reduce){.shopCard,.shopCard:before,.shopCardFooter>b,.shopControls button{transition:none}.shopCard:hover,.shopCard:hover .shopCardFooter>b{transform:none}}
 
+/* Sur telephone et tablette, l'accueil commence par les produits. Le grand
+   theatre promotionnel et sa colonne d'engagements restent reserves au bureau. */
+@media(max-width:1050px){.commerceGrid{display:none}.page{padding-top:1px}.commerceGrid+.section{margin-top:18px}}
+
 /* La photo du produit dans la carte : entiere, sur le fond clair de la vignette. */
 .productVisual{overflow:hidden}
 .productPhoto{object-fit:contain;padding:10px;mix-blend-mode:multiply}
+
+/* Caracteristiques courtes et comparables, issues des donnees du produit. */
+.productSpecs{display:flex;min-height:20px;flex-wrap:wrap;gap:4px;margin:0 0 8px;padding:0;list-style:none}
+.productSpecs li{max-width:100%;overflow:hidden;border-radius:4px;background:#f0f3f6;padding:3px 6px;color:#516178;font-size:.49rem;font-weight:650;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+.productCard h3{display:-webkit-box;min-height:4.2em;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3}
