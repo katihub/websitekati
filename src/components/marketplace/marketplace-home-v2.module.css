@@ -142,3 +142,7 @@
 @media(max-width:850px){.shopSlide{flex-basis:calc((100% - 20px)/3)}}
 @media(max-width:560px){.shopCarousel{--shop-gap:8px}.shopSlide{flex-basis:calc((100% - 8px)/2)}.shopCard{min-height:122px;padding:14px 12px 11px}.shopAvatar{width:38px;height:38px;border-radius:10px}.shopCard .shopName>strong{font-size:.6rem}.shopCardFooter{padding-top:13px}.shopCardFooter>span{font-size:.43rem}}
 @media(prefers-reduced-motion:reduce){.shopCard,.shopCard:before,.shopCardFooter>b,.shopControls button{transition:none}.shopCard:hover,.shopCard:hover .shopCardFooter>b{transform:none}}
+
+/* La photo du produit dans la carte : entiere, sur le fond clair de la vignette. */
+.productVisual{overflow:hidden}
+.productPhoto{object-fit:contain;padding:10px;mix-blend-mode:multiply}
