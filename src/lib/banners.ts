@@ -51,6 +51,9 @@ export interface PublishedBanner {
   readonly id: number | string
   readonly href: string
   readonly label: string
+  readonly description: string
+  readonly action: string
+  readonly tonalite: 'navy' | 'light' | 'orange'
   readonly alt: string
   readonly focus: number
   readonly emplacement: EmplacementBanniere
@@ -111,6 +114,9 @@ function repli(): PublishedBanner[] {
       id: b.file,
       href: b.href,
       label: b.label,
+      description: '',
+      action: 'Découvrir',
+      tonalite: 'light',
       alt: b.alt,
       focus: b.focus,
       emplacement: 'principal' as const,
@@ -158,6 +164,9 @@ function normaliser(valeur: unknown): PublishedBanner | null {
     id: b.id as number | string,
     href: b.href,
     label: b.label,
+    description: typeof b.description === 'string' ? b.description : '',
+    action: typeof b.action === 'string' && b.action ? b.action : 'Découvrir',
+    tonalite: b.tonalite === 'navy' || b.tonalite === 'orange' ? b.tonalite : 'light',
     alt: b.alt,
     focus: Number(b.focus) || 50,
     emplacement: b.emplacement === 'promo' || b.emplacement === 'pub_accueil' ? b.emplacement : 'principal',

@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { getBanners, type PublishedBanner } from '@/lib/banners'
 import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
-import { MarketplaceCategoryMenu } from './MarketplaceCategoryMenu'
 import { DerniersArrivages } from './DerniersArrivages'
 import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
 import { MarquesAccueil } from './MarquesAccueil'
@@ -11,8 +10,6 @@ import { ProductCard } from './ProductCardAccueil'
 import { ProductCarouselAccueil } from './ProductCarouselAccueil'
 import { CategoryProductShowcase, type CategoryProductGroup } from './CategoryProductShowcase'
 import { ShopCarouselAccueil } from './ShopCarouselAccueil'
-import { PromosCarrousel } from './PromosCarrousel'
-import { PubAccueil } from './PubAccueil'
 import { NewsletterKatihub, VendreSurKatihub } from './VendreSurKatihub'
 import { RayonsAccueil, type RayonAccueil } from './RayonsAccueil'
 import styles from './marketplace-home-v2.module.css'
@@ -20,9 +17,25 @@ import styles from './marketplace-home-v2.module.css'
 const POPULAR = [['📱', 'Smartphones'], ['💻', 'Ordinateurs'], ['👗', 'Mode & Vêtements'], ['🛋️', 'Maison & Décoration'], ['🧴', 'Beauté & Soins'], ['🏋️', 'Sports & Fitness'], ['🧸', 'Enfants & Jouets'], ['🍳', 'Électroménager']]
 const PROMOS_KATIHUB: PublishedBanner[] = [
   {
+    id: 'katihub-bienvenue',
+    href: '/catalogue',
+    label: 'Tout ce dont vous avez besoin, au même endroit !',
+    description: 'Des boutiques locales et une livraison suivie au Cameroun.',
+    action: 'Découvrir',
+    tonalite: 'navy',
+    alt: 'Une cliente KatiHub reçoit sa commande',
+    focus: 50,
+    emplacement: 'promo',
+    large: { url: '/marketplace-hero-douala.png', largeur: 2048, hauteur: 1024 },
+    mobile: { url: '/marketplace-hero-douala.png', largeur: 2048, hauteur: 1024 },
+  },
+  {
     id: 'katihub-high-tech',
     href: '/recherche?q=High-Tech',
     label: 'Le meilleur de la high-tech',
+    description: 'Téléphones, ordinateurs et accessoires choisis pour vous.',
+    action: 'Découvrir',
+    tonalite: 'navy',
     alt: 'Une sélection high-tech KatiHub dans les couleurs bleu nuit et orange',
     focus: 50,
     emplacement: 'promo',
@@ -33,6 +46,9 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
     id: 'katihub-mode',
     href: '/recherche?q=Mode',
     label: 'Le style camerounais au quotidien',
+    description: 'Mode, beauté et accessoires proposés par nos boutiques.',
+    action: 'Explorer',
+    tonalite: 'light',
     alt: 'Une cliente camerounaise avec ses achats KatiHub',
     focus: 50,
     emplacement: 'promo',
@@ -43,11 +59,40 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
     id: 'katihub-selection',
     href: '/catalogue',
     label: 'Vos essentiels, réunis au même endroit',
+    description: 'Maison, électronique, beauté et bien plus encore.',
+    action: 'Découvrir',
+    tonalite: 'light',
     alt: 'Une sélection de produits disponibles sur KatiHub',
     focus: 50,
     emplacement: 'promo',
     large: { url: '/marketplace-catalogue-cover.png', largeur: 2172, hauteur: 724 },
     mobile: { url: '/marketplace-catalogue-cover.png', largeur: 2172, hauteur: 724 },
+  },
+  {
+    id: 'katihub-vendeurs',
+    href: '/devenir-vendeur',
+    label: 'Vendez sur KatiHub',
+    description: 'Ouvrez votre boutique en quelques minutes.',
+    action: 'Commencer',
+    tonalite: 'light',
+    alt: 'Une commerçante camerounaise prépare ses commandes',
+    focus: 50,
+    emplacement: 'promo',
+    large: { url: '/marchande-katihub-cameroun.png', largeur: 2048, hauteur: 1024 },
+    mobile: { url: '/marchande-katihub-cameroun.png', largeur: 2048, hauteur: 1024 },
+  },
+  {
+    id: 'katihub-livraison',
+    href: '/contact',
+    label: 'Livraison rapide à domicile',
+    description: 'Recevez vos achats où que vous soyez au Cameroun.',
+    action: 'En savoir plus',
+    tonalite: 'orange',
+    alt: 'Un professionnel livre une commande KatiHub',
+    focus: 50,
+    emplacement: 'promo',
+    large: { url: '/marketplace-vendeur-cameroun.png', largeur: 2048, hauteur: 1024 },
+    mobile: { url: '/marketplace-vendeur-cameroun.png', largeur: 2048, hauteur: 1024 },
   },
 ]
 function SectionHead({ title, href, label = 'Voir tout' }: { title: string; href: string; label?: string }) {
@@ -79,22 +124,7 @@ export async function MarketplaceHome() {
   // engagements sans réintroduire les anciennes créations hors charte.
   const promosAccueil = bannieres.promos.length ? bannieres.promos : PROMOS_KATIHUB
   return <div className={styles.page}>
-    <div className={`${styles.shell} ${styles.commerceGrid}`}>
-      <MarketplaceCategoryMenu rayons={rayons} />
-      <div className={styles.centerStage}>
-        <MarketplaceHeroCarousel />
-        <PromosCarrousel promos={promosAccueil} afficherLibelles={!bannieres.promos.length} />
-      </div>
-      {/* La colonne de droite : la publicite choisie par le super admin, puis les engagements KatiHub regroupes. */}
-      <aside className={styles.promoRail} aria-label="Publicité et engagements KatiHub">
-        <PubAccueil pub={bannieres.pubsAccueil[0] ?? null} />
-        <section className={styles.engagements} aria-label="Nos engagements">
-          <article><i aria-hidden="true">🛵</i><div><b>Livraison rapide <em>à domicile</em></b><p>Recevez vos commandes où que vous soyez.</p><Link href="/contact">En savoir plus →</Link></div></article>
-          <article><i aria-hidden="true">🔒</i><div><b>Paiement sécurisé</b><p>Mobile Money et partenaires de confiance.</p><span className={styles.moyens}><small>OM</small><small>MoMo</small><small>VISA</small></span></div></article>
-          <article><i aria-hidden="true">🎧</i><div><b>Service client 24/7</b><p>Une équipe locale vous répond.</p><Link href="/contact">Nous contacter →</Link></div></article>
-        </section>
-      </aside>
-    </div>
+    <MarketplaceHeroCarousel promos={promosAccueil} />
 
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Meilleures ventes" href="/catalogue" />{best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}>Les offres seront bientôt disponibles.</p>}</section>
     <MarketplaceAvantages />
