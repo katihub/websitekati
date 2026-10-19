@@ -5,7 +5,7 @@ import { boutique, categories, espaceBoutique, IDS } from './donnees'
 
 const vide = { total: 0, elements: [] }
 
-/** Toutes les sections que l'espace vendeur charge a l'ouverture d'une boutique. */
+/** Toutes les sections disponibles ; le tableau de bord ne charge au depart que son apercu. */
 export async function espaceVendeur(page: Page, litiges: unknown[]) {
   const b = IDS.boutique
   return (await simulerApi(page))

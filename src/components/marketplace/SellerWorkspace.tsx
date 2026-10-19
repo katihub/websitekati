@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { api, ErreurApi, telechargerApi } from '@/lib/api'
 import {
@@ -14,14 +15,16 @@ import { ApercuPieces, TYPES_PIECES, taillePiece, verifierPieces, type Verificat
 import { MerchantLogin } from './MerchantLogin'
 import { VILLES_CAMEROUN } from '@/constants/villes'
 import { CHOIX_VENDEUR, MODES_LIVRAISON } from '@/lib/modes-livraison'
-import { EditeurFicheProduit } from './vendeur/EditeurFicheProduit'
-import { AdministrationProduits } from './vendeur/AdministrationProduits'
-import { DevisBoutique } from './vendeur/DevisBoutique'
-import { LivraisonsBoutique } from './vendeur/LivraisonsBoutique'
 import { cheminCategorie, libelleMois, useCategoriesMarketplace, type CategorieProduit } from './vendeur/categories'
 import { FenetreNouvelleVariante, FenetrePrixVariante, revisionOuverte, type RevisionVariante } from './vendeur/FenetresVariante'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
 import styles from '@/app/espace-vendeur/seller-workspace.module.css'
+
+const chargementOnglet = () => <p className={styles.dashboardEmpty}>Chargement de cette rubrique…</p>
+const EditeurFicheProduit = dynamic(() => import('./vendeur/EditeurFicheProduit').then(module => module.EditeurFicheProduit), { loading: chargementOnglet })
+const AdministrationProduits = dynamic(() => import('./vendeur/AdministrationProduits').then(module => module.AdministrationProduits), { loading: chargementOnglet })
+const DevisBoutique = dynamic(() => import('./vendeur/DevisBoutique').then(module => module.DevisBoutique), { loading: chargementOnglet })
+const LivraisonsBoutique = dynamic(() => import('./vendeur/LivraisonsBoutique').then(module => module.LivraisonsBoutique), { loading: chargementOnglet })
 
 type Shop = {
   id: string
@@ -130,8 +133,11 @@ type ShopDispute = { id: string; reference: string; statut: string; objet: strin
 
 type Listing<T> = { total: number; elements: T[] }
 type Section = 'documents' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'finance' | 'reviews' | 'customers' | 'members' | 'disputes'
+type Panel = 'overview' | 'verification' | 'products' | 'offers' | 'quotes' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members' | 'disputes'
 type Access = 'allowed' | 'denied' | 'error'
 const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed', disputes: 'allowed' }
+const initialLoaded: Record<Section, boolean> = { documents: false, products: false, offers: false, orders: false, deliveries: false, payments: false, finance: false, reviews: false, customers: false, members: false, disputes: false }
+const overviewSections: Section[] = ['documents', 'products', 'offers', 'orders', 'deliveries']
 
 const DOCUMENT_LABELS: Record<string, string> = {
   identite: 'Pièce d’identité (CNI ou passeport)',
@@ -202,66 +208,102 @@ export function SellerWorkspace() {
   const [members, setMembers] = useState<ShopMember[]>([])
   const [disputes, setDisputes] = useState<ShopDispute[]>([])
   const [access, setAccess] = useState<Record<Section, Access>>(initialAccess)
+  const [loaded, setLoaded] = useState<Record<Section, boolean>>(initialLoaded)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [authenticated, setAuthenticated] = useState(false)
-  const [panel, setPanel] = useState<'overview' | 'verification' | 'products' | 'offers' | 'quotes' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members' | 'disputes'>('overview')
+  const [panel, setPanel] = useState<Panel>('overview')
+  const activeShop = useRef('')
+  const inFlight = useRef(new Set<string>())
 
-  const loadDetails = useCallback(async (shopId: string) => {
-    const [nextSpace, ...sections] = await Promise.allSettled([
-      api<ShopSpace>(`/vendeurs/mes-boutiques/${shopId}`),
-      api<SellerDocument[]>(`/vendeurs/mes-boutiques/${shopId}/documents`),
-      api<ProductProposal[]>(`/marketplace/boutiques/${shopId}/propositions-produits`),
-      api<Offer[]>(`/marketplace/boutiques/${shopId}/offres`),
-      api<Listing<ShopOrder>>(`/vendeurs/mes-boutiques/${shopId}/commandes`),
-      api<Listing<ShopDelivery>>(`/vendeurs/mes-boutiques/${shopId}/livraisons`),
-      api<Listing<ShopPayment>>(`/vendeurs/mes-boutiques/${shopId}/paiements`),
-      api<Listing<ShopReview>>(`/vendeurs/mes-boutiques/${shopId}/avis`),
-      api<{ elements: ShopCustomer[] }>(`/vendeurs/mes-boutiques/${shopId}/clients`),
-      api<ShopMember[]>(`/vendeurs/mes-boutiques/${shopId}/membres`),
-      api<SellerFinance>(`/marketplace/finance/boutiques/${shopId}`),
-      api<ShopDispute[]>(`/marketplace/demandes-client/boutiques/${shopId}`),
-    ])
-    if (nextSpace.status === 'rejected') throw nextSpace.reason
-    setSpace(nextSpace.value)
-    const names: Section[] = ['documents', 'products', 'offers', 'orders', 'deliveries', 'payments', 'reviews', 'customers', 'members', 'finance', 'disputes']
-    const nextAccess = { ...initialAccess }
-    sections.forEach((result, index) => {
-      const name = names[index]
-      if (result.status === 'rejected') nextAccess[name] = result.reason instanceof ErreurApi && result.reason.code === 403 ? 'denied' : 'error'
-    })
-    setAccess(nextAccess)
-    setDocuments(sections[0].status === 'fulfilled' ? sections[0].value as SellerDocument[] : [])
-    setProducts(sections[1].status === 'fulfilled' ? sections[1].value as ProductProposal[] : [])
-    setOffers(sections[2].status === 'fulfilled' ? sections[2].value as Offer[] : [])
-    setOrders(sections[3].status === 'fulfilled' ? sections[3].value as Listing<ShopOrder> : { total: 0, elements: [] })
-    setDeliveries(sections[4].status === 'fulfilled' ? sections[4].value as Listing<ShopDelivery> : { total: 0, elements: [] })
-    setPayments(sections[5].status === 'fulfilled' ? sections[5].value as Listing<ShopPayment> : { total: 0, elements: [] })
-    setReviews(sections[6].status === 'fulfilled' ? sections[6].value as Listing<ShopReview> : { total: 0, elements: [] })
-    setCustomers(sections[7].status === 'fulfilled' ? sections[7].value as { elements: ShopCustomer[] } : { elements: [] })
-    setMembers(sections[8].status === 'fulfilled' ? sections[8].value as ShopMember[] : [])
-    setFinance(sections[9].status === 'fulfilled' ? sections[9].value as SellerFinance : null)
-    setDisputes(sections[10].status === 'fulfilled' ? sections[10].value as ShopDispute[] : [])
+  const resetShopData = useCallback(() => {
+    setSpace(null)
+    setDocuments([]); setProducts([]); setOffers([])
+    setOrders({ total: 0, elements: [] }); setDeliveries({ total: 0, elements: [] }); setPayments({ total: 0, elements: [] })
+    setFinance(null); setReviews({ total: 0, elements: [] }); setCustomers({ elements: [] }); setMembers([]); setDisputes([])
+    setAccess(initialAccess); setLoaded(initialLoaded)
   }, [])
 
-  const load = useCallback(async () => {
+  const requestSection = useCallback((shopId: string, section: Section): Promise<unknown> => {
+    switch (section) {
+      case 'documents': return api<SellerDocument[]>(`/vendeurs/mes-boutiques/${shopId}/documents`)
+      case 'products': return api<ProductProposal[]>(`/marketplace/boutiques/${shopId}/propositions-produits`)
+      case 'offers': return api<Offer[]>(`/marketplace/boutiques/${shopId}/offres`)
+      case 'orders': return api<Listing<ShopOrder>>(`/vendeurs/mes-boutiques/${shopId}/commandes`)
+      case 'deliveries': return api<Listing<ShopDelivery>>(`/vendeurs/mes-boutiques/${shopId}/livraisons`)
+      case 'payments': return api<Listing<ShopPayment>>(`/vendeurs/mes-boutiques/${shopId}/paiements`)
+      case 'reviews': return api<Listing<ShopReview>>(`/vendeurs/mes-boutiques/${shopId}/avis`)
+      case 'customers': return api<{ elements: ShopCustomer[] }>(`/vendeurs/mes-boutiques/${shopId}/clients`)
+      case 'members': return api<ShopMember[]>(`/vendeurs/mes-boutiques/${shopId}/membres`)
+      case 'finance': return api<SellerFinance>(`/marketplace/finance/boutiques/${shopId}`)
+      case 'disputes': return api<ShopDispute[]>(`/marketplace/demandes-client/boutiques/${shopId}`)
+    }
+  }, [])
+
+  const loadSections = useCallback(async (shopId: string, requested: Section[]) => {
+    const names = requested.filter((name) => {
+      const key = `${shopId}:${name}`
+      if (inFlight.current.has(key)) return false
+      inFlight.current.add(key)
+      return true
+    })
+    if (!names.length) return
+    const results = await Promise.allSettled(names.map(name => requestSection(shopId, name)))
+    names.forEach(name => inFlight.current.delete(`${shopId}:${name}`))
+    if (activeShop.current !== shopId) return
+
+    results.forEach((result, index) => {
+      const name = names[index]!
+      setLoaded(previous => ({ ...previous, [name]: true }))
+      if (result.status === 'rejected') {
+        setAccess(previous => ({ ...previous, [name]: result.reason instanceof ErreurApi && result.reason.code === 403 ? 'denied' : 'error' }))
+        return
+      }
+      setAccess(previous => ({ ...previous, [name]: 'allowed' }))
+      const value = result.value
+      if (name === 'documents') setDocuments(value as SellerDocument[])
+      else if (name === 'products') setProducts(value as ProductProposal[])
+      else if (name === 'offers') setOffers(value as Offer[])
+      else if (name === 'orders') setOrders(value as Listing<ShopOrder>)
+      else if (name === 'deliveries') setDeliveries(value as Listing<ShopDelivery>)
+      else if (name === 'payments') setPayments(value as Listing<ShopPayment>)
+      else if (name === 'reviews') setReviews(value as Listing<ShopReview>)
+      else if (name === 'customers') setCustomers(value as { elements: ShopCustomer[] })
+      else if (name === 'members') setMembers(value as ShopMember[])
+      else if (name === 'finance') setFinance(value as SellerFinance)
+      else setDisputes(value as ShopDispute[])
+    })
+  }, [requestSection])
+
+  const openShop = useCallback(async (shopId: string) => {
+    activeShop.current = shopId
+    resetShopData()
+    if (!shopId) return
+    const nextSpace = await api<ShopSpace>(`/vendeurs/mes-boutiques/${shopId}`)
+    if (activeShop.current !== shopId) return
+    setSpace(nextSpace)
+    setLoading(false)
+    void loadSections(shopId, overviewSections)
+  }, [loadSections, resetShopData])
+
+  const load = useCallback(async (preferredId?: string) => {
     setLoading(true)
     setError('')
     try {
       const nextShops = await api<Shop[]>('/vendeurs/mes-boutiques')
       setAuthenticated(true)
       setShops(nextShops)
-      const nextId = selectedId && nextShops.some((shop) => shop.id === selectedId) ? selectedId : (nextShops[0]?.id ?? '')
+      const currentId = preferredId ?? activeShop.current
+      const nextId = currentId && nextShops.some((shop) => shop.id === currentId) ? currentId : (nextShops[0]?.id ?? '')
       setSelectedId(nextId)
-      if (nextId) await loadDetails(nextId)
-      else setSpace(null)
+      await openShop(nextId)
     } catch (cause) {
       if (cause instanceof ErreurApi && (cause.code === 401 || cause.code === 403)) setAuthenticated(false)
       else setError(errorText(cause))
     } finally {
       setLoading(false)
     }
-  }, [loadDetails, selectedId])
+  }, [openShop])
 
   useEffect(() => {
     const chargement = window.setTimeout(() => void load(), 0)
@@ -277,14 +319,29 @@ export function SellerWorkspace() {
     setPanel('overview')
     setLoading(true)
     setError('')
-    try { await loadDetails(id) } catch (cause) { setError(errorText(cause)) } finally { setLoading(false) }
+    try { await openShop(id) } catch (cause) { setError(errorText(cause)) } finally { setLoading(false) }
   }
+
+  function openPanel(next: Panel) {
+    setPanel(next)
+    if (!selectedId) return
+    const sectionsByPanel: Partial<Record<Panel, Section[]>> = {
+      verification: ['documents'], products: ['products', 'offers'], offers: ['products', 'offers'],
+      orders: ['orders'], deliveries: ['deliveries'], payments: ['payments', 'finance'], reviews: ['reviews'],
+      customers: ['customers'], members: ['members'], disputes: ['disputes'],
+    }
+    const missing = (sectionsByPanel[next] ?? []).filter(section => !loaded[section])
+    if (missing.length) void loadSections(selectedId, missing)
+  }
+
+  const refreshSections = (sections: Section[]) => selectedId ? loadSections(selectedId, sections) : Promise.resolve()
 
   async function logout() {
     const client = supabase()
     if (client) await client.auth.signOut()
     if (connexionLocaleActive) seDeconnecterLocalement()
     setAuthenticated(false)
+    activeShop.current = ''
     setSpace(null)
     setShops([])
   }
@@ -307,25 +364,25 @@ export function SellerWorkspace() {
           </select>
         </div>
         <nav aria-label="Navigation vendeur">
-          <button className={panel === 'overview' ? styles.activeNav : ''} onClick={() => setPanel('overview')}><ShopIcon name="home" />Vue d’ensemble</button>
-          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'verification' ? styles.activeNav : ''} onClick={() => setPanel('verification')}><ShopIcon name="shield" />Vérification</button> : null}
+          <button className={panel === 'overview' ? styles.activeNav : ''} onClick={() => openPanel('overview')}><ShopIcon name="home" />Vue d’ensemble</button>
+          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'verification' ? styles.activeNav : ''} onClick={() => openPanel('verification')}><ShopIcon name="shield" />Vérification</button> : null}
           {([
             ['products', 'package', 'Produits'],
             ['offers', 'tag', 'Offres'],
             ['quotes', 'clock', 'Devis'],
           ] as const).map(([value, icon, label]) => (
-            <button key={value} className={panel === value ? styles.activeNav : ''} onClick={() => setPanel(value)}>
+            <button key={value} className={panel === value ? styles.activeNav : ''} onClick={() => openPanel(value)}>
               <ShopIcon name={icon} />{label}
             </button>
           ))}
-          {access.orders !== 'denied' ? <button className={panel === 'orders' ? styles.activeNav : ''} onClick={() => setPanel('orders')}><ShopIcon name="cart" />Commandes</button> : null}
-          {access.deliveries !== 'denied' ? <button className={panel === 'deliveries' ? styles.activeNav : ''} onClick={() => setPanel('deliveries')}><ShopIcon name="truck" />Livraisons</button> : null}
-          {access.disputes !== 'denied' ? <button className={panel === 'disputes' ? styles.activeNav : ''} onClick={() => setPanel('disputes')}><ShopIcon name="info" />Litiges et retours</button> : null}
-          {access.finance !== 'denied' ? <button className={panel === 'payments' ? styles.activeNav : ''} onClick={() => setPanel('payments')}><ShopIcon name="wallet" />Finances</button> : null}
-          {access.reviews !== 'denied' ? <button className={panel === 'reviews' ? styles.activeNav : ''} onClick={() => setPanel('reviews')}><ShopIcon name="star" />Avis clients</button> : null}
-          {access.customers !== 'denied' ? <button className={panel === 'customers' ? styles.activeNav : ''} onClick={() => setPanel('customers')}><ShopIcon name="users" />Clients</button> : null}
-          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'settings' ? styles.activeNav : ''} onClick={() => setPanel('settings')}><ShopIcon name="settings" />Paramètres boutique</button> : null}
-          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button disabled={access.members === 'denied'} className={panel === 'members' ? styles.activeNav : ''} onClick={() => setPanel('members')}><ShopIcon name="users" />Équipe</button> : null}
+          {access.orders !== 'denied' ? <button className={panel === 'orders' ? styles.activeNav : ''} onClick={() => openPanel('orders')}><ShopIcon name="cart" />Commandes</button> : null}
+          {access.deliveries !== 'denied' ? <button className={panel === 'deliveries' ? styles.activeNav : ''} onClick={() => openPanel('deliveries')}><ShopIcon name="truck" />Livraisons</button> : null}
+          {access.disputes !== 'denied' ? <button className={panel === 'disputes' ? styles.activeNav : ''} onClick={() => openPanel('disputes')}><ShopIcon name="info" />Litiges et retours</button> : null}
+          {access.finance !== 'denied' ? <button className={panel === 'payments' ? styles.activeNav : ''} onClick={() => openPanel('payments')}><ShopIcon name="wallet" />Finances</button> : null}
+          {access.reviews !== 'denied' ? <button className={panel === 'reviews' ? styles.activeNav : ''} onClick={() => openPanel('reviews')}><ShopIcon name="star" />Avis clients</button> : null}
+          {access.customers !== 'denied' ? <button className={panel === 'customers' ? styles.activeNav : ''} onClick={() => openPanel('customers')}><ShopIcon name="users" />Clients</button> : null}
+          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'settings' ? styles.activeNav : ''} onClick={() => openPanel('settings')}><ShopIcon name="settings" />Paramètres boutique</button> : null}
+          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button disabled={access.members === 'denied'} className={panel === 'members' ? styles.activeNav : ''} onClick={() => openPanel('members')}><ShopIcon name="users" />Équipe</button> : null}
         </nav>
         <div className={styles.sidebarFoot}>
           <div className={styles.sidebarCallout}><strong>Votre vitrine publique</strong><p>Consultez la page que voient vos clients.</p><Link href={`/boutiques/${space?.slug ?? ''}`}>Ouvrir la boutique <ShopIcon name="arrow" /></Link></div>
@@ -344,21 +401,21 @@ export function SellerWorkspace() {
 
           {panel === 'overview' ? <Overview
             space={space} products={products} offers={offers} orders={orders} deliveries={deliveries} access={access}
-            progress={progress} validatedDocuments={validatedDocuments} canPublish={canPublish}
-            onPanel={setPanel}
+            loaded={loaded} progress={progress} validatedDocuments={validatedDocuments} canPublish={canPublish}
+            onPanel={openPanel}
           /> : null}
-          {panel === 'verification' ? access.documents === 'allowed' ? <VerificationPanel shopId={space.id} documents={documents} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.documents} /> : null}
-          {panel === 'products' ? access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.products} /> : null}
+          {panel === 'verification' ? !loaded.documents ? <SectionLoading /> : access.documents === 'allowed' ? <VerificationPanel shopId={space.id} documents={documents} onRefresh={() => refreshSections(['documents'])} /> : <SectionUnavailable access={access.documents} /> : null}
+          {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.products} /> : null}
           {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
-          {panel === 'offers' ? access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.offers} /> : null}
-          {panel === 'orders' ? access.orders === 'allowed' ? <OrdersPanel shopId={space.id} listing={orders} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.orders} /> : null}
-          {panel === 'deliveries' ? access.deliveries === 'allowed' ? <LivraisonsBoutique shopId={space.id} /> : <SectionUnavailable access={access.deliveries} /> : null}
-          {panel === 'disputes' ? access.disputes === 'allowed' ? <DisputesPanel disputes={disputes} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.disputes} /> : null}
-          {panel === 'payments' ? access.finance === 'allowed' && finance ? <PaymentsPanel shopId={space.id} finance={finance} listing={payments} canWithdraw={space.mesRoles.includes('proprietaire')} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.finance} /> : null}
-          {panel === 'reviews' ? access.reviews === 'allowed' ? <ReviewsPanel listing={reviews} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.reviews} /> : null}
-          {panel === 'customers' ? access.customers === 'allowed' ? <CustomersPanel customers={customers.elements} /> : <SectionUnavailable access={access.customers} /> : null}
-          {panel === 'settings' ? space.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <SettingsPanel key={space.id} shop={space} onRefresh={load} /> : <SectionUnavailable access="denied" /> : null}
-          {panel === 'members' ? access.members === 'allowed' ? <MembersPanel shopId={space.id} members={members} canManage={space.mesRoles.includes('proprietaire')} onRefresh={() => loadDetails(space.id)} /> : <SectionUnavailable access={access.members} /> : null}
+          {panel === 'offers' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.offers} /> : null}
+          {panel === 'orders' ? !loaded.orders ? <SectionLoading /> : access.orders === 'allowed' ? <OrdersPanel shopId={space.id} listing={orders} onRefresh={() => refreshSections(['orders'])} /> : <SectionUnavailable access={access.orders} /> : null}
+          {panel === 'deliveries' ? !loaded.deliveries ? <SectionLoading /> : access.deliveries === 'allowed' ? <LivraisonsBoutique shopId={space.id} /> : <SectionUnavailable access={access.deliveries} /> : null}
+          {panel === 'disputes' ? !loaded.disputes ? <SectionLoading /> : access.disputes === 'allowed' ? <DisputesPanel disputes={disputes} onRefresh={() => refreshSections(['disputes'])} /> : <SectionUnavailable access={access.disputes} /> : null}
+          {panel === 'payments' ? !loaded.finance || !loaded.payments ? <SectionLoading /> : access.finance === 'allowed' && finance ? <PaymentsPanel shopId={space.id} finance={finance} listing={payments} canWithdraw={space.mesRoles.includes('proprietaire')} onRefresh={() => refreshSections(['finance', 'payments'])} /> : <SectionUnavailable access={access.finance} /> : null}
+          {panel === 'reviews' ? !loaded.reviews ? <SectionLoading /> : access.reviews === 'allowed' ? <ReviewsPanel listing={reviews} onRefresh={() => refreshSections(['reviews'])} /> : <SectionUnavailable access={access.reviews} /> : null}
+          {panel === 'customers' ? !loaded.customers ? <SectionLoading /> : access.customers === 'allowed' ? <CustomersPanel customers={customers.elements} /> : <SectionUnavailable access={access.customers} /> : null}
+          {panel === 'settings' ? space.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <SettingsPanel key={space.id} shop={space} onRefresh={() => load(space.id)} /> : <SectionUnavailable access="denied" /> : null}
+          {panel === 'members' ? !loaded.members ? <SectionLoading /> : access.members === 'allowed' ? <MembersPanel shopId={space.id} members={members} canManage={space.mesRoles.includes('proprietaire')} onRefresh={() => refreshSections(['members'])} /> : <SectionUnavailable access={access.members} /> : null}
         </> : <EmptyShop />}
       </section>
     </main>
@@ -373,8 +430,8 @@ function EmptyShop() {
   return <section className={styles.empty}><h1>Aucune boutique liée à ce compte</h1><p>Utilisez la même adresse électronique que celle indiquée dans votre candidature.</p><Link href="/devenir-vendeur">Créer une boutique</Link></section>
 }
 
-function Overview({ space, products, offers, orders, deliveries, access, progress, validatedDocuments, canPublish, onPanel }: {
-  space: ShopSpace; products: ProductProposal[]; offers: Offer[]; orders: Listing<ShopOrder>; deliveries: Listing<ShopDelivery>; access: Record<Section, Access>; progress: number | null; validatedDocuments: number; canPublish: boolean; onPanel: (panel: 'verification' | 'products' | 'offers' | 'orders' | 'deliveries') => void
+function Overview({ space, products, offers, orders, deliveries, access, loaded, progress, validatedDocuments, canPublish, onPanel }: {
+  space: ShopSpace; products: ProductProposal[]; offers: Offer[]; orders: Listing<ShopOrder>; deliveries: Listing<ShopDelivery>; access: Record<Section, Access>; loaded: Record<Section, boolean>; progress: number | null; validatedDocuments: number; canPublish: boolean; onPanel: (panel: 'verification' | 'products' | 'offers' | 'orders' | 'deliveries') => void
 }) {
   const activeProducts = products.filter(item => item.statut === 'actif').length
   const publishedOffers = offers.filter(item => item.statut === 'publiee').length
@@ -382,17 +439,17 @@ function Overview({ space, products, offers, orders, deliveries, access, progres
   const nextDelivery = deliveries.elements.find(item => !['livree', 'annulee'].includes(item.statut)) ?? deliveries.elements[0]
   const date = new Intl.DateTimeFormat('fr-CM', { dateStyle: 'full' }).format(new Date())
   const metrics: Array<{ label: string; value: number | string; detail: string; icon: ShopIconName; panel: 'orders' | 'deliveries' | 'products' | 'offers' }> = [
-    { label: 'Commandes', value: access.orders === 'allowed' ? orders.total : '—', detail: 'reçues par la boutique', icon: 'cart', panel: 'orders' },
-    { label: 'Livraisons', value: access.deliveries === 'allowed' ? deliveries.total : '—', detail: 'expéditions enregistrées', icon: 'truck', panel: 'deliveries' },
-    { label: 'Produits actifs', value: access.products === 'allowed' ? activeProducts : '—', detail: 'dans votre catalogue', icon: 'package', panel: 'products' },
-    { label: 'Offres publiées', value: access.offers === 'allowed' ? publishedOffers : '—', detail: 'visibles sur KatiHub', icon: 'tag', panel: 'offers' },
+    { label: 'Commandes', value: !loaded.orders ? '…' : access.orders === 'allowed' ? orders.total : '—', detail: 'reçues par la boutique', icon: 'cart', panel: 'orders' },
+    { label: 'Livraisons', value: !loaded.deliveries ? '…' : access.deliveries === 'allowed' ? deliveries.total : '—', detail: 'expéditions enregistrées', icon: 'truck', panel: 'deliveries' },
+    { label: 'Produits actifs', value: !loaded.products ? '…' : access.products === 'allowed' ? activeProducts : '—', detail: 'dans votre catalogue', icon: 'package', panel: 'products' },
+    { label: 'Offres publiées', value: !loaded.offers ? '…' : access.offers === 'allowed' ? publishedOffers : '—', detail: 'visibles sur KatiHub', icon: 'tag', panel: 'offers' },
   ]
 
   return <div className={styles.dashboard}>
     <div className={styles.dashboardIntro}><p>{space.mesRoles.includes('magasinier') && !space.mesRoles.includes('gestionnaire') ? 'Vos produits et vos offres, au même endroit.' : 'Commandes, catalogue et livraisons au même endroit.'}</p><span><ShopIcon name="clock" /> {date}</span></div>
     {space.vendeur.statutVerification !== 'approuve' && access.documents !== 'denied' ? <section className={styles.activationNotice}>
-      <div><strong>Votre dossier avance</strong><p>{access.documents === 'allowed' ? `${validatedDocuments} justificatif(s) validé(s). Complétez le dossier pour ouvrir la vente.` : 'Le suivi des justificatifs est réservé au gestionnaire du dossier.'}</p></div>
-      <span>{progress === null ? '—' : `${progress}%`}</span>
+      <div><strong>Votre dossier avance</strong><p>{!loaded.documents ? 'Chargement de votre dossier…' : access.documents === 'allowed' ? `${validatedDocuments} justificatif(s) validé(s). Complétez le dossier pour ouvrir la vente.` : 'Le suivi des justificatifs est réservé au gestionnaire du dossier.'}</p></div>
+      <span>{!loaded.documents || progress === null ? '—' : `${progress}%`}</span>
       <button disabled={access.documents !== 'allowed'} onClick={() => onPanel('verification')}>Voir la vérification <ShopIcon name="arrow" /></button>
     </section> : null}
     <section className={styles.metricStrip} aria-label="Activité de la boutique">
@@ -404,17 +461,21 @@ function Overview({ space, products, offers, orders, deliveries, access, progres
       <div className={styles.dashboardMain}>
         {access.orders !== 'denied' ? <section className={styles.dashboardPanel}>
           <header className={styles.dashboardPanelHead}><div><h2>Commandes récentes</h2><p>Les dernières commandes confiées à votre boutique.</p></div><button disabled={access.orders !== 'allowed'} onClick={() => onPanel('orders')}>Toutes les commandes <ShopIcon name="arrow" /></button></header>
-          {access.orders !== 'allowed' ? <p className={styles.dashboardEmpty}>Les commandes ne sont pas accessibles avec ce rôle pour le moment.</p> : orders.elements.length ? <div className={styles.orderTableScroll}><table className={styles.orderTable}><thead><tr><th>Commande</th><th>Produit</th><th>Montant produits</th><th>Statut</th><th>Date</th></tr></thead><tbody>{orders.elements.slice(0, 5).map(order => <tr key={order.id}><td><button onClick={() => onPanel('orders')}>{order.reference}</button></td><td>{order.lignes.map(line => `${line.quantite} × ${line.produitNomCapture}`).join(', ')}</td><td>{money(order.totalNetProduits)}</td><td><span data-status={order.statut}>{STATUS_LABELS[order.statut] ?? order.statut.replaceAll('_', ' ')}</span></td><td>{new Intl.DateTimeFormat('fr-CM', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(order.creeLe))}</td></tr>)}</tbody></table></div> : <p className={styles.dashboardEmpty}>Aucune commande reçue pour l’instant. Vos nouvelles commandes apparaîtront ici.</p>}
+          {!loaded.orders ? <p className={styles.dashboardEmpty}>Actualisation des commandes…</p> : access.orders !== 'allowed' ? <p className={styles.dashboardEmpty}>Les commandes ne sont pas accessibles avec ce rôle pour le moment.</p> : orders.elements.length ? <div className={styles.orderTableScroll}><table className={styles.orderTable}><thead><tr><th>Commande</th><th>Produit</th><th>Montant produits</th><th>Statut</th><th>Date</th></tr></thead><tbody>{orders.elements.slice(0, 5).map(order => <tr key={order.id}><td><button onClick={() => onPanel('orders')}>{order.reference}</button></td><td>{order.lignes.map(line => `${line.quantite} × ${line.produitNomCapture}`).join(', ')}</td><td>{money(order.totalNetProduits)}</td><td><span data-status={order.statut}>{STATUS_LABELS[order.statut] ?? order.statut.replaceAll('_', ' ')}</span></td><td>{new Intl.DateTimeFormat('fr-CM', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(order.creeLe))}</td></tr>)}</tbody></table></div> : <p className={styles.dashboardEmpty}>Aucune commande reçue pour l’instant. Vos nouvelles commandes apparaîtront ici.</p>}
         </section> : null}
         <section className={styles.quickPanel}><div><h2>Avancer aujourd’hui</h2><p>Deux gestes utiles pour garder votre boutique à jour.</p></div><div className={styles.quickActions}><button disabled={!canPublish || access.products !== 'allowed'} onClick={() => onPanel('products')}><ShopIcon name="package" /> Proposer un produit <ShopIcon name="arrow" /></button><button disabled={access.offers !== 'allowed'} onClick={() => onPanel('offers')}><ShopIcon name="grid" /> Gérer le stock <ShopIcon name="arrow" /></button></div></section>
       </div>
       <div className={styles.dashboardRail}>
-        <section className={styles.dashboardPanel}><header className={styles.dashboardPanelHead}><h2>Offre à la une</h2><button disabled={access.offers !== 'allowed'} onClick={() => onPanel('offers')}>Mes offres <ShopIcon name="arrow" /></button></header>{access.offers !== 'allowed' ? <p className={styles.dashboardEmpty}>Offres indisponibles.</p> : leadOffer ? <div className={styles.offerSpotlight}><span className={styles.offerMark}><ShopIcon name="bag" /></span><div><strong>{leadOffer.produit.nom}</strong><b>{offerPrice(leadOffer) === null ? 'Prix en attente' : money(offerPrice(leadOffer)!)}</b><small>{leadOffer.referenceVendeur} · {STATUS_LABELS[leadOffer.statut] ?? leadOffer.statut}</small></div><span className={styles.stockCount}><strong>{leadOffer.stock ? Math.max(0, leadOffer.stock.quantite - leadOffer.stock.quantiteReservee) : '—'}</strong><small>disponibles</small></span></div> : <p className={styles.dashboardEmpty}>Votre première offre apparaîtra ici après validation.</p>}</section>
-        {access.deliveries !== 'denied' ? <section className={styles.dashboardPanel}><header className={styles.dashboardPanelHead}><h2>Livraison à suivre</h2><button disabled={access.deliveries !== 'allowed'} onClick={() => onPanel('deliveries')}>Toutes <ShopIcon name="arrow" /></button></header>{access.deliveries !== 'allowed' ? <p className={styles.dashboardEmpty}>Livraisons indisponibles.</p> : nextDelivery ? <div className={styles.deliverySpotlight}><strong>{nextDelivery.reference}</strong><span data-status={nextDelivery.statut}>{STATUS_LABELS[nextDelivery.statut] ?? nextDelivery.statut.replaceAll('_', ' ')}</span><p><ShopIcon name="pin" /> {nextDelivery.ville} · Commande {nextDelivery.sousCommande.reference}</p><small>{nextDelivery.livraisonPrevueDebut ? `Prévue le ${new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(nextDelivery.livraisonPrevueDebut))}` : 'Date de livraison à préciser'}</small></div> : <p className={styles.dashboardEmpty}>Aucune livraison en cours.</p>}</section> : null}
+        <section className={styles.dashboardPanel}><header className={styles.dashboardPanelHead}><h2>Offre à la une</h2><button disabled={access.offers !== 'allowed'} onClick={() => onPanel('offers')}>Mes offres <ShopIcon name="arrow" /></button></header>{!loaded.offers ? <p className={styles.dashboardEmpty}>Actualisation des offres…</p> : access.offers !== 'allowed' ? <p className={styles.dashboardEmpty}>Offres indisponibles.</p> : leadOffer ? <div className={styles.offerSpotlight}><span className={styles.offerMark}><ShopIcon name="bag" /></span><div><strong>{leadOffer.produit.nom}</strong><b>{offerPrice(leadOffer) === null ? 'Prix en attente' : money(offerPrice(leadOffer)!)}</b><small>{leadOffer.referenceVendeur} · {STATUS_LABELS[leadOffer.statut] ?? leadOffer.statut}</small></div><span className={styles.stockCount}><strong>{leadOffer.stock ? Math.max(0, leadOffer.stock.quantite - leadOffer.stock.quantiteReservee) : '—'}</strong><small>disponibles</small></span></div> : <p className={styles.dashboardEmpty}>Votre première offre apparaîtra ici après validation.</p>}</section>
+        {access.deliveries !== 'denied' ? <section className={styles.dashboardPanel}><header className={styles.dashboardPanelHead}><h2>Livraison à suivre</h2><button disabled={access.deliveries !== 'allowed'} onClick={() => onPanel('deliveries')}>Toutes <ShopIcon name="arrow" /></button></header>{!loaded.deliveries ? <p className={styles.dashboardEmpty}>Actualisation des livraisons…</p> : access.deliveries !== 'allowed' ? <p className={styles.dashboardEmpty}>Livraisons indisponibles.</p> : nextDelivery ? <div className={styles.deliverySpotlight}><strong>{nextDelivery.reference}</strong><span data-status={nextDelivery.statut}>{STATUS_LABELS[nextDelivery.statut] ?? nextDelivery.statut.replaceAll('_', ' ')}</span><p><ShopIcon name="pin" /> {nextDelivery.ville} · Commande {nextDelivery.sousCommande.reference}</p><small>{nextDelivery.livraisonPrevueDebut ? `Prévue le ${new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(nextDelivery.livraisonPrevueDebut))}` : 'Date de livraison à préciser'}</small></div> : <p className={styles.dashboardEmpty}>Aucune livraison en cours.</p>}</section> : null}
         <section className={styles.supportPanel}><ShopIcon name="headphones" /><div><h2>Une question sur votre boutique ?</h2><p>L’équipe KatiHub peut vous accompagner.</p><Link href="/contact">Contacter le support <ShopIcon name="arrow" /></Link></div></section>
       </div>
     </div>
   </div>
+}
+
+function SectionLoading() {
+  return <section className={styles.featureList}><p className={styles.blank}>Chargement de cette rubrique…</p></section>
 }
 
 function SectionUnavailable({ access }: { access: Access }) {

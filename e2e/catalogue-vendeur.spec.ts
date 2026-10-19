@@ -49,7 +49,7 @@ test('le marchand ajoute une photo, écrit son référencement et soumet la fich
   await page.getByRole('button', { name: 'Fiche et photos' }).click()
   await expect(page.getByRole('heading', { name: 'Samsung Galaxy A15' })).toBeVisible()
 
-  await page.locator('input[type=file][accept^="image"]').setInputFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL.split(',')[1]!, 'base64') })
+  await page.locator('main[data-seller-workspace] input[type=file][accept^="image"]').setInputFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL.split(',')[1]!, 'base64') })
   await expect(page.getByTestId(`fiche-photo-${PHOTO}`)).toBeVisible()
   await expect(page.getByText('Image principale · nouvelle')).toBeVisible()
   await page.getByLabel('Texte alternatif').fill('Vue de face, coloris noir')
@@ -154,7 +154,7 @@ test('la création reflète instantanément les données et la photo dans l’ap
   await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25 5G')
   await page.getByLabel('Marque').fill('Samsung')
   await page.getByLabel('Description courte').fill('Un smartphone 5G endurant avec un écran lumineux et 128 Go de stockage.')
-  await page.locator('input[type=file][accept^="image"]').setInputFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL.split(',')[1]!, 'base64') })
+  await page.locator('main[data-seller-workspace] input[type=file][accept^="image"]').setInputFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL.split(',')[1]!, 'base64') })
 
   const apercu = page.getByRole('complementary').filter({ hasText: 'Aperçu client en direct' })
   await expect(apercu).toContainText('Samsung Galaxy A25 5G')
