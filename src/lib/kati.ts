@@ -28,6 +28,7 @@ export type PortefeuilleKati = {
   valeurFcfa: { disponible: number; enAttente: number }
   katiParFcfa: number
   gainsEnAttente: GainEnAttente[]
+  courrielVerifie: boolean
 }
 
 export type TypeOperationKati = 'attribution' | 'liberation' | 'transfert' | 'reservation' | 'utilisation' | 'annulation' | 'expiration' | 'correction' | 'ajustement' | 'restitution'

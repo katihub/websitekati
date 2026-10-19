@@ -12,6 +12,7 @@ import { AccountProvider } from '@/lib/account'
 import { CartProvider } from '@/lib/cart'
 import { SessionProvider } from '@/lib/session'
 import { KatiAssistantLazy } from '@/components/assistant/KatiAssistantLazy'
+import { EmailVerificationBanner } from '@/components/account/EmailVerificationBanner'
 
 export const metadata: Metadata = {
   title: {
@@ -70,6 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <AccountProvider pointsVente={[]}>
           <CartProvider>
             <KatiHeader />
+            <EmailVerificationBanner />
             {/* L'ESPACE AVANT LE PIED DE PAGE APPARTIENT A LA DERNIERE SECTION DE
             CHAQUE PAGE, PAS A `main`. Pose ici, il s'ajoutait sous tout, y
             compris sous une bande pleine largeur qui porte deja son fond et son

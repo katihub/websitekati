@@ -9,6 +9,7 @@ import { enregistrerFiche } from '@/lib/profil'
 import { garderParrainage, lireParrainageGarde, oublierParrainage, rattacher } from '@/lib/parrainage'
 import { avecRetour, useRetourDemande } from '@/lib/retour'
 import { supabase } from '@/lib/supabase'
+import { envoyerVerificationCourriel } from '@/lib/verification-courriel'
 import styles from '@/app/inscription/signup.module.css'
 
 const sansAbonnement = () => () => {}
@@ -62,9 +63,12 @@ export function CustomerSignupForm() {
         const { data: auth, error: authError } = await client.auth.signUp({ email, password, options: { data: { full_name: name, phone, city } } })
         if (authError) throw authError
         if (auth.user?.identities?.length === 0) throw new Error('Cette adresse est peut-être déjà utilisée. Essayez de vous connecter.')
-        if (auth.session) await enregistrerFiche({ nom: name, telephone: phone, ville: city })
+        if (auth.session) {
+          await enregistrerFiche({ nom: name, telephone: phone, ville: city })
+          await envoyerVerificationCourriel().catch(() => undefined)
+        }
         const parrainage = await parrainer(code, Boolean(auth.session))
-        setSuccess(`${auth.session ? 'Votre compte est prêt. Vous pouvez reprendre vos achats.' : 'Vérifiez votre boîte e-mail pour confirmer votre compte.'}${parrainage}`)
+        setSuccess(`${auth.session ? 'Votre compte est prêt. Confirmez votre adresse e-mail pour débloquer vos KATI.' : 'Vérifiez votre boîte e-mail pour confirmer votre compte.'}${parrainage}`)
       } else if (connexionLocaleActive) {
         await seConnecterLocalement(email, password)
         await enregistrerFiche({ nom: name, telephone: phone, ville: city })

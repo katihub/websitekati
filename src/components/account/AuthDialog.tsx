@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase'
 import { useSession } from '@/lib/session'
 import { completerFicheDepuisInscription, enregistrerFiche, lireProfilServeur, pousserProfil, reconcilier } from '@/lib/profil'
 import { VILLES_CAMEROUN, villeValide } from '@/constants/villes'
+import { envoyerVerificationCourriel } from '@/lib/verification-courriel'
 
 /**
  * Les messages du fournisseur sont en anglais et écrits pour un développeur.
@@ -718,7 +719,10 @@ function CardForm({
     /* La fiche du serveur nait avec le telephone : c'est tout ce que le backend
        exige d'un compte. Le nom viendra avec la premiere commande. Un echec ici
        n'empeche pas d'avancer — la page de commande redemandera le numero. */
-    if (telephoneInscription) await enregistrerFiche({ telephone: telephoneInscription, ville: villeInscription ?? undefined })
+    if (telephoneInscription) {
+      await enregistrerFiche({ telephone: telephoneInscription, ville: villeInscription ?? undefined })
+      await envoyerVerificationCourriel().catch(() => undefined)
+    }
 
     /* LA SUITE DEPEND DU MOTIF. Un devis a besoin du nom et du comptoir pour son
        message WhatsApp : la fiche suit. Une commande les demande elle-meme : la
