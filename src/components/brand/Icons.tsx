@@ -57,6 +57,16 @@ export function IconSearch(props: IconProps) {
   )
 }
 
+/** Recherche visuelle : un objectif dans un boîtier compact. */
+export function IconCamera(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M3 7.5h4l1.5-2h7l1.5 2h4v12H3z" />
+      <circle cx="12" cy="13.5" r="3.5" />
+    </Glyph>
+  )
+}
+
 /**
  * The basket. A trapezium rather than a rounded tote: this is a trade counter,
  * and the shape should read closer to a crate than to a shopping bag.

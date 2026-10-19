@@ -57,11 +57,11 @@ export function MerchantLogin({ onSuccess }: { onSuccess?: () => Promise<void> }
 
   return <div className={styles.page} data-seller-auth>
     <div className={styles.shell}>
-      <div className={styles.topline}><span>Espace marchand KatiHub</span><Link href="/devenir-vendeur">Créer un compte marchand <ShopIcon name="arrow" /></Link></div>
+      <div className={styles.topline}><span>Espace vendeur KatiHub</span><Link href="/devenir-vendeur">Créer un compte vendeur <ShopIcon name="arrow" /></Link></div>
       <div className={styles.layout}>
         <section className={styles.card} aria-labelledby="merchant-login-title">
           <span className={styles.formIcon}><ShopIcon name="bag" /></span>
-          <h1 id="merchant-login-title">Connexion marchand</h1>
+          <h1 id="merchant-login-title">Connexion vendeur</h1>
           <p className={styles.subtitle}>Accédez à votre espace vendeur KatiHub.</p>
           <form onSubmit={submit}>
             <label>Adresse e-mail<input type="email" required autoComplete="email" placeholder="vous@boutique.cm" value={email} onChange={event => setEmail(event.target.value)} /></label>
@@ -71,7 +71,7 @@ export function MerchantLogin({ onSuccess }: { onSuccess?: () => Promise<void> }
             {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
             <button className={styles.submit} disabled={pending}>{pending ? 'Connexion en cours…' : 'Se connecter'} <ShopIcon name="arrow" /></button>
           </form>
-          <div className={styles.signup}><span>Pas encore de compte vendeur ?</span><Link href="/devenir-vendeur">Créer un compte marchand</Link></div>
+          <div className={styles.signup}><span>Pas encore de compte vendeur ?</span><Link href="/devenir-vendeur">Créer un compte vendeur</Link></div>
           <div className={styles.assurances}><span><ShopIcon name="shield" /> Accès sécurisé</span><span><ShopIcon name="headphones" /> Assistance locale</span></div>
         </section>
         <aside className={styles.promo} aria-label="Vendre sur KatiHub">

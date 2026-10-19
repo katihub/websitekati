@@ -22,7 +22,7 @@
   min-height: 100vh;
   color: var(--navy);
   background: #fff;
-  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -91,7 +91,7 @@
 .rating a { color: #3766ad; }
 .rating i { width: 1px; height: 15px; margin-inline: 7px; background: var(--line); }
 .fromPrice { margin: 24px 0 3px; color: var(--muted); font-size: 13px; }
-.fromPrice strong { display: block; color: var(--navy); font-family: var(--font-plex-mono), monospace; font-size: clamp(28px, 2.4vw, 37px); letter-spacing: -1px; }
+.fromPrice strong { display: block; color: var(--navy); font-family: var(--font-mono); font-size: clamp(28px, 2.4vw, 37px); letter-spacing: -1px; }
 .stock { margin: 9px 0 18px; color: var(--green); font-weight: 700; }
 .stock span { display: inline-grid; width: 18px; height: 18px; place-items: center; margin-right: 6px; border-radius: 50%; color: white; background: var(--green); font-size: 11px; }
 .stock small { margin-left: 12px; color: var(--muted); font-weight: 400; }
@@ -124,7 +124,7 @@
 .avatar { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--navy); font-size: 11px; font-weight: 800; }
 .sellerBody { min-width: 0; display: block; }
 .sellerTop { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
-.sellerTop b { font-family: var(--font-plex-mono), monospace; font-size: 14px; white-space: nowrap; }
+.sellerTop b { font-family: var(--font-mono); font-size: 14px; white-space: nowrap; }
 .verified { display: block; margin: 1px 0 5px; color: var(--green); font-size: 9px; font-weight: 700; }
 .sellerMeta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 9px; }
 .sellerMeta span:first-child { color: #a05c00; }
@@ -138,7 +138,7 @@
 .paymentSummary h3 { margin: 0; padding: 9px 12px 7px; font-size: 11px; }
 .paymentSummary dl { display: grid; gap: 5px; margin: 0; padding: 0 12px 10px; }
 .paymentSummary dl div { display: flex; justify-content: space-between; gap: 16px; font-size: 10px; }
-.paymentSummary dd { margin: 0; font-family: var(--font-plex-mono), monospace; font-weight: 700; text-align: right; }
+.paymentSummary dd { margin: 0; font-family: var(--font-mono); font-weight: 700; text-align: right; }
 .paymentSummary .deposit { color: #0b5e46; font-weight: 700; }
 .paymentSummary p { margin: 0; padding: 8px 12px; border-top: 1px solid #d3e3f7; color: #52637d; font-size: 9px; text-align: center; }
 .primaryButton, .secondaryButton { width: 100%; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 9px; border-radius: 8px; cursor: pointer; font-weight: 700; }
@@ -160,7 +160,7 @@
 .tabContent h2 { margin: 0 0 8px; font-size: 20px; }
 .tabContent p { max-width: 68ch; margin: 0; color: #526078; line-height: 1.75; }
 .review { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; }
-.review > strong { grid-row: span 2; font-family: var(--font-plex-mono), monospace; font-size: 34px; }
+.review > strong { grid-row: span 2; font-family: var(--font-mono); font-size: 34px; }
 .review > strong span { font-size: 14px; color: var(--muted); }
 .review small { color: var(--muted); }
 .review blockquote { grid-column: 1 / -1; margin: 14px 0 0; padding: 12px 14px; border-left: 3px solid var(--orange); color: #4c5970; background: var(--soft); font-size: 11px; }

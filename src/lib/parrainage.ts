@@ -27,6 +27,7 @@ export type MonParrainage = {
 }
 
 export const normaliserCode = (saisie: string) => saisie.trim().toUpperCase().replace(/\s+/g, '')
+export const estCodeParrainage = (saisie: string) => /^[A-Z]{2}\d{6}$/.test(normaliserCode(saisie))
 
 function nouveauJeton() {
   const octets = new Uint8Array(24)
@@ -52,7 +53,9 @@ export function oublierParrainage() {
 export function garderParrainage(code: string): ParrainageGarde | null {
   const existant = lireParrainageGarde()
   if (existant) return existant
-  const garde = { code: normaliserCode(code), jeton: nouveauJeton(), le: Date.now() }
+  const normalise = normaliserCode(code)
+  if (!estCodeParrainage(normalise)) return null
+  const garde = { code: normalise, jeton: nouveauJeton(), le: Date.now() }
   try { localStorage.setItem(CLE, JSON.stringify(garde)) } catch { return null }
   return garde
 }

@@ -36,10 +36,15 @@ export function estimerReglement(entree: {
   assuranceFcfa: number
   installationFcfa: number
   remiseKatiFcfa: number
+  acompteProduitsFcfa?: number
 }): EstimationReglement {
   const complet = entree.mode === 'complet'
   const services = entree.assuranceFcfa + entree.installationFcfa
-  const payesAvance = complet ? entree.produitsFcfa : Math.max(estimatedDeposit(entree.produitsFcfa), entree.remiseKatiFcfa)
+  const minimumAcompte = estimatedDeposit(entree.produitsFcfa)
+  const acompteChoisi = Number.isSafeInteger(entree.acompteProduitsFcfa)
+    ? Math.min(entree.produitsFcfa, Math.max(minimumAcompte, entree.acompteProduitsFcfa!))
+    : minimumAcompte
+  const payesAvance = complet ? entree.produitsFcfa : Math.max(acompteChoisi, entree.remiseKatiFcfa)
   return {
     produitsPayesAvanceFcfa: payesAvance,
     aPayerMaintenantFcfa: payesAvance - entree.remiseKatiFcfa + services + (complet ? entree.fraisFcfa : 0),

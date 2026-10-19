@@ -4,6 +4,7 @@ import { lireCategoriesMarketplace } from '@/lib/marketplace-data'
 import { ActionsCompte, LiensBarreHaut } from './KatiHeaderCompte'
 import { KatiLogo } from './KatiLogo'
 import { MobileCategoriesMenu } from './MobileCategoriesMenu'
+import { MarketplaceSearchForm } from './MarketplaceSearchForm'
 import { CaptureParrainage } from './kati/CaptureParrainage'
 import styles from './marketplace-shell-v2.module.css'
 
@@ -20,11 +21,7 @@ export async function KatiHeader() {
       </div></div>
       <div className={`${styles.shell} ${styles.mainbar}`}>
         <KatiLogo />
-        <form action="/recherche" className={styles.search} data-marketplace-search>
-          <label htmlFor="katihub-search" className="sr-only">Rechercher</label>
-          <input id="katihub-search" name="q" placeholder="Rechercher un produit, une boutique…" />
-          <button type="submit" aria-label="Lancer la recherche">⌕</button>
-        </form>
+        <MarketplaceSearchForm className={styles.search} />
         <div className={styles.actions} data-marketplace-actions>
           <ActionsCompte />
           <CartButton href="/panier" />

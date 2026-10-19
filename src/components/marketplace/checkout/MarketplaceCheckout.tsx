@@ -10,7 +10,7 @@ import { avecRetour, useIci } from '@/lib/retour'
 import { useAccount, normalisePhone } from '@/lib/account'
 import { enregistrerAdresse, libelleAdresse, useCarnetAdresses } from '@/lib/carnet-adresses'
 import { quartiersDe, useLocalites } from '@/lib/localites'
-import { checkedTotal, groupDeliveries, livrableDans, type DeliveryGroup, type MarketplaceOrder } from '@/lib/marketplace-checkout'
+import { checkedTotal, estimatedDeposit, groupDeliveries, livrableDans, type DeliveryGroup, type MarketplaceOrder } from '@/lib/marketplace-checkout'
 import { DESCRIPTION_MODE, LIBELLE_MODE, livraisonADomicile, type DeliveryMode } from '@/lib/modes-livraison'
 import { usePolitiqueKati } from '@/lib/kati'
 import { estimerReglement, montantAssurance } from '@/lib/reglement'
@@ -97,8 +97,11 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   const blocked = loading || Boolean(serviceError) || !lines.length || checked.some(item => item.issue) || groups.some(group => !group.modes.length) || !Number.isSafeInteger(total) || limitsExceeded || fees === null
 
   // Les choix de reglement : l'assurance est cochee par defaut ; l'agence impose le paiement complet.
-  const [choix, setChoix] = useState<ChoixReglement>({ mode: 'acompte', assurance: true, installations: [], katiUtilises: 0 })
+  const [choix, setChoix] = useState<ChoixReglement>({ mode: 'acompte', acompteProduitsFcfa: null, assurance: true, installations: [], katiUtilises: 0 })
   const modePaiement = enAgence ? 'complet' : choix.mode
+  const minimumAcompte = estimatedDeposit(total)
+  const acompteProduitsFcfa = choix.acompteProduitsFcfa ?? minimumAcompte
+  const acompteInvalide = modePaiement === 'acompte' && (!Number.isSafeInteger(acompteProduitsFcfa) || acompteProduitsFcfa < minimumAcompte || acompteProduitsFcfa > total)
   const options = useOptionsServices(lines.flatMap(line => line.offerId ? [line.offerId] : []))
   const disponibleKati = useDisponibleKati(Boolean(session))
   const politiqueKati = usePolitiqueKati()
@@ -111,6 +114,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
     assuranceFcfa: choix.assurance && options?.assurance.active ? montantAssurance(total, options.assurance.tauxBps) : 0,
     installationFcfa: installationsRetenues.reduce((sum, installation) => sum + installation.prixFcfa, 0),
     remiseKatiFcfa: politiqueKati && katiUtilises ? katiUtilises / politiqueKati.katiParFcfa : 0,
+    acompteProduitsFcfa,
   })
 
   function verifier(): string {
@@ -124,6 +128,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
     if (!normalisePhone(adresse.telephoneDestinataire || (session ? '' : contact.telephone))) return 'Indiquez le numéro du destinataire, un mobile camerounais commençant par 6.'
     const sansNote = groups.find(group => deliveryMode(group) === 'agence' && (notesAgence[group.id] ?? '').trim().length < 3)
     if (sansNote) return `Précisez l’agence de voyage (et sa ville) où ${sansNote.name} doit déposer votre colis.`
+    if (acompteInvalide) return `Choisissez un acompte compris entre ${money(minimumAcompte)} et ${money(total)}.`
     if (!terms) return 'Acceptez les conditions de vente pour commander.'
     return ''
   }
@@ -150,6 +155,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
       totalAttenduFcfa: total,
       fraisLivraisonAttendusFcfa: fees ?? undefined,
       modePaiement,
+      ...(modePaiement === 'acompte' ? { acompteProduitsFcfa } : {}),
       assurance: Boolean(choix.assurance && options?.assurance.active),
       installations: installationsRetenues.map(installation => installation.categorieId),
       ...(katiUtilises ? { katiUtilises } : {}),
@@ -242,7 +248,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
 
       <ReglementCommande produitsFcfa={total} options={options} disponibleKati={session ? disponibleKati : null} choix={choix} onChange={setChoix} completImpose={enAgence}/>
       <section className={styles.panel}>
-        <div className={styles.depositExplanation} data-testid="a-payer-maintenant"><b>{money(reglement.aPayerMaintenantFcfa)}</b><span>{reglement.aPayerMaintenantFcfa === 0 ? 'Rien à payer maintenant : vos KATI couvrent l’acompte. La commande sera confirmée dès son enregistrement.' : `À régler par Orange Money ou MTN Mobile Money, juste après l’enregistrement de la commande${modePaiement === 'acompte' ? ' : l’acompte de 10 % des produits' : ''}${reglement.assuranceFcfa + reglement.installationFcfa ? ' et les services' : ''}${reglement.remiseKatiFcfa ? `, moins ${money(reglement.remiseKatiFcfa)} payés en KATI` : ''}.`}</span></div>
+        <div className={styles.depositExplanation} data-testid="a-payer-maintenant"><b>{money(reglement.aPayerMaintenantFcfa)}</b><span>{reglement.aPayerMaintenantFcfa === 0 ? 'Rien à payer maintenant : vos KATI couvrent l’acompte. La commande sera confirmée dès son enregistrement.' : `À régler par Orange Money ou MTN Mobile Money, juste après l’enregistrement de la commande${modePaiement === 'acompte' ? ` : votre acompte de ${money(reglement.produitsPayesAvanceFcfa)} sur les produits` : ''}${reglement.assuranceFcfa + reglement.installationFcfa ? ' et les services' : ''}${reglement.remiseKatiFcfa ? `, moins ${money(reglement.remiseKatiFcfa)} payés en KATI` : ''}.`}</span></div>
         <p data-testid="a-payer-livraison">{reglement.aPayerLivraisonFcfa ? `À la livraison : ${money(reglement.aPayerLivraisonFcfa)}${modePaiement === 'acompte' && fees ? `, dont ${money(fees)} de frais de livraison` : ''}.` : 'Rien à régler au livreur.'}</p>
         <label className={styles.terms}><input type="checkbox" checked={terms} onChange={event => setTerms(event.target.checked)}/><span>J’ai vérifié ma commande et j’accepte les <Link href="/conditions-generales-vente">conditions de vente</Link>.</span></label>
       </section>

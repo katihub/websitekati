@@ -48,8 +48,13 @@ test('l’acompte, l’assurance cochée par défaut, l’installation et le pai
   await expect(page.getByTestId('a-payer-maintenant')).toContainText(montant(44_700))
   await expect(page.getByTestId('a-payer-livraison')).toContainText(montant(270_200))
 
+  // 10 % est un minimum : le client peut avancer davantage sur les produits.
+  await page.getByTestId('acompte-produits').fill('80000')
+  await expect(page.getByTestId('a-payer-maintenant')).toContainText(montant(94_900))
+  await expect(page.getByTestId('a-payer-livraison')).toContainText(montant(220_000))
+
   await page.getByTestId(`option-installation-${CATEGORIE}`).check()
-  await expect(page.getByTestId('a-payer-maintenant')).toContainText(montant(52_200))
+  await expect(page.getByTestId('a-payer-maintenant')).toContainText(montant(102_400))
   await expect(page.getByTestId('recap-options')).toContainText('Installation')
 
   await page.getByLabel(/Tout payer maintenant/).check()

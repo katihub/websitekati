@@ -30,7 +30,7 @@ export type PortefeuilleKati = {
   gainsEnAttente: GainEnAttente[]
 }
 
-export type TypeOperationKati = 'attribution' | 'liberation' | 'reservation' | 'utilisation' | 'annulation' | 'expiration' | 'correction'
+export type TypeOperationKati = 'attribution' | 'liberation' | 'transfert' | 'reservation' | 'utilisation' | 'annulation' | 'expiration' | 'correction' | 'ajustement' | 'restitution'
 
 export type OperationKati = {
   id: string

@@ -96,17 +96,16 @@ const BIENVENUE: Message = {
   id: 'bienvenue',
   auteur: 'assistant',
   texte:
-    'Bonjour, et bienvenue chez NowTech Center. Je lis le catalogue en direct : ' +
-    'posez-moi une question sur un produit, un prix, la garantie, la livraison — ' +
-    'ou décrivez-moi une panne, je chercherai la solution.',
+    'Bonjour, je suis Kati, l’assistante de KatiHub. Je consulte le catalogue en direct : ' +
+    'demandez-moi un produit, un prix, une garantie, une livraison ou de l’aide pour votre commande.',
   le: 0,
 }
 
 const PREMIERES_SUITES = [
-  'Vous avez des onduleurs à moins de 200 000 ?',
+  'Je cherche un ordinateur portable',
   'Quelle est la garantie sur vos produits ?',
   'Vous livrez dans quelles villes ?',
-  'Mon imprimante fait des bourrages',
+  'Je veux parler à un conseiller',
 ]
 
 let compteur = 0
@@ -611,7 +610,7 @@ export function Assistant({ whatsapp }: { whatsapp: string | null }) {
       ref={surface}
       role="dialog"
       aria-modal={sheet}
-      aria-label="Bod, l’assistant du comptoir"
+      aria-label="Kati, l’assistante KatiHub"
       initial={reduced ? false : sheet ? { y: '100%' } : { opacity: 0, y: 12, scale: 0.98 }}
       animate={sheet ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
       exit={reduced ? { opacity: 0 } : sheet ? { y: '100%' } : { opacity: 0, y: 8, scale: 0.99 }}
@@ -624,21 +623,16 @@ export function Assistant({ whatsapp }: { whatsapp: string | null }) {
       }
       className="fixed inset-x-0 bottom-0 z-[var(--z-assistant)] flex max-h-[86dvh] flex-col overflow-hidden rounded-t-space bg-paper shadow-[var(--shadow-panel)] ring-1 ring-rule md:inset-x-auto md:right-6 md:bottom-24 md:max-h-[min(84dvh,44rem)] md:w-[27rem] md:rounded-space"
     >
-      {/* THE PRINTED HEAD RULE. Three pixels of the mark's own green across the
-          top edge: the one place --brand is unambiguously a shape, carrying the
-          shop's colour without putting a word on it. */}
-      <span aria-hidden className="block h-[3px] shrink-0 bg-primary" />
+      <span aria-hidden className="block h-[3px] shrink-0 bg-secondary" />
 
       <header className="flex shrink-0 items-center gap-3 border-b border-rule px-4 py-3 md:px-5">
-        <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full ring-1 ring-rule">
-          <span className="relative block size-7">
-            <Image src="/logo/bod.png" alt="" fill sizes="28px" className="object-contain" />
-          </span>
+        <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full shadow-sm">
+          <AssistantMark />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-body leading-tight font-bold tracking-[-0.01em] text-ink">Bod</span>
+          <span className="block text-body leading-tight font-bold tracking-[-0.01em] text-ink">Kati</span>
           <span className="mt-0.5 block text-micro leading-tight text-ink-3">
-            {busy ? 'écrit…' : 'En lecture directe du catalogue'}
+            {busy ? 'écrit…' : 'Assistante KatiHub · disponible 24/7'}
           </span>
         </span>
         {/* DEUX COMMANDES DE CONVERSATION, ET ELLES TIENNENT DANS L'EN-TÊTE.
@@ -948,19 +942,20 @@ export function Assistant({ whatsapp }: { whatsapp: string | null }) {
           open
             ? 'Fermer l’assistant'
             : reponseArrivee
-              ? 'Ouvrir Bod — une réponse de l’équipe vous attend'
-              : 'Ouvrir Bod, l’assistant du comptoir'
+              ? 'Ouvrir Kati — une réponse de l’équipe vous attend'
+              : 'Ouvrir Kati, l’assistante KatiHub'
         }
         animate={{ y: away ? 88 : 0, opacity: away ? 0 : 1 }}
         transition={reduced ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.28, 1] }}
         whileTap={reduced ? undefined : { scale: 0.96 }}
         style={{ pointerEvents: away ? 'none' : 'auto' }}
         data-assistant-launcher
-        className="fixed right-4 bottom-4 z-[var(--z-assistant)] grid size-13 place-items-center overflow-hidden rounded-full bg-paper ring-1 ring-rule shadow-[var(--shadow-panel)] sm:right-6 sm:bottom-6 md:size-14"
+        className="fixed right-4 bottom-4 z-[var(--z-assistant)] flex h-13 items-center gap-2 overflow-hidden rounded-full bg-[#061f4f] p-1.5 text-white ring-1 ring-[#ffffff33] shadow-[0_14px_38px_#061f4f4d] sm:right-6 sm:bottom-6 md:h-14 md:pr-4"
       >
-        <span className="relative block size-10 md:size-11">
-          <Image src="/logo/bod.png" alt="" fill sizes="44px" className="object-contain" />
+        <span className="block size-10 shrink-0 md:size-11">
+          <AssistantMark />
         </span>
+        <span className="hidden text-small font-bold md:block">Besoin d’aide ?</span>
         {/* Panneau fermé, c'est le seul endroit où l'arrivée d'une réponse peut
             se voir. Placée à l'intérieur du cercle : le disque rogne ce qui
             déborde. */}
@@ -1009,12 +1004,12 @@ function Bulle({
           aria-hidden
           className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-primary text-[0.625rem] font-bold tracking-[0.02em] text-white"
         >
-          NT
+          KH
         </span>
       ) : !deMoi ? (
         <span className="mt-0.5 grid size-7 shrink-0 place-items-center overflow-hidden rounded-full ring-1 ring-rule">
-          <span className="relative block size-5">
-            <Image src="/logo/bod.png" alt="" fill sizes="20px" className="object-contain" />
+          <span className="block size-7">
+            <AssistantMark />
           </span>
         </span>
       ) : null}
@@ -1034,7 +1029,7 @@ function Bulle({
         >
           {message.auteur === 'equipe' ? (
             <p className="t-label mb-1 whitespace-normal text-ink-3">
-              Réponse de l’équipe NowTech
+              Réponse de l’équipe KatiHub
               {equipe?.reference ? <> · réf. <span className="t-num">{equipe.reference}</span></> : null}
             </p>
           ) : null}
@@ -1149,6 +1144,13 @@ function SousLaBulle({
             >
               Écrire sur WhatsApp
             </a>
+          ) : !demande ? (
+            <Link
+              href="/contact"
+              className="press inline-flex min-h-11 items-center rounded-pill border border-rule px-3.5 text-micro text-ink-2 transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
+            >
+              Contacter l’équipe KatiHub
+            </Link>
           ) : null}
         </div>
       ) : null}
@@ -1212,11 +1214,9 @@ function Frappe() {
   const reduced = useReducedMotion()
 
   return (
-    <div data-bod-frappe className="flex gap-2" role="status" aria-label="Bod écrit une réponse">
-      <span className="mt-0.5 grid size-7 shrink-0 place-items-center overflow-hidden rounded-full ring-1 ring-rule">
-        <span className="relative block size-5">
-          <Image src="/logo/bod.png" alt="" fill sizes="20px" className="object-contain" />
-        </span>
+    <div data-bod-frappe className="flex gap-2" role="status" aria-label="Kati écrit une réponse">
+      <span className="mt-0.5 grid size-7 shrink-0 place-items-center overflow-hidden rounded-full">
+        <AssistantMark />
       </span>
       <span className="inline-flex items-center gap-1 rounded-well rounded-bl-[0.25rem] bg-space px-3.5 py-3">
         {[0, 1, 2].map((i) => (
@@ -1287,6 +1287,19 @@ function PastilleReponse({ className }: { className: string }) {
       aria-hidden
       className={`pointer-events-none absolute size-2.5 rounded-full bg-secondary ring-2 ring-paper ${className}`}
     />
+  )
+}
+
+/** La bulle KatiHub : orange de la marketplace, traits bleu nuit, sans asset supplémentaire. */
+function AssistantMark() {
+  return (
+    <svg aria-hidden viewBox="0 0 44 44" className="size-full">
+      <circle cx="22" cy="22" r="22" fill="#ff7900" />
+      <path d="M11 13.5h22v15H21l-6.5 4.5v-4.5H11z" fill="#fff" />
+      <circle cx="17" cy="21" r="1.6" fill="#061f4f" />
+      <circle cx="22" cy="21" r="1.6" fill="#061f4f" />
+      <circle cx="27" cy="21" r="1.6" fill="#061f4f" />
+    </svg>
   )
 }
 

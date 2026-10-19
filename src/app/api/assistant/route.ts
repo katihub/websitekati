@@ -48,10 +48,10 @@ function horsLigne() {
     {
       fil: '',
       texte:
-        'Je n’arrive pas à joindre la boutique à l’instant. Réessayez dans un moment, ' +
-        'ou écrivez-nous sur WhatsApp — quelqu’un vous répondra tout de suite.',
+        'Je n’arrive pas à joindre les services KatiHub à l’instant. Réessayez dans un moment ' +
+        'ou contactez notre équipe : votre demande pourra être reprise par un conseiller.',
       pieces: { humain: true },
-      suites: ['Réessayer', 'Écrire sur WhatsApp'],
+      suites: ['Réessayer'],
     },
     /* 200 AND NOT 502, AND C'EST DELIBERE. The panel draws this object as a
        message from Bod. A non-2xx would make the client throw and show its own

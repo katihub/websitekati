@@ -33,7 +33,7 @@ const STATUTS_RELAYES = new Set([400, 404, 429])
 /** Ce que le visiteur lit quand la boutique ne répond pas. */
 const INJOIGNABLE =
   'Nous n’arrivons pas à joindre l’équipe à l’instant. Réessayez dans un moment, ' +
-  'ou écrivez-nous sur WhatsApp — quelqu’un vous répondra tout de suite.'
+  'ou contactez-nous depuis la page Contact afin qu’un conseiller reprenne votre demande.'
 
 /** 429 sans message lisible : le limiteur de Nest parle anglais, pas au visiteur. */
 const TROP_DE_DEMANDES =

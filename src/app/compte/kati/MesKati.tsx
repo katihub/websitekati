@@ -12,6 +12,7 @@ import { formatKati, katiPourMontant, usePolitiqueKati, type HistoriqueKati, typ
 import type { OffreMarketplace } from '@/lib/marketplace-data'
 import { productCardSpecs } from '@/lib/product-card-specs'
 import styles from './kati.module.css'
+import { TransfertKati } from './TransfertKati'
 
 type Etat = { phase: 'chargement' } | { phase: 'connexion' } | { phase: 'refus'; message: string } | { phase: 'prete'; portefeuille: PortefeuilleKati; historique: HistoriqueKati }
 
@@ -19,7 +20,7 @@ const fcfa = (montant: number) => `${new Intl.NumberFormat('fr-FR').format(monta
 const date = (valeur: string) => new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(valeur))
 const LIBELLES: Record<OperationKati['type'], string> = {
   attribution: 'Gain en attente', liberation: 'Disponible', reservation: 'Réservé pour une commande', utilisation: 'Utilisé',
-  annulation: 'Repris', expiration: 'Expiré', correction: 'Correction KatiHub',
+  annulation: 'Repris', expiration: 'Expiré', correction: 'Correction KatiHub', transfert: 'Transfert', ajustement: 'Ajustement KatiHub', restitution: 'KATI restitués',
 }
 
 function variation(operation: OperationKati) {
@@ -93,6 +94,11 @@ export function MesKati({ recommendations }: { recommendations: readonly OffreMa
     return () => controleur.abort()
   }, [])
 
+  async function rafraichir() {
+    const [portefeuille, historique] = await Promise.all([api<PortefeuilleKati>('/marketplace/kati/moi'), api<HistoriqueKati>('/marketplace/kati/moi/historique')])
+    setEtat({ phase: 'prete', portefeuille, historique })
+  }
+
   async function plus() {
     if (etat.phase !== 'prete') return
     setSuite(true)
@@ -103,8 +109,8 @@ export function MesKati({ recommendations }: { recommendations: readonly OffreMa
   const connected = etat.phase === 'prete'
   return <div className={styles.content}>
     {etat.phase === 'chargement' ? <section className={`${styles.hero} ${styles.loadingHero}`} role="status" aria-label="Chargement de vos KATI"><div/><div/><div/></section> : connected ? <WalletHero wallet={etat.portefeuille}/> : <LoggedOutHero onLogin={ouvrirCompte} conversion={conversion} error={etat.phase === 'refus' ? etat.message : undefined}/>} 
-    {connected ? <section className={styles.accountDetails}>{politique ? <p className={styles.policy}>Chaque commande livrée vous rapporte <strong>{new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(politique.gainClientBps / 100)} %</strong> de son montant. Les points deviennent utilisables {politique.liberationApresLivraisonJours} jours après la livraison{politique.expirationGainsMois ? ` et restent valables ${politique.expirationGainsMois} mois` : ''}.</p> : null}{etat.portefeuille.gainsEnAttente.length ? <section className={styles.listSection} aria-labelledby="kati-attente-titre"><h2 id="kati-attente-titre">Bientôt disponibles</h2><ul>{etat.portefeuille.gainsEnAttente.map(gain => <li key={gain.id}><span>{gain.commission ? 'Commission de parrainage' : gain.commande ? `Commande ${gain.commande}` : gain.libelle}{gain.disponibleLe ? <small>Disponible le {date(gain.disponibleLe)}</small> : null}</span><b>{formatKati(gain.points)}</b></li>)}</ul></section> : null}</section> : null}
+    {connected ? <section className={styles.accountDetails}>{politique ? <p className={styles.policy}>Chaque commande livrée vous rapporte <strong>{new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(politique.gainClientBps / 100)} %</strong> de son montant{politique.expirationGainsMois ? `, et les points restent valables ${politique.expirationGainsMois} mois` : ''}.</p> : null}{etat.portefeuille.gainsEnAttente.length ? <section className={styles.listSection} aria-labelledby="kati-attente-titre"><h2 id="kati-attente-titre">Bientôt disponibles</h2><ul>{etat.portefeuille.gainsEnAttente.map(gain => <li key={gain.id}><span>{gain.commission ? 'Commission de parrainage' : gain.commande ? `Commande ${gain.commande}` : gain.libelle}{gain.disponibleLe ? <small>Disponible le {date(gain.disponibleLe)}</small> : null}</span><b>{formatKati(gain.points)}</b></li>)}</ul></section> : null}</section> : null}
     <ProductRecommendations offers={recommendations}/><Reassurance/>
-    {connected ? <div className={styles.lowerGrid}><CarteParrainage/><section className={styles.listSection} aria-labelledby="kati-historique-titre"><h2 id="kati-historique-titre">Historique</h2>{etat.historique.elements.length ? <ul data-testid="kati-historique">{etat.historique.elements.map(operation => { const { points, signe } = variation(operation); return <li key={operation.id}><span><b>{LIBELLES[operation.type]}{operation.commission ? ' · parrainage' : ''}</b><small>{date(operation.creeLe)}{operation.commande ? ` · ${operation.commande}` : ''} · {operation.libelle}</small></span><strong data-negative={points < 0}>{signe}{formatKati(Math.abs(points))}</strong></li> })}</ul> : <div className={styles.emptyHistory}><p>Votre première commande livrée fera apparaître vos gains ici.</p><Link href="/catalogue">Découvrir le catalogue</Link></div>}{etat.historique.elements.length < etat.historique.total ? <button type="button" disabled={suite} onClick={() => void plus()}>{suite ? 'Chargement…' : 'Voir plus'}</button> : null}</section></div> : null}
+    {connected ? <div className={styles.lowerGrid}><div className={styles.katiActions}><TransfertKati disponible={etat.portefeuille.disponible} onTransfert={rafraichir}/><CarteParrainage/></div><section className={styles.listSection} aria-labelledby="kati-historique-titre"><h2 id="kati-historique-titre">Historique</h2>{etat.historique.elements.length ? <ul data-testid="kati-historique">{etat.historique.elements.map(operation => { const { points, signe } = variation(operation); return <li key={operation.id}><span><b>{LIBELLES[operation.type]}{operation.commission ? ' · parrainage' : ''}</b><small>{date(operation.creeLe)}{operation.commande ? ` · ${operation.commande}` : ''} · {operation.libelle}</small></span><strong data-negative={points < 0}>{signe}{formatKati(Math.abs(points))}</strong></li> })}</ul> : <div className={styles.emptyHistory}><p>Votre première commande livrée fera apparaître vos gains ici.</p><Link href="/catalogue">Découvrir le catalogue</Link></div>}{etat.historique.elements.length < etat.historique.total ? <button type="button" disabled={suite} onClick={() => void plus()}>{suite ? 'Chargement…' : 'Voir plus'}</button> : null}</section></div> : null}
   </div>
 }

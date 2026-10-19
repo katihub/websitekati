@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
-import { IBM_Plex_Mono, Manrope } from 'next/font/google'
 
 import './globals.css'
 import { KatiFooter } from '@/components/marketplace/KatiFooter'
@@ -12,26 +11,7 @@ import { ScrollOnQuery } from '@/components/ui/ScrollOnQuery'
 import { AccountProvider } from '@/lib/account'
 import { CartProvider } from '@/lib/cart'
 import { SessionProvider } from '@/lib/session'
-
-/** Manrope carries the interface and display sizes across every KatiHub surface. */
-const manrope = Manrope({
-  // `subsets` governs preloading, not what the stylesheet contains: the
-  // latin-ext faces stay declared with their own unicode-range and load on
-  // demand. French needs none of them, and preloading both halves cost 50 380
-  // bytes of the 105 432 the page spends on type before it can paint.
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '800'],
-  variable: '--font-manrope',
-  display: 'swap',
-})
-
-/** IBM Plex Mono is reserved for references, identifiers and comparable figures. */
-const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-plex-mono',
-  display: 'swap',
-})
+import { KatiAssistantLazy } from '@/components/assistant/KatiAssistantLazy'
 
 export const metadata: Metadata = {
   title: {
@@ -67,7 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
      memoire de `cache` fait que l'en-tete et le pied de page relisent les memes
      reponses sans second appel. */
   return (
-    <html lang="fr" className={`${manrope.variable} ${plexMono.variable}`}>
+    <html lang="fr">
       {/* `data-habillage` dit si le menu des rayons a pu etre lu. Le travailleur
           de service le lit avant de garder /hors-ligne : une copie sans rayons,
           prise pendant une panne, resterait sur le telephone du client. */}
@@ -105,6 +85,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* L'ASSISTANT LIT LA SESSION, DONC IL VIT DEDANS. Un client connecté
             confie sa question à l'équipe sans laisser de coordonnées : son
             compte les porte déjà. Hors du fournisseur, `useSession()` lève. */}
+        <KatiAssistantLazy />
         </SessionProvider>
         <Reveal />
         {/* `useSearchParams` opts its whole subtree into client rendering unless

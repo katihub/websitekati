@@ -80,7 +80,7 @@ function MenuCompte({ profil, courriel, onDeconnexion }: { profil: Profil | null
     </button>
     {ouvert ? <div id={id} role="menu" className={styles.menuCompteListe}>
       <p>{courriel ?? 'Connecté'}</p>
-      {profil === 'marchand' ? lien('/espace-vendeur', 'Espace marchand') : null}
+      {profil === 'marchand' ? lien('/espace-vendeur', 'Espace vendeur') : null}
       {lien('/compte/commandes', 'Mes commandes')}
       {lien('/compte/devis', 'Mes devis')}
       {lien('/compte/kati', 'Mes KATI')}
@@ -103,7 +103,7 @@ export function ActionsCompte() {
   if (!session) {
     return <>
       <Link href="/connexion" className={styles.actionLien} aria-label="Connexion"><Icon>{ICONE_PERSONNE}</Icon><span>Connexion</span></Link>
-      <Link href="/espace-vendeur" className={styles.actionLien} aria-label="Compte marchand"><Icon>{ICONE_BOUTIQUE}</Icon><span>Compte marchand</span></Link>
+      <Link href="/espace-vendeur" className={styles.actionLien} aria-label="Compte vendeur"><Icon>{ICONE_BOUTIQUE}</Icon><span>Compte vendeur</span></Link>
     </>
   }
   return <>

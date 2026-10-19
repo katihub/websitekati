@@ -9,6 +9,7 @@ import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
 import { MarquesAccueil } from './MarquesAccueil'
 import { ProductCard } from './ProductCardAccueil'
 import { ProductCarouselAccueil } from './ProductCarouselAccueil'
+import { CategoryProductShowcase, type CategoryProductGroup } from './CategoryProductShowcase'
 import { ShopCarouselAccueil } from './ShopCarouselAccueil'
 import { PromosCarrousel } from './PromosCarrousel'
 import { PubAccueil } from './PubAccueil'
@@ -63,7 +64,14 @@ export async function MarketplaceHome() {
     .map((c) => ({ nom: c.nom, slug: c.slug, nombre: nombres.get(c.nom) ?? 0, sousCategories: c.sousCategories.map((s) => ({ nom: s.nom, slug: s.slug })) }))
     .sort((a, b) => b.nombre - a.nombre || a.nom.localeCompare(b.nom, 'fr'))
   const premier = rayons.find((r) => r.nombre > 0) ?? rayons[0]
-  const offresPremier = premier ? (await lireOffresMarketplace({ categorieSlug: premier.slug, taille: 8 })).offres : []
+  const categoriesCarrousel = rayons.filter((rayon) => rayon.nombre > 0).slice(0, 5)
+  const groupesCategories: CategoryProductGroup[] = await Promise.all(categoriesCarrousel.map(async (rayon) => ({
+    nom: rayon.nom,
+    slug: rayon.slug,
+    offres: (await lireOffresMarketplace({ categorieSlug: rayon.slug, taille: 12 })).offres,
+  })))
+  const offresPremier = groupesCategories.find((groupe) => groupe.slug === premier?.slug)?.offres.slice(0, 8)
+    ?? (premier ? (await lireOffresMarketplace({ categorieSlug: premier.slug, taille: 8 })).offres : [])
   const best = offres.slice(0, 20)
   const fresh = [...offres].reverse().slice(0, 6)
   // Les promotions du panel restent prioritaires. Tant qu'aucune n'est
@@ -90,6 +98,7 @@ export async function MarketplaceHome() {
 
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Meilleures ventes" href="/catalogue" />{best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}>Les offres seront bientôt disponibles.</p>}</section>
     <MarketplaceAvantages />
+    {groupesCategories.some((groupe) => groupe.offres.length) ? <CategoryProductShowcase groupes={groupesCategories.filter((groupe) => groupe.offres.length)} /> : null}
     {rayons.length ? <RayonsAccueil rayons={rayons} initial={{ slug: premier!.slug, offres: offresPremier }} /> : null}
     <MarquesAccueil marques={comptes.facettes?.marques ?? []} totalOffres={comptes.pagination.total} />
     <DerniersArrivages />

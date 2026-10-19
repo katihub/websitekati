@@ -104,7 +104,7 @@ export async function POST(requete: Request) {
     return NextResponse.json({ message: 'L’assistant produit n’est pas encore configuré sur ce serveur.' }, { status: 503 })
   }
   const authorization = requete.headers.get('authorization')?.trim() ?? ''
-  if (!authorization.toLowerCase().startsWith('bearer ')) return NextResponse.json({ message: 'Connexion marchand requise.' }, { status: 401 })
+  if (!authorization.toLowerCase().startsWith('bearer ')) return NextResponse.json({ message: 'Connexion vendeur requise.' }, { status: 401 })
   let body: Corps | null = null
   try { body = lireCorps(await requete.json()) } catch { /* réponse commune ci-dessous */ }
   if (!body) return NextResponse.json({ message: 'Indiquez le nom, la référence ou des caractéristiques vérifiables du produit.' }, { status: 400 })

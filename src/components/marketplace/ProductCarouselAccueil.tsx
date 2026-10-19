@@ -12,7 +12,7 @@ function mouvementReduit() {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-export function ProductCarouselAccueil({ offres }: { offres: readonly OffreMarketplace[] }) {
+export function ProductCarouselAccueil({ offres, label = 'Carrousel de produits' }: { offres: readonly OffreMarketplace[]; label?: string }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [pause, setPause] = useState(false)
   const [position, setPosition] = useState(1)
@@ -62,7 +62,7 @@ export function ProductCarouselAccueil({ offres }: { offres: readonly OffreMarke
         if (event.key === 'ArrowRight') { event.preventDefault(); defiler(1) }
         if (event.key === 'ArrowLeft') { event.preventDefault(); defiler(-1) }
       }}
-      aria-label="Meilleures ventes, carrousel de produits"
+      aria-label={label}
       tabIndex={0}
     >
       <div className={styles.productTrack}>

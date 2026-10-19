@@ -88,7 +88,7 @@ export function CustomerSignupForm() {
       <datalist id="villes-inscription">{VILLES_CAMEROUN.map(ville => <option key={ville} value={ville} />)}</datalist>
       <label>{local ? 'Mot de passe de démonstration' : 'Mot de passe'}<span className={styles.password}><input name="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={local ? 'Accès fourni par l’équipe' : '8 caractères minimum'} /><button type="button" onClick={() => setShowPassword(value => !value)}>{showPassword ? 'Masquer' : 'Afficher'}</button></span></label>
       {!local ? <p className={styles.hint}>Au moins une majuscule, une minuscule et un chiffre.</p> : <p className={styles.hint}>Cette version locale utilise un accès partagé, pas un compte personnel.</p>}
-      <label>Code de parrainage <small>(facultatif)</small><input key={codeGarde} name="parrain" defaultValue={codeGarde} maxLength={40} placeholder="KATI-AMINA-7Q2K" autoComplete="off" /></label>
+      <label>Code de parrainage <small>(facultatif)</small><input key={codeGarde} name="parrain" defaultValue={codeGarde} minLength={8} maxLength={8} pattern="[A-Za-z]{2}[0-9]{6}" placeholder="AM482731" autoComplete="off" /></label>
       <label className={styles.check}><input name="terms" type="checkbox" /><span>J’accepte les <Link href="/conditions" target="_blank">conditions d’utilisation</Link> et j’ai lu la <Link href="/politique-confidentialite" target="_blank">politique de confidentialité</Link>.</span></label>
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       <button className={styles.primary} disabled={pending}>{pending ? 'Un instant…' : local ? 'Continuer en démonstration' : 'Créer mon compte'}</button>

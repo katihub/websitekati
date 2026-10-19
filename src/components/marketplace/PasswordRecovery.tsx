@@ -52,7 +52,7 @@ export function PasswordRecovery({ audience = 'vendeur' }: { audience?: 'vendeur
   }
 
   return <main className={styles.page}><section className={styles.card}>
-    <Link href={connexion} className={styles.back}>← Connexion {audience === 'client' ? 'client' : 'marchand'}</Link>
+    <Link href={connexion} className={styles.back}>← Connexion {audience === 'client' ? 'client' : 'vendeur'}</Link>
     <h1>Nouveau mot de passe</h1>
     {status === 'checking' ? <p role="status">Vérification de votre lien…</p> : null}
     {status === 'unavailable' ? <p>La réinitialisation n’est pas disponible dans cet environnement de démonstration. Contactez l’équipe KatiHub pour obtenir vos accès.</p> : null}

@@ -9,6 +9,7 @@ import { IconArrowRight, IconPhone, IconSearch } from '@/components/brand/Icons'
 import type { SuggestReply } from '@/app/api/suggest/route'
 import { whatsappHref } from '@/lib/comptoirs'
 import { formatAmount, formatPrice } from '@/lib/format'
+import { enregistrerRechercheClient } from '@/lib/customer-search'
 import { ScopeSelect, type Scope } from './ScopeSelect'
 
 /**
@@ -430,6 +431,7 @@ export function SearchField({
   }
 
   const go = (item: Item) => {
+    enregistrerRechercheClient(asked, scope || undefined)
     close()
     if (item.external) {
       window.open(item.href, '_blank', 'noopener,noreferrer')
@@ -513,6 +515,7 @@ export function SearchField({
       onSubmit={(event) => {
         event.preventDefault()
         if (!asked) return
+        enregistrerRechercheClient(asked, scope || undefined)
         close()
         router.push(searchHref)
       }}
@@ -699,7 +702,10 @@ export function SearchField({
                         id={optionId(index)}
                         active={index === active}
                         onEnter={() => setCursor(index)}
-                        onPick={() => close()}
+                        onPick={() => {
+                          enregistrerRechercheClient(asked, scope || undefined)
+                          close()
+                        }}
                       />
                     </Fragment>
                   )
@@ -720,7 +726,10 @@ export function SearchField({
                   id={optionId(suggestions.length + index)}
                   active={suggestions.length + index === active}
                   onEnter={() => setCursor(suggestions.length + index)}
-                  onPick={() => close()}
+                  onPick={() => {
+                    enregistrerRechercheClient(asked, scope || undefined)
+                    close()
+                  }}
                 />
               ))}
 

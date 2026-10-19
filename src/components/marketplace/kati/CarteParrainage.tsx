@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 
 import { ErreurApi, api, apiDisponible } from '@/lib/api'
 import { formatKati } from '@/lib/kati'
-import { lireParrainageGarde, rattacher, type MonParrainage } from '@/lib/parrainage'
+import { estCodeParrainage, lireParrainageGarde, normaliserCode, rattacher, type MonParrainage } from '@/lib/parrainage'
 
 const date = (valeur: string) => new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(valeur))
 const pourcentage = (bps: number) => `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(bps / 100)} %`
@@ -69,7 +69,7 @@ export function CarteParrainage() {
       <div>
         <h2 id="parrainage-titre" className="text-h4 font-semibold text-ink">Parrainez vos proches</h2>
         <p className="mt-1 text-small text-ink-2">
-          Chaque commande livrée de vos filleuls vous rapporte <strong className="text-ink">{pourcentage(parrainage.commissionBps)}</strong> de son montant en KATI, pendant {parrainage.dureeMois} mois. Eux gagnent leurs KATI comme tout client.
+          Chaque commande livrée de vos filleuls vous rapporte <strong className="text-ink">{pourcentage(parrainage.commissionBps)}</strong> de son montant en KATI, pendant {parrainage.dureeMois} mois. Ils gagnent leurs KATI comme tout client.
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
@@ -91,9 +91,9 @@ export function CarteParrainage() {
       ) : parrainage.peutEtreParraine ? (
         <form onSubmit={(event) => void valider(event)} className="grid gap-2 border-t border-rule pt-4">
           <label className="text-small font-semibold text-ink">Quelqu’un vous a invité ? Son code de parrainage
-            <input value={saisie} onChange={(event) => setSaisie(event.currentTarget.value)} maxLength={40} placeholder="KATI-AMINA-7Q2K" className="mt-1 w-full rounded-control border border-rule bg-surface p-3 text-small font-normal uppercase" />
+            <input value={saisie} onChange={(event) => setSaisie(normaliserCode(event.currentTarget.value))} minLength={8} maxLength={8} pattern="[A-Z]{2}[0-9]{6}" placeholder="AM482731" autoComplete="off" className="mt-1 w-full rounded-control border border-rule bg-surface p-3 text-small font-normal uppercase" />
           </label>
-          <button type="submit" disabled={envoi || saisie.trim().length < 4} className="press min-h-11 justify-self-start rounded-control border border-ink px-4 text-small font-semibold disabled:opacity-50">{envoi ? 'Enregistrement…' : 'Valider le code'}</button>
+          <button type="submit" disabled={envoi || !estCodeParrainage(saisie)} className="press min-h-11 justify-self-start rounded-control border border-ink px-4 text-small font-semibold disabled:opacity-50">{envoi ? 'Enregistrement…' : 'Valider le code'}</button>
           <p className="text-micro text-ink-3">Un seul parrain, à choisir avant votre première commande livrée.</p>
         </form>
       ) : null}

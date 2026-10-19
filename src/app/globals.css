@@ -351,8 +351,8 @@
   --spacing-band: var(--s-band);
   --spacing-stack: var(--s-stack);
 
-  --font-sans: var(--font-manrope), system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "SFMono-Regular", Consolas, ui-monospace, monospace;
 
   --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -420,7 +420,7 @@ body {
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-synthesis-weight: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -499,7 +499,7 @@ body {
    reference — is set in mono with tabular figures, so a column of prices from
    1 000 to 11 800 000 FCFA stays readable as a column. */
 .t-num {
-  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 

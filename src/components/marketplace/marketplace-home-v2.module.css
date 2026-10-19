@@ -108,6 +108,28 @@
 @media(max-width:560px){.rayonsGrille{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
 @media(prefers-reduced-motion:reduce){.rayonsCarte{animation:none}.rayonsCarte .productCard,.rayonsCarte .productVisual>span,.rayonsCarte .productBuy>a,.rayonsCarte .productVisual:after{transition:none}.rayonsCarte .productCard:hover,.rayonsCarte .productCard:hover .productVisual>span,.rayonsCarte .productCard:hover .productBuy>a{transform:none}}
 
+/* Un rayon éditorial compact : onglets de catégories, puis une rangée réellement défilable. */
+.categoryShowcase{margin-top:44px;border:1px solid #dce4ef;border-radius:16px;background:linear-gradient(140deg,#f7faff 0%,#fff 58%,#fff8f0 100%);padding:24px 28px 22px;box-shadow:0 16px 42px #071d4c0d}
+.categoryShowcaseHead{display:flex;align-items:end;justify-content:space-between;gap:24px}
+.categoryShowcaseHead>div>span{color:#d55b00;font-size:.58rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.categoryShowcaseHead h2{margin:4px 0 0;font-size:clamp(1.25rem,2vw,1.75rem);letter-spacing:-.035em}
+.categoryShowcaseHead p{margin:7px 0 0;color:var(--muted);font-size:.7rem}
+.categoryShowcaseHead>a,.categoryShowcaseMeta>a{display:flex;flex:none;gap:10px;color:#17365f;font-size:.67rem;font-weight:750}
+.categoryShowcaseTabs{display:flex;gap:8px;margin:20px 0 16px;overflow-x:auto;padding:2px 2px 7px;scrollbar-width:none}
+.categoryShowcaseTabs::-webkit-scrollbar{display:none}
+.categoryShowcaseTabs button{display:flex;min-height:40px;flex:none;align-items:center;gap:8px;border:1px solid #d8e2ef;border-radius:999px;background:#fff;padding:8px 14px;color:#536781;font:inherit;font-size:.68rem;cursor:pointer;transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease}
+.categoryShowcaseTabs button:hover{border-color:#ffc58f;color:#8f3e00;transform:translateY(-1px)}
+.categoryShowcaseTabs button[aria-selected=true]{border-color:#ffb46d;background:#fff1e3;color:#a24400;font-weight:800;box-shadow:0 5px 16px #ff790017}
+.categoryShowcaseTabs button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.categoryShowcaseTabs button span{font-size:1rem}
+.categoryShowcasePanel{animation:categoryPanelIn .36s cubic-bezier(.2,.7,.2,1) both}
+.categoryShowcaseMeta{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.categoryShowcaseMeta strong{font-size:.75rem}
+@keyframes categoryPanelIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:850px){.categoryShowcase{width:min(100% - 28px,1480px);padding:20px}.categoryShowcaseHead{align-items:start}.categoryShowcaseHead p{max-width:52ch}.categoryShowcaseHead>a{display:none}}
+@media(max-width:560px){.categoryShowcase{width:min(100% - 22px,1480px);margin-top:28px;border-radius:12px;padding:18px 14px}.categoryShowcaseHead p{font-size:.64rem;line-height:1.5}.categoryShowcaseTabs{margin-top:15px}.categoryShowcaseMeta strong{font-size:.7rem}.categoryShowcaseMeta>a{font-size:.58rem}}
+@media(prefers-reduced-motion:reduce){.categoryShowcasePanel{animation:none}.categoryShowcaseTabs button{transition:none}}
+
 /* Répertoire signature : une présence éditoriale calme, sans concurrencer les produits. */
 .shopCarousel{--shop-gap:10px}
 .shopTrack{display:flex;gap:var(--shop-gap)}
