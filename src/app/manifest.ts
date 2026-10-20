@@ -1,7 +1,5 @@
 import type { MetadataRoute } from 'next'
 
-import { SITE } from '@/constants/site'
-
 /**
  * LE MANIFESTE, POUR QUE LE SITE S'INSTALLE COMME UNE APPLICATION.
  *
@@ -22,11 +20,9 @@ import { SITE } from '@/constants/site'
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${SITE.name} — matériel informatique, réseau, sécurité et énergie`,
-    short_name: SITE.name,
-    description:
-      'Plus de 4 000 références en stock à Douala et Yaoundé : informatique, réseau, ' +
-      'vidéosurveillance, énergie. Retrait le jour même.',
+    name: 'KatiMarket — achetez, vendez et gagnez des KATI',
+    short_name: 'KatiMarket',
+    description: 'La marketplace camerounaise pour acheter et vendre auprès de boutiques locales.',
     start_url: '/',
     /* La portée couvre tout le site : une commande ouverte depuis l'icône doit
        rester dans l'application, y compris la page de paiement. */
@@ -41,11 +37,11 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#ffffff',
     /* Le vert de la marque, qui teinte la barre système. Il reste le vert ici
        même si l'orange a pris les boutons : cette couleur-là dit l'identité. */
-    theme_color: '#0b5d1e',
+    theme_color: '#061f4f',
     icons: [
-      { src: '/icones/nowtech-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icones/nowtech-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icones/nowtech-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/brand/katimarket-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/brand/katimarket-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/brand/katimarket-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     shortcuts: [
       { name: 'Catalogue', url: '/catalogue' },

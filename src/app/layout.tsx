@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import localFont from 'next/font/local'
 
 import './globals.css'
 import { KatiFooter } from '@/components/marketplace/KatiFooter'
@@ -14,6 +15,9 @@ import { SessionProvider } from '@/lib/session'
 import { KatiAssistantLazy } from '@/components/assistant/KatiAssistantLazy'
 import { EmailVerificationBanner } from '@/components/account/EmailVerificationBanner'
 import { LanguageProvider } from '@/lib/language'
+
+const inter = localFont({ src: './fonts/inter-latin.woff2', weight: '100 900', variable: '--font-inter', display: 'swap' })
+const roboto = localFont({ src: './fonts/roboto-latin.woff2', weight: '100 900', variable: '--font-roboto', display: 'swap' })
 
 export const metadata: Metadata = {
   title: {
@@ -49,7 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
      memoire de `cache` fait que l'en-tete et le pied de page relisent les memes
      reponses sans second appel. */
   return (
-    <html lang="fr">
+    <html lang="fr" className={`${inter.variable} ${roboto.variable}`}>
       {/* `data-habillage` dit si le menu des rayons a pu etre lu. Le travailleur
           de service le lit avant de garder /hors-ligne : une copie sans rayons,
           prise pendant une panne, resterait sur le telephone du client. */}

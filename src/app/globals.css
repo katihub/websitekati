@@ -351,8 +351,9 @@
   --spacing-band: var(--s-band);
   --spacing-stack: var(--s-stack);
 
-  --font-sans: "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Cascadia Mono", "SFMono-Regular", Consolas, ui-monospace, monospace;
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-inter);
+  --font-title: var(--font-roboto);
 
   --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -424,6 +425,15 @@ body {
   font-synthesis-weight: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-title);
 }
 
 ::selection {
