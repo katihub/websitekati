@@ -30,9 +30,19 @@
 .engagements a:hover{text-decoration:underline}
 .moyens{display:flex;gap:5px}
 .moyens small{border:1px solid var(--line);border-radius:5px;padding:3px 6px;color:#0a2b60;font-size:.55rem;font-weight:800}
-/* Sous 1200 px, la colonne passe sous l'ouverture au lieu de disparaitre : la publicite reste vue sur telephone. */
-@media(max-width:1200px){.promoRail{display:grid;grid-column:1/-1;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto}.pubAccueil{min-height:240px}}
-@media(max-width:560px){.promoRail{grid-template-columns:1fr}.pubAccueil{min-height:0;aspect-ratio:4/3}}
+/* Ouverture de l'accueil : grand carrousel, colonne vendeur/engagements et
+   deux campagnes en dessous, comme le modele KatiHub. */
+.commerceGrid{grid-template-columns:minmax(0,1fr) 310px;align-items:stretch}
+.centerStage{display:grid;min-width:0;grid-template-rows:minmax(0,1fr) auto}
+.centerStage>.hero{min-height:clamp(390px,29vw,444px)}
+.centerStage>.hero .heroCopy{justify-content:flex-start;padding-top:37px}
+.centerStage>.hero .heroCopy h1{max-width:500px;font-size:clamp(2.35rem,3.2vw,3.25rem)}
+.promoRail{grid-template-columns:1fr;grid-template-rows:313px auto;gap:12px}
+.engagements{align-content:start}
+@media(max-width:1200px){.commerceGrid{grid-template-columns:minmax(0,1fr) 285px}.promoRail{grid-column:auto;grid-template-columns:1fr;grid-template-rows:280px auto}.centerStage>.hero{min-height:390px}.pubAccueil{min-height:0}}
+@media(max-width:1050px){.commerceGrid{display:grid;grid-template-columns:minmax(0,1fr) 280px}.promoRail{grid-column:auto;grid-template-columns:1fr;grid-template-rows:260px auto}.page{padding-top:12px}.commerceGrid+.section{margin-top:24px}}
+@media(max-width:850px){.commerceGrid{grid-template-columns:1fr}.promoRail{grid-column:auto;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto}.pubAccueil{min-height:240px}.centerStage>.hero{min-height:380px}}
+@media(max-width:560px){.commerceGrid{width:100%}.promoRail{grid-template-columns:1fr}.pubAccueil{min-height:0;aspect-ratio:4/3}.centerStage>.hero{min-height:420px}}
 @media(prefers-reduced-motion:reduce){.pubAccueil img{transition:none}}
 
 /* MENU DES CATEGORIES : le panneau reste rendu côté serveur et devient visible
@@ -177,3 +187,8 @@
 .productSpecs{display:flex;min-height:20px;flex-wrap:wrap;gap:4px;margin:0 0 8px;padding:0;list-style:none}
 .productSpecs li{max-width:100%;overflow:hidden;border-radius:4px;background:#f0f3f6;padding:3px 6px;color:#516178;font-size:.49rem;font-weight:650;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
 .productCard h3{display:-webkit-box;min-height:4.2em;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+
+/* Sur petit écran, on garde le même ordre visuel en une seule colonne. */
+@media(max-width:1050px){.commerceGrid{display:grid;grid-template-columns:minmax(0,1fr) 280px}.promoRail{grid-column:auto;grid-template-columns:1fr;grid-template-rows:260px auto}.page{padding-top:12px}.commerceGrid+.section{margin-top:24px}}
+@media(max-width:850px){.commerceGrid{grid-template-columns:1fr}.promoRail{grid-column:auto;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto}.pubAccueil{min-height:240px}.centerStage>.hero{min-height:380px}}
+@media(max-width:560px){.commerceGrid{width:100%}.promoRail{grid-template-columns:1fr}.pubAccueil{min-height:0;aspect-ratio:4/3}.centerStage>.hero{min-height:420px}}

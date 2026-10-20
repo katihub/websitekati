@@ -11,49 +11,50 @@ import styles from './marketplace-promos.module.css'
  * LE CARROUSEL DES PROMOTIONS, SOUS LA GRANDE BANNIERE DE L'ACCUEIL.
  *
  * Les images sont les bannieres de l'emplacement « promo », publiees par le
- * super admin dans le panel (Contenu > Bannieres), dans leur ordre. Deux par
- * vue sur grand ecran, une sur telephone ; defilement automatique, suspendu au
- * survol, au focus et au toucher, et absent quand le visiteur demande moins
- * d'animations.
+ * super admin dans le panel (Contenu > Bannieres), dans leur ordre. Quatre
+ * blocs par vue (grille 2 x 2) ; defilement automatique, suspendu au survol,
+ * au focus et au toucher, et absent si le visiteur reduit les animations.
  */
 
 const INTERVALLE_MS = 5000
+const PAR_VUE = 4
+
+function grouperPromos(promos: PublishedBanner[]) {
+  const nombreVues = Math.ceil(promos.length / PAR_VUE)
+  return Array.from({ length: nombreVues }, (_, index) =>
+    Array.from({ length: PAR_VUE }, (_vide, rang) => promos[(index * PAR_VUE + rang) % promos.length]!),
+  )
+}
 
 export function PromosCarrousel({ promos, afficherLibelles = false }: { promos: PublishedBanner[]; afficherLibelles?: boolean }) {
   const piste = useRef<HTMLDivElement>(null)
   const [page, setPage] = useState(0)
-  const [pages, setPages] = useState(Math.ceil(promos.length / 2))
+  const groupes = grouperPromos(promos)
+  const pages = groupes.length
   const [suspendu, setSuspendu] = useState(false)
   const [mouvementReduit, setMouvementReduit] = useState(false)
 
-  const parVue = useCallback(() => {
-    const element = piste.current
-    const carte = element?.firstElementChild as HTMLElement | null
-    return element && carte ? Math.max(1, Math.round(element.clientWidth / carte.offsetWidth)) : 2
-  }, [])
-
   const allerA = useCallback((cible: number) => {
     const element = piste.current
-    const carte = element?.children[Math.min(cible * parVue(), promos.length - 1)] as HTMLElement | undefined
-    if (!element || !carte) return
-    element.scrollTo({ left: carte.offsetLeft - element.offsetLeft, behavior: mouvementReduit ? 'auto' : 'smooth' })
-  }, [parVue, promos.length, mouvementReduit])
+    const vue = element?.children[cible] as HTMLElement | undefined
+    if (!element || !vue) return
+    element.scrollTo({ left: vue.offsetLeft - element.offsetLeft, behavior: mouvementReduit ? 'auto' : 'smooth' })
+  }, [mouvementReduit])
 
   useEffect(() => {
     const element = piste.current
     if (!element) return
-    const mesurer = () => setPages(Math.ceil(promos.length / parVue()))
     const suivre = () => {
-      const carte = element.firstElementChild as HTMLElement | null
-      if (!carte) return
-      const pas = carte.offsetWidth + parseFloat(getComputedStyle(element).columnGap || '0')
-      setPage(Math.round(element.scrollLeft / (pas * parVue())))
+      const vue = element.firstElementChild as HTMLElement | null
+      if (!vue) return
+      const pas = vue.offsetWidth + parseFloat(getComputedStyle(element).columnGap || '0')
+      setPage(Math.round(element.scrollLeft / pas))
     }
-    const observateur = new ResizeObserver(mesurer)
+    const observateur = new ResizeObserver(suivre)
     observateur.observe(element)
     element.addEventListener('scroll', suivre, { passive: true })
     return () => { observateur.disconnect(); element.removeEventListener('scroll', suivre) }
-  }, [parVue, promos.length])
+  }, [promos.length])
 
   useEffect(() => {
     const requete = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -73,16 +74,21 @@ export function PromosCarrousel({ promos, afficherLibelles = false }: { promos: 
     <div
       ref={piste}
       className={styles.piste}
+      data-testid="promos-track"
       onMouseEnter={() => setSuspendu(true)}
       onMouseLeave={() => setSuspendu(false)}
       onFocus={() => setSuspendu(true)}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setSuspendu(false) }}
       onTouchStart={() => setSuspendu(true)}
+      onTouchEnd={() => setSuspendu(false)}
+      onTouchCancel={() => setSuspendu(false)}
     >
-      {promos.map((promo, index) => <Link key={promo.id} href={promo.href} className={styles.promo} aria-label={promo.label} role="group" aria-roledescription="diapositive">
-        <Image src={promo.large.url} alt={promo.alt} fill sizes="(max-width: 850px) 100vw, 30vw" priority={index < 2} style={{ objectPosition: `center ${promo.focus}%` }} />
-        {afficherLibelles ? <span className={styles.promoCopy}><b>{promo.label}</b><small>Découvrir <span aria-hidden="true">→</span></small></span> : null}
-      </Link>)}
+      {groupes.map((groupe, index) => <div key={index} className={styles.vue} role="group" aria-roledescription="diapositive" aria-label={`Sélection ${index + 1} sur ${pages}`} data-testid="promo-page">
+        {groupe.map((promo, rang) => <Link key={`${index}-${rang}-${promo.id}`} href={promo.href} className={styles.promo} aria-label={promo.label}>
+          <Image src={promo.large.url} alt={promo.alt} fill sizes="(max-width: 850px) 48vw, 24vw" priority={index === 0} style={{ objectPosition: `center ${promo.focus}%` }} />
+          {afficherLibelles ? <span className={styles.promoCopy}><b>{promo.label}</b><small>Découvrir <span aria-hidden="true">→</span></small></span> : null}
+        </Link>)}
+      </div>)}
     </div>
     {pages > 1 ? <div className={styles.controles}>
       <button type="button" className={styles.fleche} aria-label="Promotions précédentes" onClick={() => allerA((page - 1 + pages) % pages)}>‹</button>

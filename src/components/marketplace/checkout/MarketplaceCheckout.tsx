@@ -48,7 +48,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   const localites = useLocalites()
   const carnet = useCarnetAdresses(Boolean(session))
   const { tarifs, erreur: tarifsErreur, recharger: rechargerTarifs } = useTarifsLivraison()
-  const [address, setAddress] = useState({ ville: '', quartier: '', repere: '', telephoneDestinataire: '' })
+  const [address, setAddress] = useState({ ville: '', quartier: '', quartierId: '', repere: '', telephoneDestinataire: '' })
   const [adresseChoisie, setAdresseChoisie] = useState<string>('')
   const [garderAdresse, setGarderAdresse] = useState(true)
   const [contact, setContact] = useState({ nom: '', telephone: '', courriel: '' })
@@ -73,17 +73,22 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
     : address
   const ville = adresse.ville || villes[0] || ''
   const quartiers = quartiersDe(localites, ville)
-  const quartierLibre = !quartiers.length || (adresse.quartier !== '' && !quartiers.includes(adresse.quartier))
+  const quartierSelectionne = quartiers.find(quartier => quartier.id === address.quartierId
+    || quartier.nom.toLocaleLowerCase('fr') === adresse.quartier.trim().toLocaleLowerCase('fr'))
+  const quartierId = quartierSelectionne?.id ?? ''
+  const quartierLibre = !quartiers.length || (adresse.quartier !== '' && !quartierSelectionne)
 
   const limitsExceeded = lines.length > 50 || groups.length > 20
   const groupTotal = (group: DeliveryGroup) => group.lines.reduce((sum, item) => sum + (item.offer?.prixFcfa ?? item.line.price) * item.line.qty, 0)
   /** Les frais de la boutique dans ce mode ; `null` s'il n'est pas proposable ici, avec la raison. */
   function feeFor(group: DeliveryGroup, mode: DeliveryMode): { fee: number | null; raison: string } {
     if (mode === 'retrait') return group.adresseRetrait ? { fee: 0, raison: '' } : { fee: null, raison: 'adresse de retrait à venir' }
+    if (mode === 'agence') return { fee: 0, raison: '' }
     if (livraisonADomicile(mode) && !livrableDans(group, ville)) return { fee: null, raison: `non proposée à ${ville}` }
+    if (livraisonADomicile(mode) && !quartierId) return { fee: null, raison: 'choisissez un quartier avec un tarif' }
     if (!tarifs) return { fee: null, raison: '…' }
-    const fee = fraisBoutique(tarifs, ville, mode, groupTotal(group))
-    return { fee, raison: fee === null ? `non proposée à ${ville}` : '' }
+    const fee = fraisBoutique(tarifs, quartierId, mode, groupTotal(group))
+    return { fee, raison: fee === null ? `non proposée dans ${adresse.quartier || 'ce quartier'}` : '' }
   }
   // Le mode retenu : celui choisi s'il est proposable, sinon le premier qui l'est.
   function deliveryMode(group: DeliveryGroup) {
@@ -91,9 +96,11 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
     return offerts.includes(modes[group.id]) ? modes[group.id] : offerts[0] ?? group.modes[0]
   }
   const groupFees = groups.map(group => feeFor(group, deliveryMode(group)).fee)
-  const fees = tarifs && groupFees.every(fee => fee !== null) ? groupFees.reduce<number>((sum, fee) => sum + (fee ?? 0), 0) : null
   const aDomicile = groups.some(group => livraisonADomicile(deliveryMode(group)))
+  const quartierNecessaire = aDomicile || quartiers.length > 0
   const enAgence = groups.some(group => deliveryMode(group) === 'agence')
+  const fraisAgence = enAgence ? Math.ceil(total / 10) : 0
+  const fees = groupFees.every(fee => fee !== null) ? groupFees.reduce<number>((sum, fee) => sum + (fee ?? 0), fraisAgence) : null
   const blocked = loading || Boolean(serviceError) || !lines.length || checked.some(item => item.issue) || groups.some(group => !group.modes.length) || !Number.isSafeInteger(total) || limitsExceeded || fees === null
 
   // Les choix de reglement : l'assurance est cochee par defaut ; l'agence impose le paiement complet.
@@ -149,7 +156,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
       }),
       adresse: {
         ville,
-        ...(aDomicile ? { quartier: adresse.quartier.trim(), repere: adresse.repere.trim() } : {}),
+        ...(aDomicile ? { quartier: adresse.quartier.trim(), quartierId, repere: adresse.repere.trim() } : {}),
         telephoneDestinataire,
       },
       totalAttenduFcfa: total,
@@ -214,17 +221,20 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
 
       <section className={styles.panel} aria-label="Adresse">
         <h2><ShopIcon name="pin"/>{aDomicile ? 'Adresse de livraison' : 'Ville et destinataire'}</h2>
-        <p>{aDomicile ? 'Le quartier et le repère aident le livreur à vous trouver.' : 'Le retrait et l’expédition en agence n’ont pas besoin d’adresse : seulement la ville et un numéro à joindre.'}</p>
+        <p>{quartierNecessaire ? 'Choisissez votre quartier pour afficher les frais de livraison; le repère sera demandé si vous choisissez une livraison à domicile.' : 'Le retrait et l’expédition en agence n’ont pas besoin d’adresse : seulement la ville et un numéro à joindre.'}</p>
         {carnet.length ? <label className={styles.carnet}>Mes adresses<select value={enregistree?.id ?? NOUVELLE} disabled={pending} onChange={event => setAdresseChoisie(event.target.value)}>
           {carnet.map(a => <option key={a.id} value={a.id}>{libelleAdresse(a)}</option>)}
           <option value={NOUVELLE}>Une nouvelle adresse…</option>
         </select></label> : null}
         <div className={styles.fields}>
-          <label>Ville<select required value={ville} disabled={Boolean(enregistree) || pending} onChange={event => setAddress({ ...address, ville: event.target.value, quartier: '' })}>{villes.length ? villes.map(value => <option key={value}>{value}</option>) : <option value="">Chargement des villes…</option>}{enregistree && !villes.includes(enregistree.ville) ? <option>{enregistree.ville}</option> : null}</select></label>
-          {aDomicile ? <>
-            {quartiers.length && !enregistree ? <label>Quartier<select value={quartierLibre ? AUTRE : adresse.quartier} disabled={pending} onChange={event => setAddress({ ...address, quartier: event.target.value === AUTRE ? ' ' : event.target.value })}><option value="" disabled>Choisissez…</option>{quartiers.map(q => <option key={q}>{q}</option>)}<option value={AUTRE}>Autre quartier…</option></select></label> : null}
-            {quartierLibre || enregistree ? <label>{quartiers.length && !enregistree ? 'Autre quartier' : 'Quartier'}<input required minLength={2} maxLength={80} value={adresse.quartier.trimStart()} readOnly={Boolean(enregistree)} autoComplete="address-level3" placeholder="Ex. Akwa, Bonamoussadi…" onChange={event => setAddress({ ...address, quartier: event.target.value })}/></label> : null}
-            <label>Repère<input required minLength={3} maxLength={240} value={adresse.repere} readOnly={Boolean(enregistree)} placeholder="Ex. face à la pharmacie…" onChange={event => setAddress({ ...address, repere: event.target.value })}/></label>
+          <label>Ville<select required value={ville} disabled={Boolean(enregistree) || pending} onChange={event => setAddress({ ...address, ville: event.target.value, quartier: '', quartierId: '' })}>{villes.length ? villes.map(value => <option key={value}>{value}</option>) : <option value="">Chargement des villes…</option>}{enregistree && !villes.includes(enregistree.ville) ? <option>{enregistree.ville}</option> : null}</select></label>
+          {quartierNecessaire ? <>
+            {quartiers.length && !enregistree ? <label>Quartier<select value={quartierLibre ? AUTRE : quartierSelectionne?.id ?? ''} disabled={pending} onChange={event => {
+              const selection = quartiers.find(quartier => quartier.id === event.target.value)
+              setAddress({ ...address, quartier: selection?.nom ?? (event.target.value === AUTRE ? ' ' : ''), quartierId: selection?.id ?? '' })
+            }}><option value="" disabled>Choisissez…</option>{quartiers.map(q => <option key={q.id} value={q.id}>{q.nom}</option>)}<option value={AUTRE}>Autre quartier…</option></select></label> : null}
+            {quartierLibre || enregistree ? <label>{quartiers.length && !enregistree ? 'Autre quartier' : 'Quartier'}<input required minLength={2} maxLength={80} value={adresse.quartier.trimStart()} readOnly={Boolean(enregistree)} autoComplete="address-level3" placeholder="Ex. Akwa, Bonamoussadi…" onChange={event => setAddress({ ...address, quartier: event.target.value, quartierId: '' })}/></label> : null}
+            {aDomicile ? <label>Repère<input required minLength={3} maxLength={240} value={adresse.repere} readOnly={Boolean(enregistree)} placeholder="Ex. face à la pharmacie…" onChange={event => setAddress({ ...address, repere: event.target.value })}/></label> : null}
           </> : null}
           <label>Téléphone du destinataire<input type="tel" autoComplete="tel" maxLength={20} value={adresse.telephoneDestinataire} placeholder={session ? '6 77 12 34 56' : 'Votre mobile, par défaut'} onChange={event => setAddress({ ...address, telephoneDestinataire: event.target.value })}/></label>
         </div>
@@ -239,7 +249,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
           <fieldset><legend>Mode de livraison</legend>{group.modes.length ? group.modes.map(mode => {
             const { fee, raison } = feeFor(group, mode)
             return <label key={mode} data-unavailable={fee === null}><input type="radio" name={`delivery-${group.id}`} disabled={fee === null || pending} checked={deliveryMode(group) === mode} onChange={() => setModes({ ...modes, [group.id]: mode })}/><span>{LIBELLE_MODE[mode]} · <b data-testid={`frais-${group.id}-${mode}`}>{fee === null ? raison : fee ? money(fee) : mode === 'retrait' ? 'gratuit' : 'offerte'}</b>
-              <small>{mode === 'retrait' && group.adresseRetrait ? `À retirer : ${group.adresseRetrait}${group.ville ? `, ${group.ville}` : ''}.` : livraisonADomicile(mode) ? `Livraison sous ${Math.max(...group.lines.map(item => delaiLivraisonMarketplace(item.offer?.delaiMaxJours)))} jours maximum.` : DESCRIPTION_MODE[mode]}</small></span></label>
+              <small>{mode === 'agence' ? 'Frais uniques affichés au récapitulatif : 10 % du total produits. Paiement complet à la commande.' : mode === 'retrait' && group.adresseRetrait ? `À retirer : ${group.adresseRetrait}${group.ville ? `, ${group.ville}` : ''}.` : livraisonADomicile(mode) ? `Livraison sous ${Math.max(...group.lines.map(item => delaiLivraisonMarketplace(item.offer?.delaiMaxJours)))} jours maximum.` : DESCRIPTION_MODE[mode]}</small></span></label>
           }) : <p className={styles.warning}>Aucun mode commun pour ces articles.</p>}
           {deliveryMode(group) === 'agence' ? <label className={styles.noteAgence}>Agence de voyage choisie<textarea required minLength={3} maxLength={500} rows={2} value={notesAgence[group.id] ?? ''} placeholder="Ex. Général Express, gare routière de Bafoussam" data-testid={`note-agence-${group.id}`} onChange={event => setNotesAgence({ ...notesAgence, [group.id]: event.target.value })}/></label> : null}
           {tarifs && group.modes.length && group.modes.every(mode => feeFor(group, mode).fee === null) ? <p className={styles.warning}>Cette boutique ne livre pas encore à {ville}.</p> : null}</fieldset>
@@ -258,7 +268,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
       {tarifsErreur ? <p role="alert" className={styles.warning}>{tarifsErreur}<button type="button" onClick={() => void rechargerTarifs()}>Réessayer</button></p> : null}
       <TrustStrip/><Link className={styles.continueShopping} href="/panier">Retour au panier</Link>
     </div>
-    <Summary total={total} count={count} compactLines={compact} fees={fees} reglement={reglement}>
+    <Summary total={total} count={count} compactLines={compact} fees={fees} reglement={reglement} completImpose={enAgence}>
       {error ? <p role="alert" className={styles.warning}>{error}</p> : null}
       <button className={styles.primary} disabled={pending || chargement || blocked}>{pending ? 'Enregistrement…' : reglement.aPayerMaintenantFcfa ? `Commander et payer ${money(reglement.aPayerMaintenantFcfa)}` : 'Confirmer ma commande'}<ShopIcon name="arrow"/></button>
       <p className={styles.note}><ShopIcon name="info"/>Les prix et le stock sont revérifiés par le serveur à la validation.</p>

@@ -5,12 +5,14 @@ import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplac
 import { MarketplaceAvantages } from './MarketplaceAvantages'
 import { DerniersArrivages } from './DerniersArrivages'
 import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
+import { PromosCarrousel } from './PromosCarrousel'
 import { MarquesAccueil } from './MarquesAccueil'
 import { ProductCard } from './ProductCardAccueil'
 import { ProductCarouselAccueil } from './ProductCarouselAccueil'
 import { CategoryProductShowcase, type CategoryProductGroup } from './CategoryProductShowcase'
 import { ShopCarouselAccueil } from './ShopCarouselAccueil'
 import { NewsletterKatihub, VendreSurKatihub } from './VendreSurKatihub'
+import { PubAccueil } from './PubAccueil'
 import { RayonsAccueil, type RayonAccueil } from './RayonsAccueil'
 import styles from './marketplace-home-v2.module.css'
 
@@ -95,6 +97,7 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
     mobile: { url: '/marketplace-vendeur-cameroun.png', largeur: 2048, hauteur: 1024 },
   },
 ]
+const ORDRE_PROMOS_ACCUEIL = ['katihub-mode', 'katihub-selection', 'katihub-high-tech', 'katihub-bienvenue', 'katihub-vendeurs', 'katihub-livraison'] as const
 function SectionHead({ title, href, label = 'Voir tout' }: { title: string; href: string; label?: string }) {
   return <header className={styles.sectionHead}><h2>{title}</h2><Link href={href}>{label}<span>→</span></Link></header>
 }
@@ -122,9 +125,28 @@ export async function MarketplaceHome() {
   // Les promotions du panel restent prioritaires. Tant qu'aucune n'est
   // publiée, cette sélection KatiHub évite de recréer un grand vide sous les
   // engagements sans réintroduire les anciennes créations hors charte.
-  const promosAccueil = bannieres.promos.length ? bannieres.promos : PROMOS_KATIHUB
+  const promosAccueil = [
+    ...bannieres.promos,
+    ...ORDRE_PROMOS_ACCUEIL
+      .map((id) => PROMOS_KATIHUB.find((promo) => promo.id === id))
+      .filter((promo): promo is PublishedBanner => promo !== undefined)
+      .filter((promo) => !bannieres.promos.some((publiee) => String(publiee.id) === String(promo.id))),
+  ]
   return <div className={styles.page}>
-    <MarketplaceHeroCarousel promos={promosAccueil} />
+    <div className={`${styles.shell} ${styles.commerceGrid}`}>
+      <div className={styles.centerStage}>
+        <MarketplaceHeroCarousel />
+        <PromosCarrousel promos={promosAccueil} afficherLibelles={!bannieres.promos.length} />
+      </div>
+      <aside className={styles.promoRail} aria-label="Publicité et engagements KatiHub">
+        <PubAccueil pub={bannieres.pubsAccueil[0] ?? null} />
+        <section className={styles.engagements} aria-label="Nos engagements">
+          <article><i aria-hidden="true">🛵</i><div><b>Livraison rapide <em>à domicile</em></b><p>Recevez vos commandes où que vous soyez.</p><Link href="/contact">En savoir plus →</Link></div></article>
+          <article><i aria-hidden="true">🔒</i><div><b>Paiement sécurisé</b><p>Mobile Money et partenaires de confiance.</p><span className={styles.moyens}><small>OM</small><small>MoMo</small><small>VISA</small></span></div></article>
+          <article><i aria-hidden="true">🎧</i><div><b>Service client 24/7</b><p>Une équipe locale vous répond.</p><Link href="/contact">Nous contacter →</Link></div></article>
+        </section>
+      </aside>
+    </div>
 
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Meilleures ventes" href="/catalogue" />{best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}>Les offres seront bientôt disponibles.</p>}</section>
     <MarketplaceAvantages />

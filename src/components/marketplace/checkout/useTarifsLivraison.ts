@@ -13,13 +13,13 @@ import type { DeliveryMode } from '@/lib/modes-livraison'
  * refuse (409) plutot que facture sans que le client l'ait vu.
  */
 
-export interface TarifLivraison { ville: string; mode: DeliveryMode; montantFcfa: number; gratuitDesFcfa: number | null }
+export interface TarifLivraison { quartierId: string; quartier: string; ville: string; mode: DeliveryMode; montantFcfa: number; gratuitDesFcfa: number | null }
 
 /** Les frais d'une boutique ; `null` quand ce mode n'est pas propose dans cette ville. Meme regle que le serveur : le retrait est gratuit. */
-export function fraisBoutique(tarifs: readonly TarifLivraison[], ville: string, mode: DeliveryMode, totalProduitsFcfa: number): number | null {
+export function fraisBoutique(tarifs: readonly TarifLivraison[], quartierId: string, mode: DeliveryMode, totalProduitsFcfa: number): number | null {
   if (mode === 'retrait') return 0
-  const cle = ville.trim().toLocaleLowerCase('fr')
-  const tarif = tarifs.find((t) => t.mode === mode && t.ville.trim().toLocaleLowerCase('fr') === cle)
+  if (!['katihub', 'vendeur'].includes(mode)) return null
+  const tarif = tarifs.find((t) => t.mode === mode && t.quartierId === quartierId)
   if (!tarif) return null
   return tarif.gratuitDesFcfa !== null && totalProduitsFcfa >= tarif.gratuitDesFcfa ? 0 : tarif.montantFcfa
 }

@@ -39,8 +39,15 @@ function estReponse(valeur: unknown): valeur is Reponse {
 
 /** Les villes et quartiers des listes deroulantes (commande, creation de boutique). */
 export const LOCALITES = [
-  { ville: 'Douala', quartiers: ['Akwa', 'Bonanjo', 'Bonamoussadi'] },
-  { ville: 'Yaoundé', quartiers: ['Bastos', 'Mvan'] },
+  { ville: 'Douala', quartiers: [
+    { id: '00000000-0000-4000-8000-0000000000a1', nom: 'Akwa' },
+    { id: '00000000-0000-4000-8000-0000000000b2', nom: 'Bonanjo' },
+    { id: '00000000-0000-4000-8000-0000000000c3', nom: 'Bonamoussadi' },
+  ] },
+  { ville: 'Yaoundé', quartiers: [
+    { id: '00000000-0000-4000-8000-0000000000d4', nom: 'Bastos' },
+    { id: '00000000-0000-4000-8000-0000000000e5', nom: 'Mvan' },
+  ] },
 ]
 
 /** La politique KATI publique : lue par le panier et la fiche produit sur toutes les pages. */

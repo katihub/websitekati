@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 import { simulerApi, type ApiSimulee } from './support/api'
 
 /**
- * LES FRAIS DE LIVRAISON A LA COMMANDE : par boutique, selon la ville et le
+ * LES FRAIS DE LIVRAISON A LA COMMANDE : par boutique, selon le quartier et le
  * mode, offerts au-dela du seuil, et un mode non tarife dans la ville n'est pas
  * proposable.
  */
@@ -32,9 +32,9 @@ test('la commande affiche les frais de chaque boutique et les ajoute au solde, p
       { nom: 'Écouteurs', slug: 'ecouteurs', offres: [offre(O2, B2, 'Digital', 25_000)] },
     ])
     .quand('GET', /^\/marketplace\/livraison\/tarifs$/, [
-      { ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: 100_000 },
-      { ville: 'Douala', mode: 'vendeur', montantFcfa: 1_500, gratuitDesFcfa: null },
-      { ville: 'Yaoundé', mode: 'katihub', montantFcfa: 3_000, gratuitDesFcfa: null },
+      { quartierId: '00000000-0000-4000-8000-0000000000a1', quartier: 'Akwa', ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: 100_000 },
+      { quartierId: '00000000-0000-4000-8000-0000000000a1', quartier: 'Akwa', ville: 'Douala', mode: 'vendeur', montantFcfa: 1_500, gratuitDesFcfa: null },
+      { quartierId: '00000000-0000-4000-8000-0000000000b2', quartier: 'Bonanjo', ville: 'Douala', mode: 'katihub', montantFcfa: 3_000, gratuitDesFcfa: null },
     ])
   await page.addInitScript(([o1, o2, b1, b2]) => {
     localStorage.setItem('nowtech.panier.v1', JSON.stringify([
@@ -44,6 +44,7 @@ test('la commande affiche les frais de chaque boutique et les ajoute au solde, p
   }, [O1, O2, B1, B2])
 
   await page.goto(`/marketplace/commande?articles=${O1},${O2}`)
+  await page.getByRole('combobox', { name: 'Quartier' }).selectOption('00000000-0000-4000-8000-0000000000a1')
   // Douala : TechMall depasse le seuil (offerte), Digital paie 2 000 en KatiHub.
   await expect(page.getByTestId(`frais-${B1}-katihub`)).toHaveText('offerte')
   await expect(page.getByTestId(`frais-${B2}-katihub`)).toHaveText(/2[\s  ]000 FCFA/)
@@ -54,9 +55,9 @@ test('la commande affiche les frais de chaque boutique et les ajoute au solde, p
   await page.locator(`input[name="delivery-${B2}"]`).nth(1).check()
   await expect(page.getByTestId('frais-livraison')).toHaveText(/1[\s  ]500 FCFA/)
 
-  // Yaoundé : la livraison par la boutique n'y est pas tarifée, le mode KatiHub est retenu.
-  await page.getByRole('combobox', { name: 'Ville' }).selectOption('Yaoundé')
-  await expect(page.getByTestId(`frais-${B2}-vendeur`)).toHaveText('non proposée à Yaoundé')
+  // Bonanjo : tarif KatiHub distinct, sans tarif vendeur configuré.
+  await page.getByRole('combobox', { name: 'Quartier' }).selectOption('00000000-0000-4000-8000-0000000000b2')
+  await expect(page.getByTestId(`frais-${B2}-vendeur`)).toHaveText('non proposée dans Bonanjo')
   await expect(page.locator(`input[name="delivery-${B2}"]`).nth(1)).toBeDisabled()
   await expect(page.getByTestId('frais-livraison')).toHaveText(/6[\s  ]000 FCFA/)
 })

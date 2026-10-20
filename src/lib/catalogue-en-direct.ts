@@ -53,6 +53,7 @@ const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') ?? ''
 const ETIQUETTE_CATALOGUE = 'catalogue'
 const ETIQUETTE_POINTS_VENTE = 'points-vente'
 export const ETIQUETTE_BANNIERES = 'bannieres'
+export const ETIQUETTE_ANNONCES = 'annonces'
 export const etiquetteProduit = (slug: string) => `produit:${slug}`
 
 /**
@@ -67,6 +68,7 @@ export const ETIQUETTES_FIXES = [
   'produit',
   ETIQUETTE_POINTS_VENTE,
   ETIQUETTE_BANNIERES,
+  ETIQUETTE_ANNONCES,
 ] as const
 
 /**

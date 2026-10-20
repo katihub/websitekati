@@ -25,7 +25,7 @@ async function jusquaLaRevue(page: Page) {
     .quand('POST', /^\/marketplace\/panier\/verifier$/, [{ nom: 'Téléphone', slug: 'telephone', offres: [{
       id: O, titre: 'Téléphone', prixFcfa: 149_000, disponible: 10, modesLivraison: ['katihub'], villesLivraison: ['Douala'], delaiMaxJours: 3, boutique: { id: B, nom: 'TechMall', slug: 'techmall' },
     }] }])
-    .quand('GET', /^\/marketplace\/livraison\/tarifs$/, [{ ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: null }])
+    .quand('GET', /^\/marketplace\/livraison\/tarifs$/, [{ quartierId: '00000000-0000-4000-8000-0000000000a1', quartier: 'Akwa', ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: null }])
     .quand('GET', /^\/marketplace\/services-commande\?/, {
       assurance: { active: true, tauxBps: 500 },
       installations: [{ categorieId: CATEGORIE, nom: 'Téléphones', prixFcfa: 7_500 }],
@@ -35,7 +35,7 @@ async function jusquaLaRevue(page: Page) {
   }, [O, B])
   // La commande tient sur une page : le reglement se lit sans etape intermediaire.
   await page.goto(`/marketplace/commande?articles=${O}`)
-  await page.getByLabel('Quartier').selectOption('Akwa')
+  await page.locator('label').filter({ hasText: 'Quartier' }).locator('select').selectOption('00000000-0000-4000-8000-0000000000a1')
   await page.getByLabel('Repère').fill('Face pharmacie')
   await expect(page.getByTestId('reglement-commande')).toBeVisible()
 }

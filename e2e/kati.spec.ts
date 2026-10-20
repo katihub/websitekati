@@ -72,7 +72,7 @@ test('le panier annonce les KATI que la commande rapportera', async ({ page }) =
     .quand('POST', /^\/marketplace\/panier\/verifier$/, [{ nom: 'Téléphone', slug: 'telephone', offres: [{
       id: O, titre: 'Téléphone', prixFcfa: 149_000, disponible: 10, modesLivraison: ['katihub'], villesLivraison: ['Douala'], delaiMaxJours: 3, boutique: { id: B, nom: 'TechMall', slug: 'techmall' },
     }] }])
-    .quand('GET', /^\/marketplace\/livraison\/tarifs$/, [{ ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: null }])
+    .quand('GET', /^\/marketplace\/livraison\/tarifs$/, [{ quartierId: '00000000-0000-4000-8000-0000000000a1', quartier: 'Akwa', ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: null }])
   await page.addInitScript(([o, b]) => {
     localStorage.setItem('nowtech.panier.v1', JSON.stringify([{ slug: 'telephone', name: 'Téléphone', price: 149_000, image: null, qty: 2, offerId: o, boutiqueId: b, boutiqueNom: 'TechMall' }]))
   }, [O, B])

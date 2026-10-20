@@ -36,9 +36,8 @@ async function panier(page: import('@playwright/test').Page) {
       { nom: 'Écouteurs', slug: 'ecouteurs', offres: [offre(O2, B2, 'Digital', 25_000, ['vendeur', 'agence'])] },
     ])
     .quand('GET', /^\/marketplace\/livraison\/tarifs$/, [
-      { ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: null },
-      { ville: 'Douala', mode: 'vendeur', montantFcfa: 1_500, gratuitDesFcfa: null },
-      { ville: 'Douala', mode: 'agence', montantFcfa: 3_000, gratuitDesFcfa: null },
+      { quartierId: '00000000-0000-4000-8000-0000000000a1', quartier: 'Akwa', ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: null },
+      { quartierId: '00000000-0000-4000-8000-0000000000a1', quartier: 'Akwa', ville: 'Douala', mode: 'vendeur', montantFcfa: 1_500, gratuitDesFcfa: null },
     ])
   await page.addInitScript(([o1, o2, b1, b2]) => {
     localStorage.setItem('nowtech.panier.v1', JSON.stringify([
@@ -56,7 +55,7 @@ test('sans compte : retrait gratuit, agence avec sa note et le paiement complet,
     .quand('POST', /^\/marketplace\/commandes\/sans-compte$/, { id: 'c1', reference: 'CM-INV123', jeton: JETON })
     .quand('GET', /^\/marketplace\/commandes\/sans-compte\/CM-INV123$/, (requete: Request) => requete.headers()['x-jeton-suivi'] === JETON
       ? {
-          id: 'c1', reference: 'CM-INV123', statut: 'soumise', totalFermeTtc: 175_000, fraisLivraison: 3_000, acompteDu: 178_000, acompteRecu: 0, resteAPayer: 178_000,
+          id: 'c1', reference: 'CM-INV123', statut: 'soumise', totalFermeTtc: 175_000, fraisLivraison: 17_500, acompteDu: 192_500, acompteRecu: 0, resteAPayer: 192_500,
           modePaiementMarketplace: 'complet', assuranceFcfa: 0, installationFcfa: 0, katiUtilises: 0, remiseKatiFcfa: 0,
           sousCommandes: [
             { reference: 'CM-INV123-1', boutiqueId: B1, boutique: { nom: 'TechMall', slug: 'techmall' }, totalNetProduits: 150_000, modeLivraison: 'retrait', noteAgence: null, lignes: [{ offreTitreCapture: 'Téléphone', quantite: 1, totalNetFcfa: 150_000 }] },
@@ -73,9 +72,9 @@ test('sans compte : retrait gratuit, agence avec sa note et le paiement complet,
   await page.locator(`input[name="delivery-${B1}"]`).nth(1).check()
   await expect(page.getByTestId(`frais-${B1}-retrait`)).toHaveText('gratuit')
   await expect(page.getByText('À retirer : Akwa, rue Joss, face Total, Douala.')).toBeVisible()
-  // Digital en agence : 3 000, et tout se paie maintenant.
+  // Digital en agence : 10 % du total produits, et tout se paie maintenant.
   await page.locator(`input[name="delivery-${B2}"]`).nth(1).check()
-  await expect(page.getByTestId('frais-livraison')).toHaveText(/3[\s  ]000 FCFA/)
+  await expect(page.getByTestId('frais-livraison')).toHaveText(/17[\s  ]500 FCFA/)
   await expect(page.getByTestId('complet-impose')).toBeVisible()
   await expect(page.getByLabel(/Un acompte maintenant/)).toBeDisabled()
   await expect(page.getByTestId('a-payer-livraison')).toHaveText('Rien à régler au livreur.')
@@ -111,10 +110,11 @@ test('sans compte : retrait gratuit, agence avec sa note et le paiement complet,
 
 test('à domicile, le quartier se choisit dans la liste de la ville, ou se saisit librement', async ({ page }) => {
   await panier(page)
-  await expect(page.getByTestId(`frais-${B1}-katihub`)).toHaveText(/2[\s  ]000 FCFA/)
   const quartier = page.getByRole('combobox', { name: 'Quartier' })
+  await quartier.selectOption('00000000-0000-4000-8000-0000000000a1')
+  await expect(page.getByTestId(`frais-${B1}-katihub`)).toHaveText(/2[\s  ]000 FCFA/)
   await expect(quartier.locator('option')).toHaveText(['Choisissez…', 'Akwa', 'Bonanjo', 'Bonamoussadi', 'Autre quartier…'])
-  await quartier.selectOption('Bonanjo')
+  await quartier.selectOption('00000000-0000-4000-8000-0000000000b2')
   await expect(page.getByLabel('Autre quartier', { exact: true })).toHaveCount(0)
   await quartier.selectOption({ label: 'Autre quartier…' })
   await page.getByLabel('Autre quartier', { exact: true }).fill('Ndogpassi')

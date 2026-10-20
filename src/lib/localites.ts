@@ -11,7 +11,8 @@ import { api } from './api'
  * (« Autre quartier »). Sans reseau, les listes sont vides et les champs
  * restent des champs texte.
  */
-export interface Localite { ville: string; quartiers: string[] }
+export interface QuartierLocalite { id: string; nom: string }
+export interface Localite { ville: string; quartiers: QuartierLocalite[] }
 
 export function useLocalites(): Localite[] {
   const [localites, setLocalites] = useState<Localite[]>([])
@@ -26,7 +27,7 @@ export function useLocalites(): Localite[] {
 }
 
 /** Les quartiers proposes pour une ville ; vide si la ville n'a pas de liste. */
-export function quartiersDe(localites: readonly Localite[], ville: string): string[] {
+export function quartiersDe(localites: readonly Localite[], ville: string): QuartierLocalite[] {
   const cle = ville.trim().toLocaleLowerCase('fr')
   return localites.find((l) => l.ville.toLocaleLowerCase('fr') === cle)?.quartiers ?? []
 }
