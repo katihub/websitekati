@@ -10,7 +10,7 @@ import styles from './kati.module.css'
  * valeur en FCFA, les gains a venir et l'historique. Reserve au client connecte.
  */
 export const metadata: Metadata = {
-  title: 'Mes KATI — KatiHub',
+  title: 'Mes KATI — KatiMarket',
   robots: { index: false, follow: false },
 }
 

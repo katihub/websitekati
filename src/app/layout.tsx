@@ -16,8 +16,8 @@ import { EmailVerificationBanner } from '@/components/account/EmailVerificationB
 
 export const metadata: Metadata = {
   title: {
-    default: 'KatiHub — vos boutiques locales au même endroit',
-    template: '%s · KatiHub',
+    default: 'KatiMarket — vos boutiques locales au même endroit',
+    template: '%s · KatiMarket',
   },
   description:
     'La marketplace camerounaise qui réunit des boutiques locales vérifiées, avec paiement sécurisé et livraison à Douala et Yaoundé.',

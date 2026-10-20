@@ -4,7 +4,7 @@ import { connection } from 'next/server'
 import { DetailDevis } from '@/app/compte/devis/[reference]/DetailDevis'
 
 export const metadata: Metadata = {
-  title: 'Mon devis — KatiHub',
+  title: 'Mon devis — KatiMarket',
   robots: { index: false, follow: false },
 }
 

@@ -27,7 +27,7 @@ const demoSellers: Seller[] = [
     rating: '4,8',
     sales: '412 ventes',
     price: 149000,
-    delivery: 'Livré par KatiHub',
+    delivery: 'Livré par KatiMarket',
     window: 'Demain, 12–13 avr.',
     recommended: true,
   },
@@ -48,7 +48,7 @@ const demoSellers: Seller[] = [
     rating: '4,3',
     sales: '276 ventes',
     price: 155000,
-    delivery: 'Livré par KatiHub',
+    delivery: 'Livré par KatiMarket',
     window: 'Demain, 12–13 avr.',
   },
 ]
@@ -60,8 +60,8 @@ export type MarketplaceProduct = {
   description: string | null
   marque: string | null
   categorie: string | null
-  /** Le referencement valide par KatiHub ; absent, la page compose le sien. */
-  /** La categorie KatiHub du produit et la garantie minimale qu'elle impose. */
+  /** Le referencement valide par KatiMarket ; absent, la page compose le sien. */
+  /** La categorie KatiMarket du produit et la garantie minimale qu'elle impose. */
   categorieDetail?: { nom: string; slug: string; parent: { nom: string; slug: string } | null; garantieMinimaleMois: number; garantie: string; attributsVariante?: string[] } | null
   /** Sous le titre de la fiche : trois lignes au plus, ecrites par le marchand. */
   descriptionCourte?: string | null
@@ -88,7 +88,7 @@ export type MarketplaceProduct = {
     disponible: number
     /** MOQ : la quantite minimale commandable chez cette boutique. */
     quantiteMinimale?: number
-    /** KatiHub a recu et teste l'article de cette boutique. */
+    /** KatiMarket a recu et teste l'article de cette boutique. */
     verifieParKatiLe?: string | null
     /** `ville` : la ville de la boutique, montree au client a la place de son nom. */
     boutique: { id: string; nom: string; slug: string; ville?: string | null; adresseRetrait?: string | null }
@@ -153,7 +153,7 @@ export function MarketplacePreview({ product }: { product?: MarketplaceProduct }
 
       <header className={styles.header}>
         <div className={`${styles.shell} ${styles.headerRow}`}>
-          <a href="#" className={styles.brand} aria-label="KatiHub, accueil">
+          <a href="#" className={styles.brand} aria-label="KatiMarket, accueil">
             <span className={styles.brandMark}>K</span>
             <span><strong>KATI<span>HUB</span></strong><small>UN SEUL HUB POUR TOUT</small></span>
           </a>
@@ -200,7 +200,7 @@ export function MarketplacePreview({ product }: { product?: MarketplaceProduct }
           <section className={styles.productInfo}>
             <p className={styles.eyebrow}>{product?.marque ?? 'Samsung'} · {product?.categorie ?? 'Smartphone 4G'}</p>
             <h1>{product?.nom ?? 'Samsung Galaxy A15 128 Go'}</h1>
-            <p className={styles.subtitle}>{product ? 'Fiche commune contrôlée par l’équipe KatiHub' : 'Écran Super AMOLED · Grande autonomie · Double SIM'}</p>
+            <p className={styles.subtitle}>{product ? 'Fiche commune contrôlée par l’équipe KatiMarket' : 'Écran Super AMOLED · Grande autonomie · Double SIM'}</p>
             <div className={styles.rating}>{product ? <><span>☆</span><strong>Nouveau</strong><a href="#avis">Avis après achat vérifié</a></> : <><span>★★★★★</span><strong>4,6</strong><a href="#avis">128 avis vérifiés</a><i />1 248 ventes</>}</div>
             <p className={styles.fromPrice}>Dès <strong>{money.format(sellers.length ? Math.min(...sellers.map((seller) => seller.price)) : 0)} FCFA</strong></p>
             <p className={styles.stock}><span>✓</span> {sellers.length ? 'En stock' : 'Indisponible'} <small>{sellers.reduce((total, seller) => total + (Number.parseInt(seller.sales) || 0), 0)} unité(s) disponibles</small></p>
@@ -276,7 +276,7 @@ export function MarketplacePreview({ product }: { product?: MarketplaceProduct }
       </main>
 
       <footer className={styles.marketFooter}>
-        <div className={styles.shell}><strong>KATI<span>HUB</span></strong><p>Achetez auprès de vendeurs vérifiés, en toute confiance.</p><span>© 2026 KatiHub · Douala, Cameroun</span></div>
+        <div className={styles.shell}><strong>KATI<span>HUB</span></strong><p>Achetez auprès de vendeurs vérifiés, en toute confiance.</p><span>© 2026 KatiMarket · Douala, Cameroun</span></div>
       </footer>
     </div>
   )

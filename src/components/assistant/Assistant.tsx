@@ -96,7 +96,7 @@ const BIENVENUE: Message = {
   id: 'bienvenue',
   auteur: 'assistant',
   texte:
-    'Bonjour, je suis Kati, l’assistante de KatiHub. Je consulte le catalogue en direct : ' +
+    'Bonjour, je suis Kati, l’assistante de KatiMarket. Je consulte le catalogue en direct : ' +
     'demandez-moi un produit, un prix, une garantie, une livraison ou de l’aide pour votre commande.',
   le: 0,
 }
@@ -610,7 +610,7 @@ export function Assistant({ whatsapp }: { whatsapp: string | null }) {
       ref={surface}
       role="dialog"
       aria-modal={sheet}
-      aria-label="Kati, l’assistante KatiHub"
+      aria-label="Kati, l’assistante KatiMarket"
       initial={reduced ? false : sheet ? { y: '100%' } : { opacity: 0, y: 12, scale: 0.98 }}
       animate={sheet ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
       exit={reduced ? { opacity: 0 } : sheet ? { y: '100%' } : { opacity: 0, y: 8, scale: 0.99 }}
@@ -632,7 +632,7 @@ export function Assistant({ whatsapp }: { whatsapp: string | null }) {
         <span className="min-w-0 flex-1">
           <span className="block text-body leading-tight font-bold tracking-[-0.01em] text-ink">Kati</span>
           <span className="mt-0.5 block text-micro leading-tight text-ink-3">
-            {busy ? 'écrit…' : 'Assistante KatiHub · disponible 24/7'}
+            {busy ? 'écrit…' : 'Assistante KatiMarket · disponible 24/7'}
           </span>
         </span>
         {/* DEUX COMMANDES DE CONVERSATION, ET ELLES TIENNENT DANS L'EN-TÊTE.
@@ -943,7 +943,7 @@ export function Assistant({ whatsapp }: { whatsapp: string | null }) {
             ? 'Fermer l’assistant'
             : reponseArrivee
               ? 'Ouvrir Kati — une réponse de l’équipe vous attend'
-              : 'Ouvrir Kati, l’assistante KatiHub'
+              : 'Ouvrir Kati, l’assistante KatiMarket'
         }
         animate={{ y: away ? 88 : 0, opacity: away ? 0 : 1 }}
         transition={reduced ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.28, 1] }}
@@ -1029,7 +1029,7 @@ function Bulle({
         >
           {message.auteur === 'equipe' ? (
             <p className="t-label mb-1 whitespace-normal text-ink-3">
-              Réponse de l’équipe KatiHub
+              Réponse de l’équipe KatiMarket
               {equipe?.reference ? <> · réf. <span className="t-num">{equipe.reference}</span></> : null}
             </p>
           ) : null}
@@ -1149,7 +1149,7 @@ function SousLaBulle({
               href="/contact"
               className="press inline-flex min-h-11 items-center rounded-pill border border-rule px-3.5 text-micro text-ink-2 transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
             >
-              Contacter l’équipe KatiHub
+              Contacter l’équipe KatiMarket
             </Link>
           ) : null}
         </div>
@@ -1290,7 +1290,7 @@ function PastilleReponse({ className }: { className: string }) {
   )
 }
 
-/** La bulle KatiHub : orange de la marketplace, traits bleu nuit, sans asset supplémentaire. */
+/** La bulle KatiMarket : orange de la marketplace, traits bleu nuit, sans asset supplémentaire. */
 function AssistantMark() {
   return (
     <svg aria-hidden viewBox="0 0 44 44" className="size-full">

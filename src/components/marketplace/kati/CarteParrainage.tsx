@@ -62,7 +62,7 @@ export function CarteParrainage() {
     } catch { /* presse-papiers indisponible : le lien reste affiche */ }
   }
 
-  const texteWhatsApp = `Je commande sur KatiHub. Inscris-toi avec mon lien et gagne des KATI sur tes achats : ${parrainage.lien}`
+  const texteWhatsApp = `Je commande sur KatiMarket. Inscris-toi avec mon lien et gagne des KATI sur tes achats : ${parrainage.lien}`
 
   return (
     <section aria-labelledby="parrainage-titre" className="grid gap-4 rounded-well border border-rule p-5" data-testid="carte-parrainage">

@@ -11,8 +11,8 @@ import { productCardSpecs } from '@/lib/product-card-specs'
 import styles from './marques.module.css'
 
 export const metadata: Metadata = {
-  title: 'Toutes les marques | KatiHub',
-  description: 'Explorez les marques proposées par les vendeurs KatiHub et découvrez leurs offres disponibles au Cameroun.',
+  title: 'Toutes les marques | KatiMarket',
+  description: 'Explorez les marques proposées par les vendeurs KatiMarket et découvrez leurs offres disponibles au Cameroun.',
 }
 
 interface PageProps {
@@ -102,7 +102,7 @@ export default async function MarquesPage({ searchParams }: PageProps) {
     <nav className={styles.breadcrumb} aria-label="Fil d’Ariane"><Link href="/">Accueil</Link><span>/</span><b>Marques</b></nav>
 
     <section className={styles.hero}>
-      <div><span className={styles.eyebrow}>Explorer KatiHub</span><h1>Trouvez vos produits par marque</h1><p>Des références proposées par des vendeurs locaux, avec stock, prix et livraison clairement annoncés.</p></div>
+      <div><span className={styles.eyebrow}>Explorer KatiMarket</span><h1>Trouvez vos produits par marque</h1><p>Des références proposées par des vendeurs locaux, avec stock, prix et livraison clairement annoncés.</p></div>
       <form className={styles.search} action="/marques" role="search">
         <label htmlFor="brand-search">Rechercher une marque</label>
         <div><input id="brand-search" name="q" defaultValue={q} placeholder="HP, Samsung, Lenovo…" /><button>Rechercher <span aria-hidden="true">→</span></button></div>

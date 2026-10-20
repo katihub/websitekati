@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { SuiviMarketplace } from './SuiviMarketplace'
 
 export const metadata: Metadata = {
-  title: 'Suivi de commande — KatiHub',
+  title: 'Suivi de commande — KatiMarket',
   robots: { index: false, follow: false },
 }
 

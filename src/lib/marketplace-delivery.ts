@@ -1,4 +1,4 @@
-/** La promesse commune de livraison KatiHub. */
+/** La promesse commune de livraison KatiMarket. */
 export const DELAI_LIVRAISON_MAX_JOURS = 3
 
 /**

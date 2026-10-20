@@ -43,13 +43,13 @@ const STATUTS: Record<string, string> = {
   ouverte: 'Ouverte',
   en_attente_vendeur: 'Réponse du vendeur attendue',
   en_attente_client: 'Votre réponse est attendue',
-  escaladee: 'Transmise à KatiHub',
+  escaladee: 'Transmise à KatiMarket',
   en_arbitrage: 'En cours d’examen',
   resolue: 'Résolue',
   fermee: 'Fermée',
 }
 
-const AUTEURS: Record<string, string> = { client: 'Vous', vendeur: 'Le vendeur', equipe: 'KatiHub' }
+const AUTEURS: Record<string, string> = { client: 'Vous', vendeur: 'Le vendeur', equipe: 'KatiMarket' }
 
 type Etat =
   | { phase: 'chargement' }
@@ -119,7 +119,7 @@ export function CentreAssistance() {
           description: String(donnees.get('description') ?? '').trim(),
         },
       })
-      setConfirmation(`Ticket ${ticket.reference} ouvert. Le vendeur et l’équipe KatiHub peuvent maintenant vous répondre.`)
+      setConfirmation(`Ticket ${ticket.reference} ouvert. Le vendeur et l’équipe KatiMarket peuvent maintenant vous répondre.`)
       setFormulaireOuvert(false)
       setCommandeId('')
       setSousCommandeId('')
@@ -151,7 +151,7 @@ export function CentreAssistance() {
     <main className="mx-auto w-full max-w-6xl px-4 pt-8 pb-band md:pt-12">
       <nav className="text-micro text-ink-3" aria-label="Fil d’Ariane"><Link href="/">Accueil</Link> <span aria-hidden="true">/</span> <span aria-current="page">Assistance</span></nav>
       <header className="mt-5 grid gap-5 rounded-well bg-ink px-5 py-7 text-white md:grid-cols-[1fr_auto] md:items-end md:px-8">
-        <div><p className="t-label text-white/60">Centre d’aide KatiHub</p><h1 className="mt-2 text-h2 font-semibold">Comment pouvons-nous vous aider ?</h1><p className="mt-2 max-w-2xl text-small text-white/75">Ouvrez un ticket lié à votre commande et suivez chaque réponse au même endroit.</p></div>
+        <div><p className="t-label text-white/60">Centre d’aide KatiMarket</p><h1 className="mt-2 text-h2 font-semibold">Comment pouvons-nous vous aider ?</h1><p className="mt-2 max-w-2xl text-small text-white/75">Ouvrez un ticket lié à votre commande et suivez chaque réponse au même endroit.</p></div>
         <button type="button" onClick={() => { setFormulaireOuvert((valeur) => !valeur); setErreurFormulaire('') }} className="min-h-12 rounded-control bg-secondary px-5 text-small font-bold text-on-surface transition-transform hover:-translate-y-0.5">{formulaireOuvert ? 'Fermer le formulaire' : 'Ouvrir un ticket'}</button>
       </header>
 

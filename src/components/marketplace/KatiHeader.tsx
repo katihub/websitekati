@@ -36,7 +36,7 @@ export async function KatiHeader() {
           <div className={styles.navScroll}>
             {categories.slice(0, 6).map((categorie) => <Link key={categorie.id} href={`/categories/${categorie.slug}`}>{categorie.nom}</Link>)}
             <Link href="/boutiques">Boutiques</Link>
-            <Link href="/devenir-vendeur">Vendre sur KatiHub</Link>
+            <Link href="/devenir-vendeur">Vendre sur KatiMarket</Link>
           </div>
         </div>
       </nav>

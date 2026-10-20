@@ -55,7 +55,7 @@ export function PasswordRecovery({ audience = 'vendeur' }: { audience?: 'vendeur
     <Link href={connexion} className={styles.back}>← Connexion {audience === 'client' ? 'client' : 'vendeur'}</Link>
     <h1>Nouveau mot de passe</h1>
     {status === 'checking' ? <p role="status">Vérification de votre lien…</p> : null}
-    {status === 'unavailable' ? <p>La réinitialisation n’est pas disponible dans cet environnement de démonstration. Contactez l’équipe KatiHub pour obtenir vos accès.</p> : null}
+    {status === 'unavailable' ? <p>La réinitialisation n’est pas disponible dans cet environnement de démonstration. Contactez l’équipe KatiMarket pour obtenir vos accès.</p> : null}
     {status === 'expired' ? <><p>Ce lien a expiré ou n’est plus valide. Demandez-en un nouveau depuis la page de connexion.</p><Link href={connexion} className={styles.action}>Revenir à la connexion</Link></> : null}
     {status === 'done' ? <><p>Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter.</p><Link href={connexion} className={styles.action}>Se connecter</Link></> : null}
     {status === 'ready' ? <><p>Choisissez un nouveau mot de passe pour votre {audience === 'client' ? 'compte client' : 'espace vendeur'}.</p><form onSubmit={submit}>

@@ -7,8 +7,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const boutique = await lireBoutiqueMarketplace(slug)
   return {
-    title: { absolute: boutique ? `${boutique.nom} — Boutique KatiHub` : 'Boutique — KatiHub' },
-    description: boutique?.description ?? 'Découvrez les produits et les offres des boutiques locales sur KatiHub.',
+    title: { absolute: boutique ? `${boutique.nom} — Boutique KatiMarket` : 'Boutique — KatiMarket' },
+    description: boutique?.description ?? 'Découvrez les produits et les offres des boutiques locales sur KatiMarket.',
   }
 }
 

@@ -9,7 +9,7 @@ import { CATEGORY_ICON, ProductCard } from './ProductCardAccueil'
 import styles from './marketplace-home-v2.module.css'
 
 /**
- * « EXPLOREZ NOS RAYONS » : les rayons KatiHub a gauche, leurs sous-categories
+ * « EXPLOREZ NOS RAYONS » : les rayons KatiMarket a gauche, leurs sous-categories
  * en onglets au-dessus, et huit offres du choix courant, avec les cartes produit
  * de l'accueil. Le premier rayon affiche est le mieux fourni, lu cote serveur ;
  * les autres se chargent au clic et restent en memoire le temps de la visite.

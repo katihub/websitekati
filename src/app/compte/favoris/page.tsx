@@ -7,7 +7,7 @@ import { MesFavoris } from './MesFavoris'
  * est connecte, pour les retrouver sur un autre appareil.
  */
 export const metadata: Metadata = {
-  title: 'Mes favoris — KatiHub',
+  title: 'Mes favoris — KatiMarket',
   robots: { index: false, follow: false },
 }
 

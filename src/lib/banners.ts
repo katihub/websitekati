@@ -42,7 +42,7 @@ export interface BannerVariant {
  *
  * Le proprietaire a divise la section en deux blocs sur la meme rangee : le
  * carrousel des bannieres et, a cote, celui des promotions. `pub_accueil` est
- * la publicite de l'accueil KatiHub, dans la colonne de droite. L'emplacement
+ * la publicite de l'accueil KatiMarket, dans la colonne de droite. L'emplacement
  * est choisi dans le panel, piece par piece.
  */
 export type EmplacementBanniere = 'principal' | 'promo' | 'pub_accueil'
@@ -70,7 +70,7 @@ export interface PublishedBanner {
 export interface BannieresAccueil {
   readonly principales: PublishedBanner[]
   readonly promos: PublishedBanner[]
-  /** Les publicites de l'accueil KatiHub ; la premiere est affichee. */
+  /** Les publicites de l'accueil KatiMarket ; la premiere est affichee. */
   readonly pubsAccueil: PublishedBanner[]
 }
 

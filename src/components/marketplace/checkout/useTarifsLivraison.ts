@@ -8,7 +8,7 @@ import type { DeliveryMode } from '@/lib/modes-livraison'
 /**
  * LA GRILLE DES FRAIS DE LIVRAISON, LUE POUR LES AFFICHER AVANT LA COMMANDE.
  *
- * Elle est tenue par KatiHub et la commande recalcule les frais cote serveur ;
+ * Elle est tenue par KatiMarket et la commande recalcule les frais cote serveur ;
  * l'ecran envoie ce qu'il a affiche, et un changement de grille entre-temps est
  * refuse (409) plutot que facture sans que le client l'ait vu.
  */

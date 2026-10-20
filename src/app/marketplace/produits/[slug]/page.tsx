@@ -13,7 +13,7 @@ async function chargerProduit(slug: string): Promise<MarketplaceProduct> {
     headers: { Accept: 'application/json' },
   })
   if (reponse.status === 404) notFound()
-  if (!reponse.ok) throw new Error(`Le catalogue KatiHub a répondu ${reponse.status}.`)
+  if (!reponse.ok) throw new Error(`Le catalogue KatiMarket a répondu ${reponse.status}.`)
   return reponse.json() as Promise<MarketplaceProduct>
 }
 
@@ -21,8 +21,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   try {
     const produit = await chargerProduit(slug)
-    const titre = produit.metaTitre || `${produit.nom} — KatiHub`
-    const description = produit.metaDescription || produit.description || `Comparez les vendeurs vérifiés pour ${produit.nom} sur KatiHub.`
+    const titre = produit.metaTitre || `${produit.nom} — KatiMarket`
+    const description = produit.metaDescription || produit.description || `Comparez les vendeurs vérifiés pour ${produit.nom} sur KatiMarket.`
     const image = produit.images?.[0]
     return {
       title: { absolute: titre },
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       openGraph: { title: titre, description, type: 'website', images: image ? [{ url: image.url, alt: image.texteAlternatif ?? produit.nom }] : undefined },
     }
   } catch {
-    return { title: { absolute: 'Produit — KatiHub' } }
+    return { title: { absolute: 'Produit — KatiMarket' } }
   }
 }
 

@@ -9,7 +9,7 @@ export function KatiAnnouncementTicker({ announcements }: { announcements: Annou
   const messages = announcements.length ? announcements : []
   return (
     <div className={styles.ticker} data-paused={paused} data-marketplace-announcements>
-      <div className={styles.viewport} role="group" aria-label="Annonces KatiHub">
+      <div className={styles.viewport} role="group" aria-label="Annonces KatiMarket">
         <div className={styles.track}>
           {[0, 1].map(copy => (
             <div className={styles.group} key={copy} aria-hidden={copy === 1} role={copy === 0 ? 'list' : undefined}>

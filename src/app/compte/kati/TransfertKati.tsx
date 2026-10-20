@@ -48,7 +48,7 @@ export function TransfertKati({ disponible, onTransfert }: { disponible: number;
   }
 
   return <section className={styles.transferCard} aria-labelledby="transfert-kati-titre">
-    <header><span className={styles.transferIcon} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h12l-3-3m3 3-3 3M17 17H5l3 3m-3-3 3-3"/></svg></span><div><h2 id="transfert-kati-titre">Envoyer des KATI</h2><p>Transférez vos KATI disponibles à un autre utilisateur KatiHub.</p></div></header>
+    <header><span className={styles.transferIcon} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h12l-3-3m3 3-3 3M17 17H5l3 3m-3-3 3-3"/></svg></span><div><h2 id="transfert-kati-titre">Envoyer des KATI</h2><p>Transférez vos KATI disponibles à un autre utilisateur KatiMarket.</p></div></header>
     <p className={styles.transferBalance}><span>Disponible</span><strong>{formatKati(disponible)}</strong></p>
     <form onSubmit={(event) => void envoyer(event)} className={styles.transferForm}>
       <label>Code KATI du destinataire<span className={styles.codeRow}><input value={code} onChange={(event) => { setCode(normaliserCode(event.currentTarget.value)); setDestinataire(null); setMessage(null) }} minLength={8} maxLength={8} pattern="[A-Z]{2}[0-9]{6}" placeholder="AM482731" autoComplete="off"/><button type="button" onClick={() => void verifier()} disabled={!estCodeParrainage(code) || phase !== 'repos'}>{phase === 'verification' ? 'Vérification…' : 'Vérifier'}</button></span></label>

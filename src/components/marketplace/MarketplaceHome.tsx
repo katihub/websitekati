@@ -17,7 +17,7 @@ import { RayonsAccueil, type RayonAccueil } from './RayonsAccueil'
 import styles from './marketplace-home-v2.module.css'
 
 const POPULAR = [['📱', 'Smartphones'], ['💻', 'Ordinateurs'], ['👗', 'Mode & Vêtements'], ['🛋️', 'Maison & Décoration'], ['🧴', 'Beauté & Soins'], ['🏋️', 'Sports & Fitness'], ['🧸', 'Enfants & Jouets'], ['🍳', 'Électroménager']]
-const PROMOS_KATIHUB: PublishedBanner[] = [
+const PROMOS_KATIMARKET: PublishedBanner[] = [
   {
     id: 'katihub-bienvenue',
     href: '/catalogue',
@@ -25,7 +25,7 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
     description: 'Des boutiques locales et une livraison suivie au Cameroun.',
     action: 'Découvrir',
     tonalite: 'navy',
-    alt: 'Une cliente KatiHub reçoit sa commande',
+    alt: 'Une cliente KatiMarket reçoit sa commande',
     focus: 50,
     emplacement: 'promo',
     large: { url: '/marketplace-hero-douala.png', largeur: 2048, hauteur: 1024 },
@@ -38,7 +38,7 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
     description: 'Téléphones, ordinateurs et accessoires choisis pour vous.',
     action: 'Découvrir',
     tonalite: 'navy',
-    alt: 'Une sélection high-tech KatiHub dans les couleurs bleu nuit et orange',
+    alt: 'Une sélection high-tech KatiMarket dans les couleurs bleu nuit et orange',
     focus: 50,
     emplacement: 'promo',
     large: { url: '/marketplace-shop-tech-cover.png', largeur: 2172, hauteur: 724 },
@@ -51,7 +51,7 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
     description: 'Mode, beauté et accessoires proposés par nos boutiques.',
     action: 'Explorer',
     tonalite: 'light',
-    alt: 'Une cliente camerounaise avec ses achats KatiHub',
+    alt: 'Une cliente camerounaise avec ses achats KatiMarket',
     focus: 50,
     emplacement: 'promo',
     large: { url: '/marketplace-mode-cameroun.png', largeur: 2172, hauteur: 724 },
@@ -64,7 +64,7 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
     description: 'Maison, électronique, beauté et bien plus encore.',
     action: 'Découvrir',
     tonalite: 'light',
-    alt: 'Une sélection de produits disponibles sur KatiHub',
+    alt: 'Une sélection de produits disponibles sur KatiMarket',
     focus: 50,
     emplacement: 'promo',
     large: { url: '/marketplace-catalogue-cover.png', largeur: 2172, hauteur: 724 },
@@ -73,7 +73,7 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
   {
     id: 'katihub-vendeurs',
     href: '/devenir-vendeur',
-    label: 'Vendez sur KatiHub',
+    label: 'Vendez sur KatiMarket',
     description: 'Ouvrez votre boutique en quelques minutes.',
     action: 'Commencer',
     tonalite: 'light',
@@ -90,7 +90,7 @@ const PROMOS_KATIHUB: PublishedBanner[] = [
     description: 'Recevez vos achats où que vous soyez au Cameroun.',
     action: 'En savoir plus',
     tonalite: 'orange',
-    alt: 'Un professionnel livre une commande KatiHub',
+    alt: 'Un professionnel livre une commande KatiMarket',
     focus: 50,
     emplacement: 'promo',
     large: { url: '/marketplace-vendeur-cameroun.png', largeur: 2048, hauteur: 1024 },
@@ -123,12 +123,12 @@ export async function MarketplaceHome() {
   const best = offres.slice(0, 20)
   const fresh = [...offres].reverse().slice(0, 6)
   // Les promotions du panel restent prioritaires. Tant qu'aucune n'est
-  // publiée, cette sélection KatiHub évite de recréer un grand vide sous les
+  // publiée, cette sélection KatiMarket évite de recréer un grand vide sous les
   // engagements sans réintroduire les anciennes créations hors charte.
   const promosAccueil = [
     ...bannieres.promos,
     ...ORDRE_PROMOS_ACCUEIL
-      .map((id) => PROMOS_KATIHUB.find((promo) => promo.id === id))
+      .map((id) => PROMOS_KATIMARKET.find((promo) => promo.id === id))
       .filter((promo): promo is PublishedBanner => promo !== undefined)
       .filter((promo) => !bannieres.promos.some((publiee) => String(publiee.id) === String(promo.id))),
   ]
@@ -138,7 +138,7 @@ export async function MarketplaceHome() {
         <MarketplaceHeroCarousel />
         <PromosCarrousel promos={promosAccueil} afficherLibelles={!bannieres.promos.length} />
       </div>
-      <aside className={styles.promoRail} aria-label="Publicité et engagements KatiHub">
+      <aside className={styles.promoRail} aria-label="Publicité et engagements KatiMarket">
         <PubAccueil pub={bannieres.pubsAccueil[0] ?? null} />
         <section className={styles.engagements} aria-label="Nos engagements">
           <article><i aria-hidden="true">🛵</i><div><b>Livraison rapide <em>à domicile</em></b><p>Recevez vos commandes où que vous soyez.</p><Link href="/contact">En savoir plus →</Link></div></article>

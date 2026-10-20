@@ -43,7 +43,7 @@ export function useDisponibleKati(actif: boolean) {
 
 /**
  * LES CHOIX DE REGLEMENT : paiement complet ou acompte, assurance KATI (cochee
- * par defaut), installation par KatiHub pour les categories qui la proposent,
+ * par defaut), installation par KatiMarket pour les categories qui la proposent,
  * et KATI a utiliser sur les produits. Les montants affiches sont estimes ; le
  * serveur les recalcule a la commande.
  */
@@ -90,7 +90,7 @@ export function ReglementCommande({ produitsFcfa, options, disponibleKati, choix
     {options?.installations.map((installation) => <label key={installation.categorieId} className={styles.optionService}>
       <input type="checkbox" checked={choix.installations.includes(installation.categorieId)} data-testid={`option-installation-${installation.categorieId}`}
         onChange={(event) => onChange({ ...choix, installations: event.target.checked ? [...choix.installations, installation.categorieId] : choix.installations.filter((id) => id !== installation.categorieId) })}/>
-      <span><b>Installation {installation.nom} par KatiHub · {money(installation.prixFcfa)}</b><small>Un technicien KatiHub installe vos produits {installation.nom.toLowerCase()} après la livraison.</small></span>
+      <span><b>Installation {installation.nom} par KatiMarket · {money(installation.prixFcfa)}</b><small>Un technicien KatiMarket installe vos produits {installation.nom.toLowerCase()} après la livraison.</small></span>
     </label>)}
 
     {politique && disponibleKati !== null ? maxKati > 0 ? <div className={styles.optionService} data-testid="option-kati">

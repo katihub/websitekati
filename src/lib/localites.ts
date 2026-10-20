@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { api } from './api'
 
 /**
- * LES VILLES ET QUARTIERS DES LISTES DEROULANTES, TENUS PAR KATIHUB.
+ * LES VILLES ET QUARTIERS DES LISTES DEROULANTES, TENUS PAR KATIMARKET.
  *
  * Des suggestions : un quartier absent de la liste se saisit librement
  * (« Autre quartier »). Sans reseau, les listes sont vides et les champs

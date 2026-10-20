@@ -46,7 +46,7 @@ export function CustomerLoginForm() {
     setError(''); setNotice('')
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Saisissez d’abord votre adresse e-mail.')
     const client = supabase()
-    if (!client) return setError('En démonstration, demandez les accès à l’équipe KatiHub.')
+    if (!client) return setError('En démonstration, demandez les accès à l’équipe KatiMarket.')
     setResetPending(true)
     try {
       const { error: resetError } = await client.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/nouveau-mot-de-passe` })
@@ -58,7 +58,7 @@ export function CustomerLoginForm() {
   }
 
   return <section className={styles.formArea} aria-labelledby="customer-login-title">
-    <h1 id="customer-login-title">Bon retour sur KatiHub</h1>
+    <h1 id="customer-login-title">Bon retour sur KatiMarket</h1>
     <p className={styles.intro}>Retrouvez vos commandes et reprenez vos achats.</p>
     <form onSubmit={submit} noValidate>
       <label>Adresse e-mail<input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="exemple@email.com" /></label>

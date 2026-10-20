@@ -66,7 +66,7 @@ export default avecPanneCatalogue(async function HomePage() {
   return <MarketplaceHome />
   /* L'ancienne vitrine NowTech est conservée temporairement sous ce point de
      coupure pendant la migration de ses pages profondes. Elle n'est plus
-     exécutée : la racine appartient désormais à la marketplace KatiHub. */
+     exécutée : la racine appartient désormais à la marketplace KatiMarket. */
   /* TOUT VIENT DU BACKEND, EN QUATRE LECTURES PARALLELES. Les bannieres, la
      navigation (rayons, comptes, photographies d'ouverture, marques), les blocs
      de l'accueil (selections, tour des comptoirs, colonnes d'arrivages) et les

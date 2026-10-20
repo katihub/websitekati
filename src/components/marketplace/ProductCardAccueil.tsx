@@ -7,7 +7,7 @@ import { productCardSpecs } from '@/lib/product-card-specs'
 import styles from './marketplace-home-v2.module.css'
 
 /**
- * LA CARTE PRODUIT DE L'ACCUEIL KATIHUB : partagee par les sections de la page
+ * LA CARTE PRODUIT DE L'ACCUEIL KATIMARKET : partagee par les sections de la page
  * (meilleures ventes, nouveautes, rayons), pour qu'un produit se presente
  * partout de la meme facon.
  */

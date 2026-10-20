@@ -10,12 +10,12 @@ import {
 import styles from './categories.module.css'
 
 /**
- * TOUTES LES CATEGORIES DE LA MARKETPLACE, TELLES QUE KATIHUB LES TIENT : une
+ * TOUTES LES CATEGORIES DE LA MARKETPLACE, TELLES QUE KATIMARKET LES TIENT : une
  * carte par categorie, ses sous-categories et la garantie minimale qui s'y applique.
  */
 export const metadata: Metadata = {
   title: 'Toutes les catégories',
-  description: 'Parcourez les catégories et sous-catégories des boutiques vérifiées de KatiHub, avec la garantie minimale de chacune.',
+  description: 'Parcourez les catégories et sous-catégories des boutiques vérifiées de KatiMarket, avec la garantie minimale de chacune.',
 }
 
 export const revalidate = 300
@@ -64,7 +64,7 @@ export default async function CategoriesPage() {
             <h1>Toutes les catégories</h1>
             <p>
               Découvrez tous nos rayons et leurs sous-catégories. Chaque catégorie affiche la
-              garantie minimale requise sur les produits vendus sur KatiHub.
+              garantie minimale requise sur les produits vendus sur KatiMarket.
             </p>
           </div>
           <Link href="/catalogue" className={styles.catalogueLink}>

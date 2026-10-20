@@ -12,7 +12,7 @@ import { ChampTexte, FenetreAction } from '@/components/ui/FenetreAction'
  * Noir »), ses attributs, sa reference, son prix et son stock. Elle reprend les
  * conditions (etat, garantie, livraison) de l'offre d'origine et passe en
  * moderation comme toute offre. Changer un prix, c'est soumettre une revision :
- * le prix publie ne bouge qu'apres validation par KatiHub.
+ * le prix publie ne bouge qu'apres validation par KatiMarket.
  */
 
 export type RevisionVariante = {
@@ -115,7 +115,7 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
     <FenetreAction
       ouverte={Boolean(origine)}
       titre="Ajouter une variante"
-      description={origine ? <>Variante de <strong>{origine.produit.nom}</strong>. Elle reprend l’état, la garantie et la livraison de l’offre d’origine, avec son propre prix et son propre stock. KatiHub la valide avant publication.</> : null}
+      description={origine ? <>Variante de <strong>{origine.produit.nom}</strong>. Elle reprend l’état, la garantie et la livraison de l’offre d’origine, avec son propre prix et son propre stock. KatiMarket la valide avant publication.</> : null}
       libelleValider="Soumettre la variante"
       onValider={valider}
       onFermer={onFermer}
@@ -180,7 +180,7 @@ export function FenetrePrixVariante({ boutiqueId, offre, onFermer, onSoumis }: {
     <FenetreAction
       ouverte={Boolean(offre)}
       titre="Prix et minimum de commande"
-      description={offre ? <>{offre.produit.nom}{offre.libelleVariante ? <> — <strong>{offre.libelleVariante}</strong></> : null}. Le nouveau prix et le nouveau minimum s’appliquent après validation par KatiHub ; d’ici là, les conditions actuelles restent en vigueur.</> : null}
+      description={offre ? <>{offre.produit.nom}{offre.libelleVariante ? <> — <strong>{offre.libelleVariante}</strong></> : null}. Le nouveau prix et le nouveau minimum s’appliquent après validation par KatiMarket ; d’ici là, les conditions actuelles restent en vigueur.</> : null}
       libelleValider="Soumettre"
       onValider={valider}
       onFermer={onFermer}

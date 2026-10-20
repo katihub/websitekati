@@ -10,7 +10,7 @@ import { ErreurApi, api } from '@/lib/api'
  * Rien n'est publie d'ici. Les photos deposees attendent ; le marchand compose
  * la galerie (ordre, texte alternatif), ecrit la description courte, la fiche
  * technique (texte et/ou PDF), le meta title et la meta description, et soumet
- * le tout. KatiHub valide, puis la fiche publique change. Tant qu'une
+ * le tout. KatiMarket valide, puis la fiche publique change. Tant qu'une
  * proposition est en cours, elle est affichee et l'edition attend.
  */
 
@@ -150,7 +150,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
           images: galerie.map((e) => ({ imageId: e.imageId, texteAlternatif: e.texteAlternatif.trim() || undefined })),
         },
       })
-      setMessage({ type: 'succes', texte: 'Fiche envoyée à KatiHub. Elle sera publiée après validation.' })
+      setMessage({ type: 'succes', texte: 'Fiche envoyée à KatiMarket. Elle sera publiée après validation.' })
       await charger()
     } catch (cause) {
       setMessage({ type: 'erreur', texte: erreur(cause) })
@@ -177,7 +177,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
         <div>
           <p className="t-label text-ink-3">Fiche produit</p>
           <h2 id="fiche-titre" className="text-h3 font-semibold">{contenu.produit.nom}</h2>
-          <p className="text-micro text-ink-3">Photos, textes et référencement sont publiés après validation par KatiHub.</p>
+          <p className="text-micro text-ink-3">Photos, textes et référencement sont publiés après validation par KatiMarket.</p>
         </div>
         <button type="button" onClick={onFermer} className="min-h-11 rounded-control border border-rule px-4 text-small font-semibold">← Retour aux produits</button>
       </header>
@@ -276,7 +276,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
         <figure className="rounded-well border border-rule p-4" aria-label="Aperçu dans les résultats de recherche">
           <figcaption className="t-label text-ink-3">Aperçu Google</figcaption>
           <p className="mt-3 truncate text-micro text-ink-3">katihub.cm › marketplace › {contenu.produit.slug}</p>
-          <p className="mt-1 line-clamp-2 text-[1.1rem] leading-snug text-[#1a0dab]">{metaTitre.trim() || `${contenu.produit.nom} — KatiHub`}</p>
+          <p className="mt-1 line-clamp-2 text-[1.1rem] leading-snug text-[#1a0dab]">{metaTitre.trim() || `${contenu.produit.nom} — KatiMarket`}</p>
           <p className="mt-1 line-clamp-3 text-small text-ink-2">{metaDescription.trim() || 'Sans meta description, Google choisit lui-même un extrait de la page.'}</p>
         </figure>
       </section>

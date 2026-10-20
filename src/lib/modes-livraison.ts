@@ -1,7 +1,7 @@
 /**
  * LES MODES DE REMISE D'UNE COMMANDE MARKETPLACE, ET LEURS LIBELLES.
  *
- * - Kati Express : la livraison faite par KatiHub ;
+ * - Kati Express : la livraison faite par KatiMarket ;
  * - la livraison par la boutique ;
  * - le retrait a la boutique, gratuit ;
  * - l'expedition en agence de voyage : le client nomme l'agence, et tout se
@@ -23,7 +23,7 @@ export const LIBELLE_MODE: Readonly<Record<DeliveryMode, string>> = {
 
 /** Ce que le mode promet, en une phrase. */
 export const DESCRIPTION_MODE: Readonly<Record<DeliveryMode, string>> = {
-  katihub: 'Un livreur KatiHub vous apporte la commande.',
+  katihub: 'Un livreur KatiMarket vous apporte la commande.',
   vendeur: 'La boutique vous livre avec ses propres livreurs.',
   retrait: 'Vous passez chercher la commande à la boutique : c’est gratuit.',
   agence: 'La boutique dépose le colis à l’agence de voyage de votre choix ; tout se règle à la commande.',
@@ -33,7 +33,7 @@ export const DESCRIPTION_MODE: Readonly<Record<DeliveryMode, string>> = {
 export const CHOIX_VENDEUR: Readonly<Record<DeliveryMode, string>> = {
   vendeur: 'Je livre moi-même',
   retrait: 'Le client vient sur place (retrait gratuit)',
-  katihub: 'Kati Express (KatiHub livre pour moi)',
+  katihub: 'Kati Express (KatiMarket livre pour moi)',
   agence: 'J’expédie en agence de voyage',
 }
 

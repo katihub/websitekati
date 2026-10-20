@@ -19,7 +19,7 @@ export function MarketplaceHeroCarousel() {
   const slide = slides[active]!
   const change = (direction: number) => setActive((active + direction + slides.length) % slides.length)
 
-  return <section className={styles.hero} aria-roledescription="carrousel" aria-label="Offres KatiHub">
+  return <section className={styles.hero} aria-roledescription="carrousel" aria-label="Offres KatiMarket">
     <Image key={slide.image} src={slide.image} alt="" fill priority sizes="(max-width: 900px) 100vw, 70vw" className={styles.heroImage} />
     <div className={styles.heroCopy}><span className={styles.heroEyebrow}>La marketplace qui vous connecte</span><h1>{slide.title}</h1><p>{slide.text}</p><Link href={slide.href}>{slide.action}<span>→</span></Link></div>
     <button type="button" className={`${styles.heroArrow} ${styles.heroPrev}`} onClick={() => change(-1)} aria-label="Publicité précédente"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg></button>

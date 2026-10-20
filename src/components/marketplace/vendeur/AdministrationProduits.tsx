@@ -245,7 +245,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
           ficheTechniquePdfCle: clePdf, images: images.map((photo, index) => ({ imageId: photo.id, texteAlternatif: `${values.nom.trim()}, photo ${index + 1}` })),
         } })
       }
-      setMessage('Produit et médias envoyés à la modération KatiHub.'); await onCree()
+      setMessage('Produit et médias envoyés à la modération KatiMarket.'); await onCree()
     } catch (cause) { setMessage(messageErreur(cause)) } finally { setPending(false) }
   }
 
@@ -256,7 +256,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
         <section className={styles.aiPanel} aria-labelledby="assistant-produit-titre">
           <div className={styles.aiHeading}>
             <span className={styles.aiMark} aria-hidden>✦</span>
-            <div><p className={styles.aiEyebrow}>COPILOTE KATIHUB</p><h4 id="assistant-produit-titre">Générer une fiche produit fiable</h4><p>Donnez la référence exacte et les faits connus. L’IA complète le titre, la catégorie, les descriptions, la fiche technique et le référencement.</p></div>
+            <div><p className={styles.aiEyebrow}>COPILOTE KATIMARKET</p><h4 id="assistant-produit-titre">Générer une fiche produit fiable</h4><p>Donnez la référence exacte et les faits connus. L’IA complète le titre, la catégorie, les descriptions, la fiche technique et le référencement.</p></div>
           </div>
           <label className={styles.aiContext}>Informations source à respecter
             <textarea rows={4} maxLength={6000} value={contexteIa} onChange={(event) => setContexteIa(event.target.value)} placeholder={'Ex. HP 16-an0008tx, Core Ultra 7, RAM 16 Go, SSD 1 To, écran 16 pouces. Copiez ici les caractéristiques du fournisseur ou de l’emballage.'} />
@@ -283,7 +283,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
           <div className={styles.previewCopy}><small className={styles.shopName}>▣ {nomBoutique}</small><h4>{values.nom || 'Nom de votre produit'}</h4><p className={styles.previewBrand}>{values.marque || 'Marque'} · {libelleCategorie}</p><div className={styles.pricePlaceholder}>Prix ajouté après validation</div><p>{values.descriptionCourte || 'Votre description courte apparaîtra ici pour aider le client à comprendre le produit en quelques secondes.'}</p><button type="button" disabled>Ajouter au panier</button></div>
           {lignes.length ? <dl className={styles.specs}>{lignes.map((ligne) => { const [nom, ...reste] = ligne.split(':'); return <div key={ligne}><dt>{nom}</dt><dd>{reste.join(':').trim() || '—'}</dd></div> })}</dl> : null}
         </div>
-        <div className={styles.previewNote}><strong>Ce qui sera contrôlé</strong><p>Catégorie, contenu, photos et référencement sont vérifiés par KatiHub avant publication. Le prix et le stock seront ajoutés ensuite dans l’offre.</p></div>
+        <div className={styles.previewNote}><strong>Ce qui sera contrôlé</strong><p>Catégorie, contenu, photos et référencement sont vérifiés par KatiMarket avant publication. Le prix et le stock seront ajoutés ensuite dans l’offre.</p></div>
       </aside>
     </div>
   </form>
@@ -351,7 +351,7 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
 
   return <div className={styles.bulk}>
     <div className={styles.bulkToolbar}><button type="button" className={styles.back} onClick={onRetour}>← Revenir à la liste</button><label className={styles.search}><span>⌕</span><input aria-label="Rechercher dans les offres" value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(1) }} placeholder="Produit, référence, variante…" /></label><div className={styles.pageSize}><span>Lignes :</span><button type="button" aria-pressed={taille === 10} onClick={() => { setTaille(10); setPage(1) }}>10</button><button type="button" aria-pressed={taille === 20} onClick={() => { setTaille(20); setPage(1) }}>20</button></div></div>
-    <div className={styles.bulkInfo}><div><strong>Modification en lot</strong><p>Le stock est appliqué immédiatement. Prix, minimum et délai restent en validation jusqu’à la décision KatiHub.</p></div><span>{filtrees.length} offre(s)</span></div>
+    <div className={styles.bulkInfo}><div><strong>Modification en lot</strong><p>Le stock est appliqué immédiatement. Prix, minimum et délai restent en validation jusqu’à la décision KatiMarket.</p></div><span>{filtrees.length} offre(s)</span></div>
     <div className={styles.bulkScroll}><table className={styles.bulkTable}><thead><tr><th>Produit / offre</th><th>Prix FCFA</th><th>Prix de référence</th><th>Stock</th><th>Minimum</th><th>Délai (3 j max.)</th><th>État</th></tr></thead><tbody>{visibles.map((offre) => {
       const valeur = brouillons[offre.id] ?? valeursOffre(offre); const modifiee = !identique(valeur, valeursOffre(offre)); const erreur = erreurLigne(offre)
       return <tr key={offre.id} data-modified={modifiee || undefined} data-error={Boolean(erreur) || undefined}><td><strong>{offre.produit.nom}</strong><small>{offre.referenceVendeur}{offre.libelleVariante ? ` · ${offre.libelleVariante}` : ''}</small></td><td><input aria-label={`Prix de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prix} onChange={(e) => changer(offre, 'prix', e.target.value)} /></td><td><input aria-label={`Prix de référence de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prixReference} onChange={(e) => changer(offre, 'prixReference', e.target.value)} /></td><td><input aria-label={`Stock de ${offre.produit.nom}`} inputMode="numeric" value={valeur.stock} onChange={(e) => changer(offre, 'stock', e.target.value)} /></td><td><input aria-label={`Minimum de ${offre.produit.nom}`} inputMode="numeric" value={valeur.minimum} onChange={(e) => changer(offre, 'minimum', e.target.value)} /></td><td><input aria-label={`Délai de ${offre.produit.nom}`} type="number" min="0" max="3" inputMode="numeric" value={valeur.delai} onChange={(e) => changer(offre, 'delai', e.target.value)} /></td><td>{erreur ? <span className={styles.rowError} title={erreur}>À corriger</span> : REVISIONS_OUVERTES.includes(offre.revisions[0]?.statut ?? '') ? <span className={styles.pending}>En validation</span> : <span className={styles.ready}>{modifiee ? 'Modifié' : 'Prêt'}</span>}</td></tr>

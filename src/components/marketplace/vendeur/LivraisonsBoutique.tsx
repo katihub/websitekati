@@ -12,12 +12,12 @@ import { LIBELLE_MODE, estModeLivraison, type DeliveryMode } from '@/lib/modes-l
  *
  * Pour les modes qu'elle gere elle-meme (sa livraison, le retrait, l'agence), la
  * boutique fait avancer chaque colis :
- * 1. elle l'affecte a un de ses agents, verifie par KatiHub ;
+ * 1. elle l'affecte a un de ses agents, verifie par KatiMarket ;
  * 2. elle en prouve la prise en charge (photo du colis prepare, ou sa reference) ;
  * 3. elle le met en route, ou au comptoir pour un retrait ;
  * 4. elle le remet contre le code envoye au client, ou, en agence, prouve le
  *    depot par le bordereau.
- * Les colis Kati Express sont operes par KatiHub : ils s'affichent sans action.
+ * Les colis Kati Express sont operes par KatiMarket : ils s'affichent sans action.
  */
 
 type Agent = { id: string; nom: string; telephone: string; actif: boolean; verifieLe: string | null; plafondEspecesFcfa: number | null }
@@ -132,7 +132,7 @@ export function LivraisonsBoutique({ shopId }: { shopId: string }) {
     const telephone = normalisePhone(String(donnees.get('telephone') ?? ''))
     if (nom.length < 2) throw new Error('Indiquez le nom de l’agent.')
     if (!telephone) throw new Error('Indiquez un numéro mobile camerounais, commençant par 6.')
-    await valider(() => api(`/marketplace/expeditions/boutiques/${shopId}/agents`, { methode: 'POST', corps: { nom, telephone } }), `${nom} est ajouté : KatiHub doit le vérifier avant sa première livraison.`)
+    await valider(() => api(`/marketplace/expeditions/boutiques/${shopId}/agents`, { methode: 'POST', corps: { nom, telephone } }), `${nom} est ajouté : KatiMarket doit le vérifier avant sa première livraison.`)
   }
 
   async function prendreEnCharge(livraison: Livraison, donnees: FormData) {
@@ -181,9 +181,9 @@ export function LivraisonsBoutique({ shopId }: { shopId: string }) {
   function actions(livraison: Livraison) {
     const mode = livraison.modeLivraison
     const occupe = Boolean(enCours)
-    if (!geree(livraison)) return <p className="text-small text-ink-3">Opérée par Kati Express : KatiHub s’en occupe.</p>
+    if (!geree(livraison)) return <p className="text-small text-ink-3">Opérée par Kati Express : KatiMarket s’en occupe.</p>
     if (['planifiee', 'a_affecter', 'reportee'].includes(livraison.statut)) {
-      if (!disponibles.length) return <p className="text-small text-warn">Aucun agent vérifié : ajoutez-en un ci-dessus, KatiHub le vérifie avant sa première livraison.</p>
+      if (!disponibles.length) return <p className="text-small text-warn">Aucun agent vérifié : ajoutez-en un ci-dessus, KatiMarket le vérifie avant sa première livraison.</p>
       const choisi = choixAgent[livraison.id] ?? disponibles[0]!.id
       return <div className="flex flex-wrap items-end gap-2">
         <label className="text-small font-semibold">Agent
@@ -230,12 +230,12 @@ export function LivraisonsBoutique({ shopId }: { shopId: string }) {
   return <div className="grid gap-6" data-testid="livraisons-boutique">
     <section className="rounded-well border border-rule bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="text-h4 font-semibold">Vos agents</h2><p className="mt-1 max-w-2xl text-small text-ink-2">Les livreurs et les employés du comptoir de la boutique. KatiHub vérifie chaque agent et fixe l’argent qu’il peut garder sur lui avant sa première livraison.</p></div>
+        <div><h2 className="text-h4 font-semibold">Vos agents</h2><p className="mt-1 max-w-2xl text-small text-ink-2">Les livreurs et les employés du comptoir de la boutique. KatiMarket vérifie chaque agent et fixe l’argent qu’il peut garder sur lui avant sa première livraison.</p></div>
         <button type="button" className={principal} onClick={() => setFenetre({ type: 'agent' })} data-testid="ajouter-agent">Ajouter un agent</button>
       </div>
       {agents.length ? <ul className="mt-4 divide-y divide-rule">{agents.map((agent) => <li key={agent.id} className="flex flex-wrap items-center justify-between gap-3 py-3" data-testid={`agent-ligne-${agent.nom}`}>
         <div><b className="text-small">{agent.nom}</b><span className="ml-2 text-micro text-ink-3">{agent.telephone}</span>
-          <p className={`text-micro ${!agent.actif ? 'text-ink-3' : agent.verifieLe ? 'text-primary' : 'text-warn'}`}>{!agent.actif ? 'Retiré' : agent.verifieLe ? `Vérifié par KatiHub${agent.plafondEspecesFcfa !== null ? ` · peut encaisser jusqu’à ${fcfa(agent.plafondEspecesFcfa)}` : ''}` : 'En attente de vérification KatiHub'}</p></div>
+          <p className={`text-micro ${!agent.actif ? 'text-ink-3' : agent.verifieLe ? 'text-primary' : 'text-warn'}`}>{!agent.actif ? 'Retiré' : agent.verifieLe ? `Vérifié par KatiMarket${agent.plafondEspecesFcfa !== null ? ` · peut encaisser jusqu’à ${fcfa(agent.plafondEspecesFcfa)}` : ''}` : 'En attente de vérification KatiMarket'}</p></div>
         {agent.actif ? <button type="button" className={secondaire} disabled={Boolean(enCours)} onClick={() => void agir(agent.id, () => api(`/marketplace/expeditions/boutiques/${shopId}/agents/${agent.id}/desactivation`, { methode: 'POST' }), `${agent.nom} est retiré.`)}>Retirer</button> : null}
       </li>)}</ul> : <p className="mt-4 text-small text-ink-3">Aucun agent pour l’instant.</p>}
     </section>
@@ -268,7 +268,7 @@ export function LivraisonsBoutique({ shopId }: { shopId: string }) {
         : <p className="mt-4 text-small text-ink-3">{toutes ? 'Aucune livraison pour cette boutique.' : 'Aucune livraison à traiter : tout est à jour.'}</p>}
     </section>
 
-    {fenetre?.type === 'agent' ? <FenetreAction ouverte titre="Ajouter un agent" description="Un livreur ou un employé du comptoir. KatiHub le vérifie avant sa première livraison." libelleValider="Ajouter" onValider={ajouterAgent} onFermer={() => setFenetre(null)}>
+    {fenetre?.type === 'agent' ? <FenetreAction ouverte titre="Ajouter un agent" description="Un livreur ou un employé du comptoir. KatiMarket le vérifie avant sa première livraison." libelleValider="Ajouter" onValider={ajouterAgent} onFermer={() => setFenetre(null)}>
       <ChampTexte nom="nom" libelle="Nom complet" required minLength={2} maxLength={120} autoComplete="name" />
       <ChampTexte nom="telephone" libelle="Téléphone mobile" required type="tel" inputMode="tel" maxLength={20} placeholder="6 77 12 34 56" />
     </FenetreAction> : null}
@@ -287,7 +287,7 @@ export function LivraisonsBoutique({ shopId }: { shopId: string }) {
       <label className="block text-small font-semibold">Photo du bordereau<input type="file" name="photo" required accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" className="mt-1 block w-full text-small font-normal" /></label>
     </FenetreAction> : null}
 
-    {fenetre?.type === 'incident' && fenetreLivraison ? <FenetreAction ouverte titre={`Incident — ${fenetreLivraison.reference}`} description="Le client et KatiHub voient le motif. Un report permet de réaffecter la livraison." libelleValider="Enregistrer l’incident" onValider={(donnees) => signaler(fenetreLivraison, donnees)} onFermer={() => setFenetre(null)}>
+    {fenetre?.type === 'incident' && fenetreLivraison ? <FenetreAction ouverte titre={`Incident — ${fenetreLivraison.reference}`} description="Le client et KatiMarket voient le motif. Un report permet de réaffecter la livraison." libelleValider="Enregistrer l’incident" onValider={(donnees) => signaler(fenetreLivraison, donnees)} onFermer={() => setFenetre(null)}>
       <label className="block text-small font-semibold">Ce qui s’est passé
         <select name="statut" className="mt-1 block min-h-11 w-full rounded-control border border-rule bg-surface px-3 font-normal">
           <option value="reportee">Report (client absent, rendez-vous déplacé)</option>

@@ -4,7 +4,7 @@ import { connection } from 'next/server'
 import { CentreAssistance } from './CentreAssistance'
 
 export const metadata: Metadata = {
-  title: 'Mes demandes — KatiHub',
+  title: 'Mes demandes — KatiMarket',
   robots: { index: false, follow: false },
 }
 

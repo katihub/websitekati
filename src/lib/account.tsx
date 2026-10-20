@@ -288,7 +288,7 @@ export function AccountProvider({
 
   /* « SE CONNECTER » MENE A LA PAGE DE CONNEXION, QUI RAMENE ICI.
      La fenetre de compte NowTech (`AuthDialog`) n'est plus montee depuis que le
-     site est devenu KatiHub (12 octobre) : la connexion et l'inscription vivent
+     site est devenu KatiMarket (12 octobre) : la connexion et l'inscription vivent
      sur /connexion et /inscription. Ouvrir une fenetre absente ne faisait rien,
      et le bouton « Se connecter » de la commande etait inerte. Chaque appel
      mene donc a /connexion, avec la page courante en retour ; le panier et la

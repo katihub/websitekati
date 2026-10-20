@@ -7,7 +7,7 @@ import { api } from '@/lib/api'
 /**
  * LES CATEGORIES DE LA MARKETPLACE, TELLES QUE LE MARCHAND LES CHOISIT.
  *
- * KatiHub seul les cree. Une categorie qui a des sous-categories ne recoit pas
+ * KatiMarket seul les cree. Une categorie qui a des sous-categories ne recoit pas
  * de produit directement : le marchand choisit alors la sous-categorie. La
  * garantie est un minimum que ses offres ne peuvent pas descendre.
  */

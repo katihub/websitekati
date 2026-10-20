@@ -42,7 +42,7 @@ const CATEGORIES = [
   ['autre', 'Autre demande'],
 ] as const
 
-const AUTEURS: Record<string, string> = { client: 'Vous', vendeur: 'La boutique', equipe: 'KatiHub' }
+const AUTEURS: Record<string, string> = { client: 'Vous', vendeur: 'La boutique', equipe: 'KatiMarket' }
 
 type Fenetre =
   | { type: 'ouverture'; sousCommande: SousCommande; ligne: Ligne; expedition?: Expedition }
@@ -151,7 +151,7 @@ export function SuiviMarketplace({ reference, jetonUrl }: { reference: string; j
   function contesterRetour(retour: Retour, donnees: FormData) {
     return enregistrer(() => api(`/marketplace/demandes-client/retours/${retour.id}/contestation`, {
       methode: 'POST', corps: { motif: String(donnees.get('motif') ?? '').trim() },
-    }), 'Votre contestation est transmise à KatiHub pour arbitrage.')
+    }), 'Votre contestation est transmise à KatiMarket pour arbitrage.')
   }
 
   function choisirPieces(demande: Demande, fichiers: FileList | null) {
@@ -206,7 +206,7 @@ export function SuiviMarketplace({ reference, jetonUrl }: { reference: string; j
 
       {jeton ? (
         <div className="mt-6 rounded-well border border-rule bg-space px-4 py-3 text-small text-ink" data-testid="arguments-compte">
-          Commande passée sans compte : gardez le lien reçu par e-mail, il ouvre cette page.{commande.acompteRecu < commande.acompteDu ? <> <Link href={`/marketplace/commande/${encodeURIComponent(commande.reference)}/paiement?suivi=${encodeURIComponent(jeton)}`} className="text-secondary underline underline-offset-2">Régler la commande</Link>.</> : null} Avec un compte KatiHub, vous gagnez des KATI sur chaque commande, vous retrouvez vos adresses et vous pouvez signaler un problème en ligne. <Link href="/inscription" className="text-secondary underline underline-offset-2">Créer un compte</Link>
+          Commande passée sans compte : gardez le lien reçu par e-mail, il ouvre cette page.{commande.acompteRecu < commande.acompteDu ? <> <Link href={`/marketplace/commande/${encodeURIComponent(commande.reference)}/paiement?suivi=${encodeURIComponent(jeton)}`} className="text-secondary underline underline-offset-2">Régler la commande</Link>.</> : null} Avec un compte KatiMarket, vous gagnez des KATI sur chaque commande, vous retrouvez vos adresses et vous pouvez signaler un problème en ligne. <Link href="/inscription" className="text-secondary underline underline-offset-2">Créer un compte</Link>
         </div>
       ) : null}
       {erreur ? <p className="mt-5 rounded-well border border-warn p-3 text-small text-warn" role="alert">{erreur}</p> : null}
@@ -331,9 +331,9 @@ export function SuiviMarketplace({ reference, jetonUrl }: { reference: string; j
       <FenetreAction
         ouverte={fenetre?.type === 'contestation'}
         titre="Contester la décision"
-        description="KatiHub examine les échanges et les preuves du dossier, puis rend une décision qui s’impose aux deux parties."
+        description="KatiMarket examine les échanges et les preuves du dossier, puis rend une décision qui s’impose aux deux parties."
         libelleValider="Envoyer la contestation"
-        irreversible="Je comprends qu’une contestation ne peut être ouverte qu’une seule fois sur ce retour, et que la décision de KatiHub sera définitive."
+        irreversible="Je comprends qu’une contestation ne peut être ouverte qu’une seule fois sur ce retour, et que la décision de KatiMarket sera définitive."
         onFermer={() => setFenetre(null)}
         onValider={(donnees) => (fenetre?.type === 'contestation' ? contesterRetour(fenetre.retour, donnees) : Promise.resolve())}
       >
@@ -364,7 +364,7 @@ function RetourResume({ retour }: { retour: Retour }) {
     <div className="mt-4 rounded-control bg-space p-3 text-small">
       <p><b>Retour :</b> {libelle(retour.statut)}{retour.montantRembourseFcfa ? ` · ${formatPrice(retour.montantRembourseFcfa)} remboursés` : ''}</p>
       {retour.referenceRetour ? <p className="mt-1 text-micro text-ink-3">Colis retour : {retour.referenceRetour}</p> : null}
-      {motif ? <p className="mt-1 text-micro text-ink-2">{retour.motifArbitrage ? 'Décision de KatiHub' : 'Motif de la boutique'} : {motif}</p> : null}
+      {motif ? <p className="mt-1 text-micro text-ink-2">{retour.motifArbitrage ? 'Décision de KatiMarket' : 'Motif de la boutique'} : {motif}</p> : null}
       {retour.motifContestation ? <p className="mt-1 text-micro text-ink-2">Votre contestation : {retour.motifContestation}</p> : null}
     </div>
   )

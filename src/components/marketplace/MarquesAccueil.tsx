@@ -4,11 +4,11 @@ import { BRAND_MARK_BY_NAME } from '@/constants/brand-marks'
 import styles from './marketplace-marques.module.css'
 
 /**
- * « LES MARQUES DE NOS BOUTIQUES » : les marques vendues sur KatiHub, des plus
+ * « LES MARQUES DE NOS BOUTIQUES » : les marques vendues sur KatiMarket, des plus
  * presentes aux moins presentes, lues dans les facettes du catalogue. Une
  * marque dont le site tient le logo l'affiche, aux couleurs de la marque ; les
  * autres, souvent des marques locales, ont leurs initiales aux couleurs de
- * KatiHub. Chaque tuile ouvre le catalogue filtre sur la marque.
+ * KatiMarket. Chaque tuile ouvre le catalogue filtre sur la marque.
  */
 
 const LIMITE = 12
@@ -26,7 +26,7 @@ export function MarquesAccueil({ marques, totalOffres }: { marques: Array<{ nom:
     <header className={styles.entete}>
       <div>
         <h2 id="marques-titre">Les marques qui font votre quotidien</h2>
-        <p>{nombre.format(totalOffres)} offre{totalOffres > 1 ? 's' : ''} auprès de {nombre.format(marques.length)} marque{marques.length > 1 ? 's' : ''}, proposées par les boutiques de KatiHub.</p>
+        <p>{nombre.format(totalOffres)} offre{totalOffres > 1 ? 's' : ''} auprès de {nombre.format(marques.length)} marque{marques.length > 1 ? 's' : ''}, proposées par les boutiques de KatiMarket.</p>
       </div>
       <Link href="/marques">Explorer toutes les marques <span aria-hidden="true">→</span></Link>
     </header>

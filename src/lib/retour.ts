@@ -8,7 +8,7 @@ import { useSyncExternalStore } from 'react'
  * `/connexion?retour=…` et `/inscription?retour=…` ramenent le client la ou il
  * etait (sa commande, son devis, une boutique). Seul un chemin INTERNE est
  * suivi : `/x` oui, `//site` et `/\site` non — un navigateur lit ces deux-la
- * comme une autre origine, et un lien piege ferait de KatiHub une redirection
+ * comme une autre origine, et un lien piege ferait de KatiMarket une redirection
  * ouverte vers n'importe quel site.
  */
 export function retourSur(valeur: string | null | undefined): string | null {

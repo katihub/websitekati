@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const chemin = trouvee.parent ? `${trouvee.parent.nom} › ${trouvee.categorie.nom}` : trouvee.categorie.nom
   return {
     title: chemin,
-    description: `${chemin} : les offres des boutiques vérifiées de KatiHub${trouvee.garantie ? `, garantie minimale ${trouvee.garantie}` : ''}. Livraison à Douala et Yaoundé.`,
+    description: `${chemin} : les offres des boutiques vérifiées de KatiMarket${trouvee.garantie ? `, garantie minimale ${trouvee.garantie}` : ''}. Livraison à Douala et Yaoundé.`,
     alternates: { canonical: `/categories/${trouvee.categorie.slug}` },
   }
 }

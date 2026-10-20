@@ -8,7 +8,7 @@ import { MesDevis } from './MesDevis'
  * devis acceptes et devenus commandes. Reserve au client connecte.
  */
 export const metadata: Metadata = {
-  title: 'Mes devis — KatiHub',
+  title: 'Mes devis — KatiMarket',
   robots: { index: false, follow: false },
 }
 

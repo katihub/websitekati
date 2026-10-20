@@ -48,7 +48,7 @@ function horsLigne() {
     {
       fil: '',
       texte:
-        'Je n’arrive pas à joindre les services KatiHub à l’instant. Réessayez dans un moment ' +
+        'Je n’arrive pas à joindre les services KatiMarket à l’instant. Réessayez dans un moment ' +
         'ou contactez notre équipe : votre demande pourra être reprise par un conseiller.',
       pieces: { humain: true },
       suites: ['Réessayer'],

@@ -70,7 +70,7 @@ export function PromosCarrousel({ promos, afficherLibelles = false }: { promos: 
     return () => window.clearInterval(minuterie)
   }, [suspendu, mouvementReduit, pages, page, allerA])
 
-  return <section className={styles.promos} aria-roledescription="carrousel" aria-label="Promotions KatiHub" data-testid="promos-accueil">
+  return <section className={styles.promos} aria-roledescription="carrousel" aria-label="Promotions KatiMarket" data-testid="promos-accueil">
     <div
       ref={piste}
       className={styles.piste}

@@ -24,7 +24,7 @@ export function MesFavoris() {
       {favoris.elements.map((element) => <li key={element.offreId} className="flex items-center justify-between gap-3 rounded-well border border-rule px-4 py-3">
         <Link href={`/marketplace/produits/${element.slug}${element.boutiqueSlug ? `?boutique=${element.boutiqueSlug}` : ''}`} className="min-w-0 hover:underline">
           <span className="block font-semibold text-ink">{element.nom}</span>
-          <span className="block text-micro text-ink-3">{element.boutiqueNom ?? 'Boutique KatiHub'}{element.prixFcfa !== null ? ` · ${fcfa(element.prixFcfa)}` : ''}</span>
+          <span className="block text-micro text-ink-3">{element.boutiqueNom ?? 'Boutique KatiMarket'}{element.prixFcfa !== null ? ` · ${fcfa(element.prixFcfa)}` : ''}</span>
         </Link>
         <button type="button" onClick={() => favoris.retirer(element.offreId)} className="min-h-11 shrink-0 rounded-control border border-rule px-3 text-small font-semibold">Retirer</button>
       </li>)}

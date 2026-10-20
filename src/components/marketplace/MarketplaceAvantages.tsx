@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './marketplace-avantages.module.css'
 
 /**
- * « LES AVANTAGES KATIHUB » : un carrousel de cartes texte + image, defilant
+ * « LES AVANTAGES KATIMARKET » : un carrousel de cartes texte + image, defilant
  * seul, qui presente ce que la marketplace ajoute a un achat. Rien d'invente :
  * chaque carte decrit un service reel (Kati Express, points KATI, retrait,
  * devis, paiement et assurance, mode locale) et mene a la page qui le sert.
@@ -27,7 +27,7 @@ const AVANTAGES: readonly Avantage[] = [
   {
     titre: 'Des KATI à chaque achat',
     texte: 'Vos commandes livrées vous rapportent des points KATI, qui paient une partie de la suivante. Parrainez un proche : vous en gagnez aussi.',
-    image: '/marketplace-telephone-kati.png', alt: 'Un téléphone affichant l’application KatiHub', href: '/compte/kati', action: 'Voir mes KATI',
+    image: '/marketplace-telephone-kati.png', alt: 'Un téléphone affichant l’application KatiMarket', href: '/compte/kati', action: 'Voir mes KATI',
   },
   {
     titre: 'Retrait gratuit en boutique',
@@ -42,7 +42,7 @@ const AVANTAGES: readonly Avantage[] = [
   {
     titre: 'Achetez l’esprit tranquille',
     texte: 'Paiement par Orange Money ou MTN Mobile Money, acompte ou paiement complet, et assurance KATI en option sur vos produits.',
-    image: '/marketplace-catalogue-cover.png', alt: 'Une sélection de produits du catalogue KatiHub', href: '/catalogue', action: 'Ouvrir le catalogue',
+    image: '/marketplace-catalogue-cover.png', alt: 'Une sélection de produits du catalogue KatiMarket', href: '/catalogue', action: 'Ouvrir le catalogue',
   },
   {
     titre: 'La mode des créateurs d’ici',
@@ -113,7 +113,7 @@ export function MarketplaceAvantages() {
   return <section className={styles.section} aria-roledescription="carrousel" aria-labelledby="avantages-titre">
     <header className={styles.entete}>
       <div>
-        <h2 id="avantages-titre">Plus qu’un panier : les avantages KatiHub</h2>
+        <h2 id="avantages-titre">Plus qu’un panier : les avantages KatiMarket</h2>
         <p>Livraison Kati Express, points KATI, retrait gratuit en boutique, devis pour les pros : ce que la marketplace ajoute à chacun de vos achats, sans frais cachés.</p>
       </div>
       <Link href="/catalogue">Ouvrir le catalogue</Link>

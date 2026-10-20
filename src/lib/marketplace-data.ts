@@ -29,7 +29,7 @@ export interface OffreMarketplace {
   publieLe?: string | null
   produit: {
     nom: string; slug: string; marque: string | null; categorie: string | null; ficheTechnique?: string | null; images?: Array<{ url: string; texteAlternatif: string | null }>
-    /** La categorie KatiHub du produit, avec son rayon parent quand c'est une sous-categorie. */
+    /** La categorie KatiMarket du produit, avec son rayon parent quand c'est une sous-categorie. */
     categorieRef?: { nom: string; slug: string; parent: { nom: string; slug: string } | null } | null
   }
   boutique: { nom: string; slug: string }
@@ -54,7 +54,7 @@ export interface ListeOffresMarketplace {
   categorie?: { nom: string; slug: string; parent: { nom: string; slug: string } | null } | null
 }
 
-/** L'arbre des categories KatiHub actives, tel que le marchand et le client le voient. */
+/** L'arbre des categories KatiMarket actives, tel que le marchand et le client le voient. */
 export interface CategorieArbre {
   id: string
   nom: string

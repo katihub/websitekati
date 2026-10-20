@@ -178,7 +178,7 @@ export function DemandeEquipe({
         </p>
         <p id={idAide} className="mt-0.5 text-micro leading-[1.5] text-ink-3">
           {avecContact
-            ? 'Un membre de l’équipe KatiHub vous répondra ici. Laissez un numéro ou une adresse e-mail pour être prévenu.'
+            ? 'Un membre de l’équipe KatiMarket vous répondra ici. Laissez un numéro ou une adresse e-mail pour être prévenu.'
             : courriel
               ? `Nous vous répondrons ici et à ${courriel}.`
               : 'Nous vous répondrons ici.'}

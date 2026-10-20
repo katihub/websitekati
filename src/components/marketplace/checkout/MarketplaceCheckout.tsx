@@ -60,7 +60,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   const request = useRef<{ body: string; key: string } | null>(null)
   const lock = useRef(false)
 
-  // Les villes proposees : celles des listes KatiHub, puis celles des offres et de la grille.
+  // Les villes proposees : celles des listes KatiMarket, puis celles des offres et de la grille.
   const villes = [...new Set([
     ...localites.map(l => l.ville),
     ...checked.flatMap(item => item.offer?.villesLivraison ?? []),

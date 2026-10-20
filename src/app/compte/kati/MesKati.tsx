@@ -20,7 +20,7 @@ const fcfa = (montant: number) => `${new Intl.NumberFormat('fr-FR').format(monta
 const date = (valeur: string) => new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(valeur))
 const LIBELLES: Record<OperationKati['type'], string> = {
   attribution: 'Gain en attente', liberation: 'Disponible', reservation: 'Réservé pour une commande', utilisation: 'Utilisé',
-  annulation: 'Repris', expiration: 'Expiré', correction: 'Correction KatiHub', transfert: 'Transfert', ajustement: 'Ajustement KatiHub', restitution: 'KATI restitués',
+  annulation: 'Repris', expiration: 'Expiré', correction: 'Correction KatiMarket', transfert: 'Transfert', ajustement: 'Ajustement KatiMarket', restitution: 'KATI restitués',
 }
 
 function variation(operation: OperationKati) {
@@ -57,7 +57,7 @@ function KatiCoin() {
 }
 
 function LoggedOutHero({ onLogin, conversion, error }: { onLogin: () => void; conversion: string | null; error?: string }) {
-  return <><section className={styles.hero} aria-labelledby="kati-title"><div className={styles.heroCopy}><h1 id="kati-title">Vos achats vous <strong>récompensent</strong></h1><p>Chaque commande livrée sur KatiHub vous fait gagner des KATI. Cumulez des points et économisez sur vos prochains achats.</p>{conversion ? <span className={styles.conversion}>{conversion}</span> : null}{error ? <p className={styles.heroError} role="alert">{error}</p> : null}<button type="button" onClick={onLogin} className={styles.loginButton}><Icon name="user"/><span>Se connecter</span><Icon name="arrow"/></button><small>pour voir votre solde et suivre vos gains</small></div><KatiCoin/><div className={styles.heroSteps}><Steps/></div></section><div className={styles.mobileSteps}><Steps/></div></>
+  return <><section className={styles.hero} aria-labelledby="kati-title"><div className={styles.heroCopy}><h1 id="kati-title">Vos achats vous <strong>récompensent</strong></h1><p>Chaque commande livrée sur KatiMarket vous fait gagner des KATI. Cumulez des points et économisez sur vos prochains achats.</p>{conversion ? <span className={styles.conversion}>{conversion}</span> : null}{error ? <p className={styles.heroError} role="alert">{error}</p> : null}<button type="button" onClick={onLogin} className={styles.loginButton}><Icon name="user"/><span>Se connecter</span><Icon name="arrow"/></button><small>pour voir votre solde et suivre vos gains</small></div><KatiCoin/><div className={styles.heroSteps}><Steps/></div></section><div className={styles.mobileSteps}><Steps/></div></>
 }
 
 function WalletHero({ wallet }: { wallet: PortefeuilleKati }) {
@@ -72,13 +72,13 @@ function ProductRecommendations({ offers }: { offers: readonly OffreMarketplace[
     const specs = productCardSpecs(offer, 2)
     const gain = politique && offer.prixFcfa ? katiPourMontant(offer.prixFcfa, politique.gainClientBps, politique.katiParFcfa) : null
     const href = `/marketplace/produits/${offer.produit.slug}?boutique=${encodeURIComponent(offer.boutique.slug)}`
-    return <article className={styles.productCard} style={{ '--delay': `${index * 65}ms` } as React.CSSProperties} key={offer.id}><Link href={href} className={styles.productImage}>{image ? <Image src={image.url} alt={image.alt} fill sizes="(max-width: 700px) 72vw, 280px" priority={index === 0}/> : <span>{offer.produit.marque ?? offer.produit.categorie ?? 'KatiHub'}</span>}</Link><div className={styles.productContent}><small><Icon name="shop"/>{offer.boutique.nom}</small><h3><Link href={href}>{offer.titre ?? offer.produit.nom}</Link></h3>{specs.length ? <ul>{specs.map(spec => <li key={spec}>{spec}</li>)}</ul> : null}<strong>{offer.prixFcfa === null ? 'Prix sur demande' : fcfa(offer.prixFcfa)}</strong><Link href={href} className={styles.katiGain}><span>K</span>{gain ? `+ ${formatKati(gain)}` : 'Gagnez des KATI'}<Icon name="arrow"/></Link></div></article>
+    return <article className={styles.productCard} style={{ '--delay': `${index * 65}ms` } as React.CSSProperties} key={offer.id}><Link href={href} className={styles.productImage}>{image ? <Image src={image.url} alt={image.alt} fill sizes="(max-width: 700px) 72vw, 280px" priority={index === 0}/> : <span>{offer.produit.marque ?? offer.produit.categorie ?? 'KatiMarket'}</span>}</Link><div className={styles.productContent}><small><Icon name="shop"/>{offer.boutique.nom}</small><h3><Link href={href}>{offer.titre ?? offer.produit.nom}</Link></h3>{specs.length ? <ul>{specs.map(spec => <li key={spec}>{spec}</li>)}</ul> : null}<strong>{offer.prixFcfa === null ? 'Prix sur demande' : fcfa(offer.prixFcfa)}</strong><Link href={href} className={styles.katiGain}><span>K</span>{gain ? `+ ${formatKati(gain)}` : 'Gagnez des KATI'}<Icon name="arrow"/></Link></div></article>
   })}</div></section>
 }
 
 function Reassurance() {
   const items = [{ icon: 'shield' as const, title: 'Paiement sécurisé', text: 'Vos transactions sont protégées.' }, { icon: 'shop' as const, title: 'Boutiques locales', text: 'Des vendeurs proches de chez vous.' }, { icon: 'truck' as const, title: 'KATI après livraison', text: 'Vos points sont validés après réception.' }]
-  return <section className={styles.reassurance} aria-label="Les garanties KatiHub">{items.map(item => <div key={item.title}><span><Icon name={item.icon}/></span><p><b>{item.title}</b><small>{item.text}</small></p></div>)}</section>
+  return <section className={styles.reassurance} aria-label="Les garanties KatiMarket">{items.map(item => <div key={item.title}><span><Icon name={item.icon}/></span><p><b>{item.title}</b><small>{item.text}</small></p></div>)}</section>
 }
 
 export function MesKati({ recommendations }: { recommendations: readonly OffreMarketplace[] }) {
