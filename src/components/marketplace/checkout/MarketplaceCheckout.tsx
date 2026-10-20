@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, ErreurApi } from '@/lib/api'
 import { cartLineKey, useCart } from '@/lib/cart'
@@ -23,6 +23,9 @@ import { CheckoutHeading, ProductThumb, Summary, TrustStrip, money } from './Che
 import { useCheckedCart } from './useCheckedCart'
 import { fraisBoutique, useTarifsLivraison } from './useTarifsLivraison'
 import styles from './checkout.module.css'
+import { useMarketplaceLanguage } from '@/lib/language'
+import { buildAccessoryRecommendationQuery } from '@/lib/marketplace-accessories'
+import type { OffreMarketplace } from '@/lib/marketplace-data'
 
 const AUTRE = '__autre__'
 const NOUVELLE = 'nouvelle'
@@ -35,6 +38,8 @@ const COURRIEL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
  * par e-mail le lien qui suit et paie sa commande.
  */
 export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] | null }) {
+  const { locale } = useMarketplaceLanguage()
+  const en = locale === 'en'
   const cart = useCart()
   const { session, chargement } = useSession()
   const account = useAccount()
@@ -42,6 +47,19 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   const ici = useIci()
   const lines = cart.lines.filter(line => selectedKeys === null || selectedKeys.includes(cartLineKey(line)))
   const { checked, loading, error: serviceError, refresh } = useCheckedCart(lines)
+  const [accessories, setAccessories] = useState<OffreMarketplace[]>([])
+  const accessoryCategories = [...new Set(checked.map(item => item.categorieId).filter((id): id is string => Boolean(id)))].join(',')
+  const accessorySlugs = [...new Set(lines.map(line => line.slug))].join(',')
+  useEffect(() => {
+    const query = buildAccessoryRecommendationQuery(accessoryCategories ? accessoryCategories.split(',') : [], accessorySlugs ? accessorySlugs.split(',') : [])
+    if (!query || loading || serviceError) { setAccessories([]); return }
+    let active = true
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/v1/marketplace/accessoires${query}`, { headers: { Accept: 'application/json' } })
+      .then(response => response.ok ? response.json() as Promise<OffreMarketplace[]> : [])
+      .then(result => { if (active) setAccessories(result.slice(0, 4)) })
+      .catch(() => { if (active) setAccessories([]) })
+    return () => { active = false }
+  }, [accessoryCategories, accessorySlugs, loading, serviceError])
   const groups = groupDeliveries(checked)
   const total = checkedTotal(checked)
   const count = lines.reduce((sum, line) => sum + line.qty, 0)
@@ -188,13 +206,13 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
     }
   }
 
-  if (!lines.length) return <div className={styles.page}><div className={styles.shell}><CheckoutHeading title="Passer ma commande" subtitle="Livraison et paiement de vos achats." step={2}/><section className={styles.empty}><ShopIcon name="bag"/><h2>Aucun article sélectionné.</h2><Link className={styles.primary} href="/panier">Revenir au panier</Link></section></div></div>
+  if (!lines.length) return <div className={styles.page}><div className={styles.shell}><CheckoutHeading title={en ? 'Checkout' : 'Passer ma commande'} subtitle={en ? 'Delivery and payment for your purchases.' : 'Livraison et paiement de vos achats.'} step={2}/><section className={styles.empty}><ShopIcon name="bag"/><h2>{en ? 'No items selected.' : 'Aucun article sélectionné.'}</h2><Link className={styles.primary} href="/panier">{en ? 'Return to cart' : 'Revenir au panier'}</Link></section></div></div>
   const compact = checked.map(item => ({ ...item.line, price: item.offer?.prixFcfa ?? item.line.price }))
   return <div className={styles.page}><div className={styles.shell}>
-    <CheckoutHeading title="Passer ma commande" subtitle="Vos articles, la livraison et le paiement, sur une seule page." step={2}/>
+    <CheckoutHeading title={en ? 'Checkout' : 'Passer ma commande'} subtitle={en ? 'Your items, delivery, and payment on one page.' : 'Vos articles, la livraison et le paiement, sur une seule page.'} step={2}/>
     <form id="marketplace-checkout" className={styles.layout} onSubmit={submit} noValidate><div className={styles.checkoutMain}>
-      <section className={styles.panel} aria-label="Vos articles">
-        <h2><ShopIcon name="bag"/>Vos articles</h2>
+      <section className={styles.panel} aria-label={en ? 'Your items' : 'Vos articles'}>
+        <h2><ShopIcon name="bag"/>{en ? 'Your items' : 'Vos articles'}</h2>
         <ul className={styles.lignesCommande}>{lines.map(line => {
           const key = cartLineKey(line)
           const live = checked.find(item => cartLineKey(item.line) === key)?.offer
@@ -205,23 +223,24 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
             <button type="button" className={styles.edit} disabled={pending} aria-label={`Retirer ${line.name}`} onClick={() => cart.remove(key)}><ShopIcon name="trash"/></button></li>
         })}</ul>
       </section>
+      {accessories.length ? <section className={styles.panel} aria-label={en ? 'Suggested accessories' : 'Accessoires suggérés'} data-testid="checkout-accessories"><h2><ShopIcon name="package"/>{en ? 'Complete your order' : 'Complétez votre commande'}</h2><p>{en ? 'Optional accessories related to items in your cart. Nothing is added unless you choose it.' : 'Accessoires en lien avec vos articles. Rien n’est ajouté sans votre choix.'}</p><ul className={styles.lignesCommande}>{accessories.map(offer => <li key={offer.id}><ProductThumb line={{ name: offer.produit.nom, image: offer.produit.images?.[0]?.url ?? null }}/><div><b>{offer.titre ?? offer.produit.nom}</b><small>{offer.boutique.nom}</small></div><strong>{offer.prixFcfa === null ? (en ? 'Ask for price' : 'Prix sur demande') : money(offer.prixFcfa)}</strong><button type="button" className={styles.edit} disabled={offer.prixFcfa === null || !offer.boutique.id || !offer.modesLivraison?.length} onClick={() => { if (offer.prixFcfa === null || !offer.boutique.id) return; cart.add({ slug: offer.produit.slug, name: offer.titre ?? offer.produit.nom, price: offer.prixFcfa, image: offer.produit.images?.[0]?.url ?? null, offerId: offer.id, boutiqueId: offer.boutique.id, boutiqueNom: offer.boutique.nom, modesLivraison: offer.modesLivraison as never, villesLivraison: offer.villesLivraison ?? [], quantiteMinimale: offer.quantiteMinimale ?? 1 }) }}>{en ? 'Add' : 'Ajouter'}</button></li>)}</ul></section> : null}
 
-      {!session && !chargement ? <section className={styles.panel} aria-label="Vos coordonnées" data-testid="sans-compte">
-        <h2><ShopIcon name="phone"/>Vos coordonnées</h2>
-        <p>Commandez sans compte : le lien de suivi et de paiement vous est envoyé par e-mail.</p>
+      {!session && !chargement ? <section className={styles.panel} aria-label={en ? 'Your contact details' : 'Vos coordonnées'} data-testid="sans-compte">
+        <h2><ShopIcon name="phone"/>{en ? 'Your contact details' : 'Vos coordonnées'}</h2>
+        <p>{en ? 'Checkout as a guest: your tracking and payment link will be emailed to you.' : 'Commandez sans compte : le lien de suivi et de paiement vous est envoyé par e-mail.'}</p>
         <div className={styles.fields}>
-          <label>Nom complet<input required autoComplete="name" maxLength={80} value={contact.nom} onChange={event => setContact({ ...contact, nom: event.target.value })}/></label>
-          <label>Téléphone mobile<input required type="tel" autoComplete="tel" maxLength={20} value={contact.telephone} placeholder="6 77 12 34 56" onChange={event => setContact({ ...contact, telephone: event.target.value })}/></label>
-          <label className={styles.wide}>E-mail<input required type="email" autoComplete="email" maxLength={320} value={contact.courriel} placeholder="vous@exemple.cm" onChange={event => setContact({ ...contact, courriel: event.target.value })}/></label>
+          <label>{en ? 'Full name' : 'Nom complet'}<input required autoComplete="name" maxLength={80} value={contact.nom} onChange={event => setContact({ ...contact, nom: event.target.value })}/></label>
+          <label>{en ? 'Mobile phone' : 'Téléphone mobile'}<input required type="tel" autoComplete="tel" maxLength={20} value={contact.telephone} placeholder="6 77 12 34 56" onChange={event => setContact({ ...contact, telephone: event.target.value })}/></label>
+          <label className={styles.wide}>{en ? 'Email' : 'E-mail'}<input required type="email" autoComplete="email" maxLength={320} value={contact.courriel} placeholder="you@example.cm" onChange={event => setContact({ ...contact, courriel: event.target.value })}/></label>
         </div>
         <div className={styles.accountPrompt} data-testid="arguments-compte"><ShopIcon name="shield"/><div><b>Avec un compte, c’est encore mieux :</b>
           <ul className={styles.argumentsCompte}><li>vous gagnez des KATI sur chaque commande, à dépenser sur la suivante ;</li><li>vous suivez toutes vos commandes au même endroit ;</li><li>vos adresses sont enregistrées pour la prochaine fois ;</li><li>vous retrouvez vos devis et vos retours.</li></ul>
           <button type="button" onClick={account.open}>Se connecter</button><Link href={avecRetour('/inscription', ici)}>Créer un compte</Link></div></div>
       </section> : null}
 
-      <section className={styles.panel} aria-label="Adresse">
-        <h2><ShopIcon name="pin"/>{aDomicile ? 'Adresse de livraison' : 'Ville et destinataire'}</h2>
-        <p>{quartierNecessaire ? 'Choisissez votre quartier pour afficher les frais de livraison; le repère sera demandé si vous choisissez une livraison à domicile.' : 'Le retrait et l’expédition en agence n’ont pas besoin d’adresse : seulement la ville et un numéro à joindre.'}</p>
+      <section className={styles.panel} aria-label={en ? 'Address' : 'Adresse'}>
+        <h2><ShopIcon name="pin"/>{aDomicile ? (en ? 'Delivery address' : 'Adresse de livraison') : (en ? 'City and recipient' : 'Ville et destinataire')}</h2>
+        <p>{quartierNecessaire ? (en ? 'Choose your neighbourhood to see delivery fees. A landmark is required for home delivery.' : 'Choisissez votre quartier pour afficher les frais de livraison; le repère sera demandé si vous choisissez une livraison à domicile.') : (en ? 'Pickup and agency shipping do not require a street address: only the city and a contact number.' : 'Le retrait et l’expédition en agence n’ont pas besoin d’adresse : seulement la ville et un numéro à joindre.')}</p>
         {carnet.length ? <label className={styles.carnet}>Mes adresses<select value={enregistree?.id ?? NOUVELLE} disabled={pending} onChange={event => setAdresseChoisie(event.target.value)}>
           {carnet.map(a => <option key={a.id} value={a.id}>{libelleAdresse(a)}</option>)}
           <option value={NOUVELLE}>Une nouvelle adresse…</option>
@@ -241,8 +260,8 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
         {session && aDomicile && !enregistree ? <label className={styles.terms}><input type="checkbox" checked={garderAdresse} onChange={event => setGarderAdresse(event.target.checked)}/><span>Enregistrer cette adresse dans mon carnet</span></label> : null}
       </section>
 
-      <section className={styles.panel} aria-label="Livraison par boutique">
-        <h2><ShopIcon name="truck"/>Livraison par boutique</h2><p>Chaque boutique prépare ses articles séparément.</p>
+      <section className={styles.panel} aria-label={en ? 'Delivery by shop' : 'Livraison par boutique'}>
+        <h2><ShopIcon name="truck"/>{en ? 'Delivery by shop' : 'Livraison par boutique'}</h2><p>{en ? 'Each shop prepares its items separately.' : 'Chaque boutique prépare ses articles séparément.'}</p>
         {loading ? <p role="status">Vérification des prix, du stock et des livraisons…</p> : null}
         {!loading && !serviceError ? groups.map(group => <div className={styles.deliveryGroup} key={group.id}>
           <div><span className={styles.shopMonogram}>{group.name.split(' ').map(word => word[0]).slice(0, 2).join('')}</span><b>{group.name}</b><small>{group.lines.reduce((sum, item) => sum + item.line.qty, 0)} article(s)</small></div>
@@ -266,12 +285,12 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
       {limitsExceeded ? <p className={styles.warning} role="alert">Une commande est limitée à 50 articles distincts et 20 boutiques. Réduisez votre sélection dans le panier.</p> : null}
       {serviceError ? <p role="alert" className={styles.warning}>{serviceError}<button type="button" onClick={refresh}>Réessayer</button></p> : null}
       {tarifsErreur ? <p role="alert" className={styles.warning}>{tarifsErreur}<button type="button" onClick={() => void rechargerTarifs()}>Réessayer</button></p> : null}
-      <TrustStrip/><Link className={styles.continueShopping} href="/panier">Retour au panier</Link>
+      <TrustStrip/><Link className={styles.continueShopping} href="/panier">{en ? 'Return to cart' : 'Retour au panier'}</Link>
     </div>
     <Summary total={total} count={count} compactLines={compact} fees={fees} reglement={reglement} completImpose={enAgence}>
       {error ? <p role="alert" className={styles.warning}>{error}</p> : null}
       <button className={styles.primary} disabled={pending || chargement || blocked}>{pending ? 'Enregistrement…' : reglement.aPayerMaintenantFcfa ? `Commander et payer ${money(reglement.aPayerMaintenantFcfa)}` : 'Confirmer ma commande'}<ShopIcon name="arrow"/></button>
-      <p className={styles.note}><ShopIcon name="info"/>Les prix et le stock sont revérifiés par le serveur à la validation.</p>
+      <p className={styles.note}><ShopIcon name="info"/>{en ? 'Prices and stock are checked again when you place your order.' : 'Les prix et le stock sont revérifiés par le serveur à la validation.'}</p>
     </Summary></form>
   </div></div>
 }

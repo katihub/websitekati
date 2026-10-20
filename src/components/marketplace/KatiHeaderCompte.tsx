@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNod
 import { api, ErreurApi } from '@/lib/api'
 import { useSession } from '@/lib/session'
 import styles from './marketplace-shell-v2.module.css'
+import { useMarketplaceLanguage } from '@/lib/language'
 
 /**
  * CE QUE L'EN-TETE PROPOSE SELON QUI EST LA.
@@ -61,6 +62,7 @@ function useProfil(userId: string | null): Profil | null {
 }
 
 function MenuCompte({ profil, courriel, onDeconnexion }: { profil: Profil | null; courriel: string | null; onDeconnexion: () => Promise<void> }) {
+  const { text } = useMarketplaceLanguage()
   const [ouvert, setOuvert] = useState(false)
   const conteneur = useRef<HTMLDivElement>(null)
   const id = useId()
@@ -75,23 +77,24 @@ function MenuCompte({ profil, courriel, onDeconnexion }: { profil: Profil | null
   }, [ouvert])
   const lien = (href: string, libelle: string) => <Link href={href} role="menuitem" onClick={() => setOuvert(false)}>{libelle}</Link>
   return <div className={styles.menuCompte} ref={conteneur}>
-    <button type="button" className={styles.actionLien} aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined} aria-label="Mon compte" onClick={() => setOuvert(!ouvert)} data-testid="menu-compte">
-      <Icon>{ICONE_PERSONNE}</Icon><span>Mon compte</span>
+    <button type="button" className={styles.actionLien} aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined} aria-label={text('myAccount')} onClick={() => setOuvert(!ouvert)} data-testid="menu-compte">
+      <Icon>{ICONE_PERSONNE}</Icon><span>{text('myAccount')}</span>
     </button>
     {ouvert ? <div id={id} role="menu" className={styles.menuCompteListe}>
       <p>{courriel ?? 'Connecté'}</p>
-      {profil === 'marchand' ? lien('/espace-vendeur', 'Espace vendeur') : null}
-      {lien('/compte/commandes', 'Mes commandes')}
-      {lien('/compte/devis', 'Mes devis')}
-      {lien('/compte/kati', 'Mes KATI')}
-      {lien('/compte/favoris', 'Mes favoris')}
-      <button type="button" role="menuitem" onClick={() => { setOuvert(false); void onDeconnexion() }}>Se déconnecter</button>
+      {profil === 'marchand' ? lien('/espace-vendeur', text('sellerSpace')) : null}
+      {lien('/compte/commandes', text('myOrders'))}
+      {lien('/compte/devis', text('myQuotes'))}
+      {lien('/compte/kati', text('myPoints'))}
+      {lien('/compte/favoris', text('myFavorites'))}
+      <button type="button" role="menuitem" onClick={() => { setOuvert(false); void onDeconnexion() }}>{text('signOut')}</button>
     </div> : null}
   </div>
 }
 
 /** Les deux actions de compte de la barre principale, a cote du panier. */
 export function ActionsCompte() {
+  const { text } = useMarketplaceLanguage()
   const { session, chargement, courriel, deconnecter } = useSession()
   const profil = useProfil(session?.userId ?? null)
   const router = useRouter()
@@ -102,28 +105,29 @@ export function ActionsCompte() {
   if (!hydrate || chargement) return <span className={styles.actionsAttente} aria-hidden="true" />
   if (!session) {
     return <>
-      <Link href="/connexion" className={styles.actionLien} aria-label="Connexion"><Icon>{ICONE_PERSONNE}</Icon><span>Connexion</span></Link>
-      <Link href="/espace-vendeur" className={styles.actionLien} aria-label="Compte vendeur"><Icon>{ICONE_BOUTIQUE}</Icon><span>Compte vendeur</span></Link>
+      <Link href="/connexion" className={styles.actionLien} aria-label={text('signIn')}><Icon>{ICONE_PERSONNE}</Icon><span>{text('signIn')}</span></Link>
+      <Link href="/espace-vendeur" className={styles.actionLien} aria-label={text('sellerAccount')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('sellerAccount')}</span></Link>
     </>
   }
   return <>
     {profil === 'marchand'
-      ? <Link href="/espace-vendeur" className={styles.actionLien} aria-label="Ma boutique"><Icon>{ICONE_BOUTIQUE}</Icon><span>Ma boutique</span></Link>
-      : <Link href="/compte/commandes" className={styles.actionLien} aria-label="Mes commandes"><Icon>{ICONE_COLIS}</Icon><span>Mes commandes</span></Link>}
+      ? <Link href="/espace-vendeur" className={styles.actionLien} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
+      : <Link href="/compte/commandes" className={styles.actionLien} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
     <MenuCompte profil={profil} courriel={courriel} onDeconnexion={deconnexion} />
   </>
 }
 
 /** Les liens de la barre du haut : se connecter, ou saluer le client connecte. */
 export function LiensBarreHaut() {
+  const { text } = useMarketplaceLanguage()
   const { session, chargement, courriel, deconnecter } = useSession()
   const router = useRouter()
   const hydrate = useHydrate()
   if (!hydrate || chargement) return null
-  if (!session) return <><Link href="/connexion">Se connecter</Link><Link href="/inscription">Créer un compte</Link></>
+  if (!session) return <><Link href="/connexion">{text('signIn')}</Link><Link href="/inscription">{text('createAccount')}</Link></>
   const prenom = prenomDe(courriel)
   return <>
-    <span className={styles.salutation}>Bonjour{prenom ? `, ${prenom}` : ''}</span>
-    <button type="button" className={styles.lienBarre} onClick={() => void deconnecter().then(() => router.refresh())}>Se déconnecter</button>
+    <span className={styles.salutation}>{text('greeting')}{prenom ? `, ${prenom}` : ''}</span>
+    <button type="button" className={styles.lienBarre} onClick={() => void deconnecter().then(() => router.refresh())}>{text('signOut')}</button>
   </>
 }

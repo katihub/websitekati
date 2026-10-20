@@ -1,5 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import type { ReactNode } from 'react'
+import { MarketplaceText } from '@/lib/language'
 import { getBanners, type PublishedBanner } from '@/lib/banners'
 import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
@@ -98,7 +100,7 @@ const PROMOS_KATIMARKET: PublishedBanner[] = [
   },
 ]
 const ORDRE_PROMOS_ACCUEIL = ['katihub-mode', 'katihub-selection', 'katihub-high-tech', 'katihub-bienvenue', 'katihub-vendeurs', 'katihub-livraison'] as const
-function SectionHead({ title, href, label = 'Voir tout' }: { title: string; href: string; label?: string }) {
+function SectionHead({ title, href, label = <MarketplaceText id="viewAll" /> }: { title: ReactNode; href: string; label?: ReactNode }) {
   return <header className={styles.sectionHead}><h2>{title}</h2><Link href={href}>{label}<span>→</span></Link></header>
 }
 
@@ -148,18 +150,18 @@ export async function MarketplaceHome() {
       </aside>
     </div>
 
-    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Meilleures ventes" href="/catalogue" />{best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}>Les offres seront bientôt disponibles.</p>}</section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="bestSellersTitle" />} href="/catalogue" />{best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}><MarketplaceText id="offersSoon" /></p>}</section>
     <MarketplaceAvantages />
     {groupesCategories.some((groupe) => groupe.offres.length) ? <CategoryProductShowcase groupes={groupesCategories.filter((groupe) => groupe.offres.length)} /> : null}
     {rayons.length ? <RayonsAccueil rayons={rayons} initial={{ slug: premier!.slug, offres: offresPremier }} /> : null}
     <MarquesAccueil marques={comptes.facettes?.marques ?? []} totalOffres={comptes.pagination.total} />
     <DerniersArrivages />
-    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Catégories populaires" href="/catalogue" label="Voir toutes les catégories" /><div className={styles.categoryRail}>{POPULAR.map(([icon, name]) => <Link href={`/recherche?q=${encodeURIComponent(name)}`} key={name}><span>{icon}</span><b>{name}</b></Link>)}</div></section>
-    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Boutiques recommandées" href="/boutiques" label="Voir toutes les boutiques" />{boutiques.length ? <ShopCarouselAccueil boutiques={boutiques.slice(0, 20)} /> : <p className={styles.empty}>Les boutiques seront bientôt disponibles.</p>}</section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="popularCategories" />} href="/catalogue" label={<MarketplaceText id="viewAllCategories" />} /><div className={styles.categoryRail}>{POPULAR.map(([icon, name]) => <Link href={`/recherche?q=${encodeURIComponent(name)}`} key={name}><span>{icon}</span><b>{name}</b></Link>)}</div></section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="recommendedShopsTitle" />} href="/boutiques" label={<MarketplaceText id="viewAllShops" />} />{boutiques.length ? <ShopCarouselAccueil boutiques={boutiques.slice(0, 20)} /> : <p className={styles.empty}><MarketplaceText id="shopsSoon" /></p>}</section>
 
-    <section className={`${styles.shell} ${styles.fashionBanner}`}><Image src="/marketplace-mode-cameroun.png" alt="Une cliente camerounaise présente une sélection mode" fill sizes="(max-width: 800px) 100vw, 1480px" /><div><h2>Le style camerounais,<br /><strong>au quotidien !</strong></h2><p>Vêtements, chaussures et accessoires proposés par des boutiques locales.</p><Link href="/recherche?q=Mode">Découvrir la mode <span>→</span></Link></div></section>
+    <section className={`${styles.shell} ${styles.fashionBanner}`}><Image src="/marketplace-mode-cameroun.png" alt="Une cliente camerounaise présente une sélection mode" fill sizes="(max-width: 800px) 100vw, 1480px" /><div><h2><MarketplaceText id="fashionBannerTitle" /><br /><strong><MarketplaceText id="daily" /></strong></h2><p><MarketplaceText id="localFashionText" /></p><Link href="/recherche?q=Mode"><MarketplaceText id="discoverFashion" /> <span>→</span></Link></div></section>
 
-    <section className={`${styles.shell} ${styles.section}`}><SectionHead title="Nouveautés" href="/catalogue?tri=recent" />{fresh.length ? <div className={styles.productGrid}>{fresh.map((offre) => <ProductCard key={offre.id} offre={offre} fresh />)}</div> : null}</section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="newArrivals" />} href="/catalogue?tri=recent" />{fresh.length ? <div className={styles.productGrid}>{fresh.map((offre) => <ProductCard key={offre.id} offre={offre} fresh />)}</div> : <p className={styles.empty}><MarketplaceText id="newArrivalsEmpty" /></p>}</section>
     <VendreSurKatihub />
     <NewsletterKatihub />
   </div>

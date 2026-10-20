@@ -1,12 +1,12 @@
-import Link from 'next/link'
 import { CartButton } from '@/components/layout/CartButton'
 import { lireCategoriesMarketplace } from '@/lib/marketplace-data'
 import { lireAnnonces } from '@/lib/announcements'
 import { ActionsCompte, LiensBarreHaut } from './KatiHeaderCompte'
 import { KatiLogo } from './KatiLogo'
-import { MobileCategoriesMenu } from './MobileCategoriesMenu'
 import { KatiAnnouncementTicker } from './KatiAnnouncementTicker'
 import { MarketplaceSearchForm } from './MarketplaceSearchForm'
+import { LanguageSwitcher, TrustSlogan } from './LanguageSwitcher'
+import { MarketplaceNav } from './MarketplaceNav'
 import { CaptureParrainage } from './kati/CaptureParrainage'
 import styles from './marketplace-shell-v2.module.css'
 
@@ -18,7 +18,8 @@ export async function KatiHeader() {
       <CaptureParrainage />
       <div className={styles.topbar} data-marketplace-topbar><div className={`${styles.shell} ${styles.topbarInner}`}>
         <KatiAnnouncementTicker announcements={announcements} />
-        <em>En toute confiance !</em>
+        <TrustSlogan />
+        <LanguageSwitcher />
         <LiensBarreHaut />
       </div></div>
       <div className={`${styles.shell} ${styles.mainbar}`}>
@@ -29,17 +30,7 @@ export async function KatiHeader() {
           <CartButton href="/panier" />
         </div>
       </div>
-      <nav className={styles.nav} aria-label="Catégories principales" data-marketplace-nav>
-        <div className={`${styles.shell} ${styles.navInner}`}>
-          <Link href="/categories" className={styles.allCategories}>▦ Toutes les catégories</Link>
-          <MobileCategoriesMenu categories={categories} />
-          <div className={styles.navScroll}>
-            {categories.slice(0, 6).map((categorie) => <Link key={categorie.id} href={`/categories/${categorie.slug}`}>{categorie.nom}</Link>)}
-            <Link href="/boutiques">Boutiques</Link>
-            <Link href="/devenir-vendeur">Vendre sur KatiMarket</Link>
-          </div>
-        </div>
-      </nav>
+      <MarketplaceNav categories={categories} />
     </header>
   )
 }

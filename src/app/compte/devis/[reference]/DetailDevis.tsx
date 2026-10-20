@@ -10,6 +10,7 @@ import { LIBELLES_DEVIS, LIBELLES_PARTIE, dateCourte, fcfa, type DevisMarketplac
 import { useLocalites } from '@/lib/localites'
 import { LIBELLE_MODE, livraisonADomicile, type DeliveryMode } from '@/lib/modes-livraison'
 import { memoriserSuivi, useJetonSuivi } from '@/lib/suivi'
+import { useMarketplaceLanguage } from '@/lib/language'
 
 /**
  * UN DEVIS MARKETPLACE, VU PAR SON CLIENT.
@@ -30,6 +31,8 @@ function intersection(listes: string[][]) {
 }
 
 export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { reference: string; sansCompte?: boolean; jetonUrl?: string }) {
+  const { locale } = useMarketplaceLanguage()
+  const en = locale === 'en'
   const { open: ouvrirCompte } = useAccount()
   const router = useRouter()
   const localites = useLocalites()
@@ -81,12 +84,12 @@ export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { refer
 
   if (connexion) {
     return <div className="rounded-well border border-rule bg-space p-4">
-      <p className="text-small text-ink">Connectez-vous pour consulter ce devis.</p>
-      <button type="button" onClick={ouvrirCompte} className="press mt-4 inline-flex min-h-11 items-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface">Se connecter</button>
+      <p className="text-small text-ink">{en ? 'Sign in to view this quote.' : 'Connectez-vous pour consulter ce devis.'}</p>
+      <button type="button" onClick={ouvrirCompte} className="press mt-4 inline-flex min-h-11 items-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface">{en ? 'Sign in' : 'Se connecter'}</button>
     </div>
   }
-  if (!devis && !erreur) return <p className="text-small text-ink-3" role="status">Chargement du devis…</p>
-  if (!devis) return <div className="rounded-well border border-rule bg-space p-4"><p className="text-small text-ink">{erreur}</p>{sansCompte ? null : <Link href="/compte/devis" className="mt-3 inline-flex text-micro text-secondary underline">← Mes devis</Link>}</div>
+  if (!devis && !erreur) return <p className="text-small text-ink-3" role="status">{en ? 'Loading quote…' : 'Chargement du devis…'}</p>
+  if (!devis) return <div className="rounded-well border border-rule bg-space p-4"><p className="text-small text-ink">{erreur}</p>{sansCompte ? null : <Link href="/compte/devis" className="mt-3 inline-flex text-micro text-secondary underline">← {en ? 'My quotes' : 'Mes devis'}</Link>}</div>
 
   async function telecharger() {
     try { await telechargerApi(`${base}/pdf`, `devis-${reference}.pdf`, acces) }
@@ -135,18 +138,18 @@ export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { refer
   return <div className="grid gap-8">
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        {sansCompte ? <p className="text-micro text-ink-3">Devis sans compte · gardez le lien reçu par e-mail, il ouvre cette page.</p> : <Link href="/compte/devis" className="text-micro text-secondary underline underline-offset-2">← Mes devis</Link>}
-        <h1 className="mt-2 text-h3 font-semibold text-ink">Devis <span className="t-num">{devis.reference}</span></h1>
-        <p className="text-small text-ink-2">Demandé le {dateCourte(devis.creeLe)}{devis.entreprise ? ` pour ${devis.entreprise}` : ''} · {LIBELLES_DEVIS[devis.statut]}</p>
+        {sansCompte ? <p className="text-micro text-ink-3">{en ? 'Guest quote · keep the email link to return to this page.' : 'Devis sans compte · gardez le lien reçu par e-mail, il ouvre cette page.'}</p> : <Link href="/compte/devis" className="text-micro text-secondary underline underline-offset-2">← {en ? 'My quotes' : 'Mes devis'}</Link>}
+        <h1 className="mt-2 text-h3 font-semibold text-ink">{en ? 'Quote' : 'Devis'} <span className="t-num">{devis.reference}</span></h1>
+        <p className="text-small text-ink-2">{en ? 'Requested on ' : 'Demandé le '}{new Intl.DateTimeFormat(en ? 'en-CM' : 'fr-CM').format(new Date(devis.creeLe))}{devis.entreprise ? `${en ? ' for ' : ' pour '}${devis.entreprise}` : ''} · {en ? devis.statut.replaceAll('_', ' ') : LIBELLES_DEVIS[devis.statut]}</p>
       </div>
-      <button type="button" onClick={() => void telecharger()} className="press min-h-11 rounded-control border border-rule px-4 text-small font-semibold" data-testid="devis-pdf">Télécharger le PDF</button>
+      <button type="button" onClick={() => void telecharger()} className="press min-h-11 rounded-control border border-rule px-4 text-small font-semibold" data-testid="devis-pdf">{en ? 'Download PDF' : 'Télécharger le PDF'}</button>
     </header>
 
     {devis.statut === 'accepte' && devis.commande ? <p className="rounded-well border border-primary p-4 text-small" role="status">
-      Ce devis est devenu la commande <b className="t-num">{devis.commande.reference}</b>. <Link className="text-secondary underline" href={`/marketplace/commande/${encodeURIComponent(devis.commande.reference)}/paiement`}>Voir la commande et son paiement</Link>
+      {en ? 'This quote became order ' : 'Ce devis est devenu la commande '}<b className="t-num">{devis.commande.reference}</b>. <Link className="text-secondary underline" href={`/marketplace/commande/${encodeURIComponent(devis.commande.reference)}/paiement`}>{en ? 'View order and payment' : 'Voir la commande et son paiement'}</Link>
     </p> : null}
     {!devis.prixAJour && devis.statut === 'ouvert' ? <p className="rounded-well border border-warn p-4 text-small text-warn" role="status">
-      Certains prix ont changé depuis votre demande. <button type="button" className="font-semibold underline" disabled={envoi} onClick={() => void actualiser()}>Actualiser le devis</button>
+      {en ? 'Some prices have changed since your request. ' : 'Certains prix ont changé depuis votre demande. '}<button type="button" className="font-semibold underline" disabled={envoi} onClick={() => void actualiser()}>{en ? 'Refresh quote' : 'Actualiser le devis'}</button>
     </p> : null}
 
     <section className="grid gap-4" aria-label="Parties du devis par boutique">

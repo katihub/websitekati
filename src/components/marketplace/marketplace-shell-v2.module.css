@@ -5,8 +5,13 @@
 /* The editable announcement ticker replaces the former hard-coded message spans. */
 .topbar .topbarInner{gap:18px;min-height:42px}
 .topbar .topbarInner em{flex:none;margin-left:auto}
+.topbar .languageSwitcher{display:inline-flex;align-items:center;gap:2px;border:1px solid #ffffff55;border-radius:999px;padding:2px}
+.topbar .languageSwitcher button{min-width:32px;min-height:26px;border:0;border-radius:999px;background:transparent;padding:0 7px;color:#fff;font:inherit;font-size:.63rem;font-weight:800;cursor:pointer}
+.topbar .languageSwitcher button[aria-pressed=true]{background:#ff7900;color:#fff}
+.topbar .languageSwitcher button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media(max-width:1050px){.topbar .topbarInner em{display:none}}
 @media(max-width:700px){.topbar .topbarInner{min-height:38px;justify-content:space-between;gap:8px}.topbar .topbarInner em{display:none}}
+.languageSwitcher{display:inline-flex;flex:none;align-items:center;gap:2px;border:1px solid #ffffff55;border-radius:999px;padding:2px}
 .logoMark img{transform:scale(1.48);transform-origin:50% 0}
 .footerGrid{grid-template-columns:1.4fr repeat(4,minmax(0,1fr));gap:38px}.legal nav{display:flex;flex-wrap:wrap;gap:8px 14px}.legal nav a{font-size:inherit}.legal nav a+a:before{content:'|';color:#7d90b0;margin-right:14px}@media(max-width:1050px){.footerGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}.footerGrid>div:first-child{grid-column:1/-1}}@media(max-width:700px){.footerGrid{grid-template-columns:1fr}.footerGrid>div:first-child{grid-column:auto}.legal nav{gap:8px 10px}.legal nav a+a:before{margin-right:10px}}
 

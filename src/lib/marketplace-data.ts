@@ -32,7 +32,7 @@ export interface OffreMarketplace {
     /** La categorie KatiMarket du produit, avec son rayon parent quand c'est une sous-categorie. */
     categorieRef?: { nom: string; slug: string; parent: { nom: string; slug: string } | null } | null
   }
-  boutique: { nom: string; slug: string }
+  boutique: { id?: string; nom: string; slug: string; ville?: string | null }
 }
 
 // L’API boutique fournit son identité une seule fois, pas dans chaque offre.
@@ -60,7 +60,7 @@ export interface CategorieArbre {
   nom: string
   slug: string
   garantie: { mois: number; libelle: string }
-  sousCategories: Array<{ id: string; nom: string; slug: string; garantie: { mois: number; libelle: string } }>
+  sousCategories: Array<{ id: string; nom: string; slug: string; garantie: { mois: number; libelle: string }; sousCategories: Array<{ id: string; nom: string; slug: string; garantie: { mois: number; libelle: string } }> }>
 }
 
 /** Vide quand l'API ne repond pas : le menu se replie alors sur « Toutes les categories ». */

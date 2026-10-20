@@ -19,6 +19,7 @@ import { cheminCategorie, libelleMois, useCategoriesMarketplace, type CategorieP
 import { FenetreNouvelleVariante, FenetrePrixVariante, revisionOuverte, type RevisionVariante } from './vendeur/FenetresVariante'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
 import styles from '@/app/espace-vendeur/seller-workspace.module.css'
+import { useMarketplaceLanguage } from '@/lib/language'
 
 const chargementOnglet = () => <p className={styles.dashboardEmpty}>Chargement de cette rubrique…</p>
 const EditeurFicheProduit = dynamic(() => import('./vendeur/EditeurFicheProduit').then(module => module.EditeurFicheProduit), { loading: chargementOnglet })
@@ -143,7 +144,7 @@ const DOCUMENT_LABELS: Record<string, string> = {
   identite: 'Pièce d’identité (CNI ou passeport)',
   domicile: 'Justificatif de domicile',
   rccm: 'Registre du commerce (RCCM)',
-  niu: 'Attestation fiscale (NIU)',
+  niu: 'Attestation de non-redevance',
   rib: 'Relevé d’identité bancaire (RIB)',
 }
 
@@ -193,6 +194,8 @@ function errorText(cause: unknown) {
 }
 
 export function SellerWorkspace() {
+  const { locale } = useMarketplaceLanguage()
+  const en = locale === 'en'
   const [shops, setShops] = useState<Shop[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [space, setSpace] = useState<ShopSpace | null>(null)
@@ -346,7 +349,7 @@ export function SellerWorkspace() {
     setShops([])
   }
 
-  if (loading && !space) return <WorkspaceLoading />
+  if (loading && !space) return <WorkspaceLoading en={en} />
   if (!authenticated) return <MerchantLogin onSuccess={load} />
 
   const catalogueRole = space?.mesRoles.some(role => ['proprietaire', 'gestionnaire', 'magasinier'].includes(role)) ?? false
@@ -358,45 +361,45 @@ export function SellerWorkspace() {
     <main className={styles.workspace} data-seller-workspace>
       <aside className={styles.sidebar}>
         <div className={styles.shopSwitcher}>
-          <small>VOTRE BOUTIQUE</small>
+          <small>{en ? 'YOUR SHOP' : 'VOTRE BOUTIQUE'}</small>
           <select value={selectedId} onChange={(event) => void selectShop(event.target.value)} aria-label="Boutique active">
             {shops.map((shop) => <option value={shop.id} key={shop.id}>{shop.nom}</option>)}
           </select>
         </div>
-        <nav aria-label="Navigation vendeur">
-          <button className={panel === 'overview' ? styles.activeNav : ''} onClick={() => openPanel('overview')}><ShopIcon name="home" />Vue d’ensemble</button>
-          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'verification' ? styles.activeNav : ''} onClick={() => openPanel('verification')}><ShopIcon name="shield" />Vérification</button> : null}
+        <nav aria-label={en ? 'Seller navigation' : 'Navigation vendeur'}>
+          <button className={panel === 'overview' ? styles.activeNav : ''} onClick={() => openPanel('overview')}><ShopIcon name="home" />{en ? 'Overview' : 'Vue d’ensemble'}</button>
+          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'verification' ? styles.activeNav : ''} onClick={() => openPanel('verification')}><ShopIcon name="shield" />{en ? 'Verification' : 'Vérification'}</button> : null}
           {([
-            ['products', 'package', 'Produits'],
-            ['offers', 'tag', 'Offres'],
-            ['quotes', 'clock', 'Devis'],
+            ['products', 'package', en ? 'Products' : 'Produits'],
+            ['offers', 'tag', en ? 'Offers' : 'Offres'],
+            ['quotes', 'clock', en ? 'Quotes' : 'Devis'],
           ] as const).map(([value, icon, label]) => (
             <button key={value} className={panel === value ? styles.activeNav : ''} onClick={() => openPanel(value)}>
               <ShopIcon name={icon} />{label}
             </button>
           ))}
-          {access.orders !== 'denied' ? <button className={panel === 'orders' ? styles.activeNav : ''} onClick={() => openPanel('orders')}><ShopIcon name="cart" />Commandes</button> : null}
-          {access.deliveries !== 'denied' ? <button className={panel === 'deliveries' ? styles.activeNav : ''} onClick={() => openPanel('deliveries')}><ShopIcon name="truck" />Livraisons</button> : null}
-          {access.disputes !== 'denied' ? <button className={panel === 'disputes' ? styles.activeNav : ''} onClick={() => openPanel('disputes')}><ShopIcon name="info" />Litiges et retours</button> : null}
-          {access.finance !== 'denied' ? <button className={panel === 'payments' ? styles.activeNav : ''} onClick={() => openPanel('payments')}><ShopIcon name="wallet" />Finances</button> : null}
-          {access.reviews !== 'denied' ? <button className={panel === 'reviews' ? styles.activeNav : ''} onClick={() => openPanel('reviews')}><ShopIcon name="star" />Avis clients</button> : null}
-          {access.customers !== 'denied' ? <button className={panel === 'customers' ? styles.activeNav : ''} onClick={() => openPanel('customers')}><ShopIcon name="users" />Clients</button> : null}
-          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'settings' ? styles.activeNav : ''} onClick={() => openPanel('settings')}><ShopIcon name="settings" />Paramètres boutique</button> : null}
-          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button disabled={access.members === 'denied'} className={panel === 'members' ? styles.activeNav : ''} onClick={() => openPanel('members')}><ShopIcon name="users" />Équipe</button> : null}
+          {access.orders !== 'denied' ? <button className={panel === 'orders' ? styles.activeNav : ''} onClick={() => openPanel('orders')}><ShopIcon name="cart" />{en ? 'Orders' : 'Commandes'}</button> : null}
+          {access.deliveries !== 'denied' ? <button className={panel === 'deliveries' ? styles.activeNav : ''} onClick={() => openPanel('deliveries')}><ShopIcon name="truck" />{en ? 'Deliveries' : 'Livraisons'}</button> : null}
+          {access.disputes !== 'denied' ? <button className={panel === 'disputes' ? styles.activeNav : ''} onClick={() => openPanel('disputes')}><ShopIcon name="info" />{en ? 'Disputes & returns' : 'Litiges et retours'}</button> : null}
+          {access.finance !== 'denied' ? <button className={panel === 'payments' ? styles.activeNav : ''} onClick={() => openPanel('payments')}><ShopIcon name="wallet" />{en ? 'Finance' : 'Finances'}</button> : null}
+          {access.reviews !== 'denied' ? <button className={panel === 'reviews' ? styles.activeNav : ''} onClick={() => openPanel('reviews')}><ShopIcon name="star" />{en ? 'Customer reviews' : 'Avis clients'}</button> : null}
+          {access.customers !== 'denied' ? <button className={panel === 'customers' ? styles.activeNav : ''} onClick={() => openPanel('customers')}><ShopIcon name="users" />{en ? 'Customers' : 'Clients'}</button> : null}
+          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'settings' ? styles.activeNav : ''} onClick={() => openPanel('settings')}><ShopIcon name="settings" />{en ? 'Shop settings' : 'Paramètres boutique'}</button> : null}
+          {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button disabled={access.members === 'denied'} className={panel === 'members' ? styles.activeNav : ''} onClick={() => openPanel('members')}><ShopIcon name="users" />{en ? 'Team' : 'Équipe'}</button> : null}
         </nav>
         <div className={styles.sidebarFoot}>
-          <div className={styles.sidebarCallout}><strong>Votre vitrine publique</strong><p>Consultez la page que voient vos clients.</p><Link href={`/boutiques/${space?.slug ?? ''}`}>Ouvrir la boutique <ShopIcon name="arrow" /></Link></div>
-          <Link href="/contact"><ShopIcon name="headphones" /> Centre d’aide</Link>
-          <button onClick={() => void logout()}><ShopIcon name="arrow" /> Se déconnecter</button>
+          <div className={styles.sidebarCallout}><strong>{en ? 'Your public storefront' : 'Votre vitrine publique'}</strong><p>{en ? 'See the page your customers see.' : 'Consultez la page que voient vos clients.'}</p><Link href={`/boutiques/${space?.slug ?? ''}`}>{en ? 'Open shop' : 'Ouvrir la boutique'} <ShopIcon name="arrow" /></Link></div>
+          <Link href="/contact"><ShopIcon name="headphones" /> {en ? 'Help center' : 'Centre d’aide'}</Link>
+          <button onClick={() => void logout()}><ShopIcon name="arrow" /> {en ? 'Sign out' : 'Se déconnecter'}</button>
         </div>
       </aside>
 
       <section className={styles.content}>
-        {error ? <div className={styles.error} role="alert">{error}<button onClick={() => void load()}>Réessayer</button></div> : null}
+        {error ? <div className={styles.error} role="alert">{error}<button onClick={() => void load()}>{en ? 'Try again' : 'Réessayer'}</button></div> : null}
         {space ? <>
           <header className={styles.pageHead}>
-            <div><h1>{panel === 'overview' ? `Bonjour, ${space.nom}` : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Catalogue vendeur' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? 'Voici ce qui se passe dans votre boutique.' : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
-            <div className={styles.headTools}><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> Voir ma boutique</Link></div>
+            <div><h1>{panel === 'overview' ? `${en ? 'Hello' : 'Bonjour'}, ${space.nom}` : en ? ({verification: 'Shop verification', products: 'Seller catalogue', offers: 'Shop offers', quotes: 'Quotes', orders: 'Shop orders', deliveries: 'Shop deliveries', disputes: 'Disputes & returns', payments: 'Finance & payouts', reviews: 'Customer reviews', customers: 'Customers', members: 'Shop team', settings: 'Shop settings'}[panel] ?? 'Seller overview') : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Catalogue vendeur' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? (en ? 'Here is what is happening in your shop.' : 'Voici ce qui se passe dans votre boutique.') : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
+            <div className={styles.headTools}><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{en ? ({brouillon:'Draft', soumis:'Submitted', en_verification:'Under review', approuve:'Verified shop', modification_demandee:'Changes requested', refuse:'Application rejected'}[space.vendeur.statutVerification] ?? space.vendeur.statutVerification) : STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> {en ? 'View my shop' : 'Voir ma boutique'}</Link></div>
           </header>
 
           {panel === 'overview' ? <Overview
@@ -422,37 +425,41 @@ export function SellerWorkspace() {
   )
 }
 
-function WorkspaceLoading() {
-  return <main className={styles.loading}><span /><p>Chargement de votre espace vendeur…</p></main>
+function WorkspaceLoading({ en }: { en: boolean }) {
+  return <main className={styles.loading}><span /><p>{en ? 'Loading your seller workspace…' : 'Chargement de votre espace vendeur…'}</p></main>
 }
 
 function EmptyShop() {
-  return <section className={styles.empty}><h1>Aucune boutique liée à ce compte</h1><p>Utilisez la même adresse électronique que celle indiquée dans votre candidature.</p><Link href="/devenir-vendeur">Créer une boutique</Link></section>
+  const { locale } = useMarketplaceLanguage()
+  const en = locale === 'en'
+  return <section className={styles.empty}><h1>{en ? 'No shop linked to this account' : 'Aucune boutique liée à ce compte'}</h1><p>{en ? 'Use the same email address you used in your application.' : 'Utilisez la même adresse électronique que celle indiquée dans votre candidature.'}</p><Link href="/devenir-vendeur">{en ? 'Open a shop' : 'Créer une boutique'}</Link></section>
 }
 
 function Overview({ space, products, offers, orders, deliveries, access, loaded, progress, validatedDocuments, canPublish, onPanel }: {
   space: ShopSpace; products: ProductProposal[]; offers: Offer[]; orders: Listing<ShopOrder>; deliveries: Listing<ShopDelivery>; access: Record<Section, Access>; loaded: Record<Section, boolean>; progress: number | null; validatedDocuments: number; canPublish: boolean; onPanel: (panel: 'verification' | 'products' | 'offers' | 'orders' | 'deliveries') => void
 }) {
+  const { locale } = useMarketplaceLanguage()
+  const en = locale === 'en'
   const activeProducts = products.filter(item => item.statut === 'actif').length
   const publishedOffers = offers.filter(item => item.statut === 'publiee').length
   const leadOffer = offers.find(item => item.statut === 'publiee') ?? offers[0]
   const nextDelivery = deliveries.elements.find(item => !['livree', 'annulee'].includes(item.statut)) ?? deliveries.elements[0]
-  const date = new Intl.DateTimeFormat('fr-CM', { dateStyle: 'full' }).format(new Date())
+  const date = new Intl.DateTimeFormat(en ? 'en-CM' : 'fr-CM', { dateStyle: 'full' }).format(new Date())
   const metrics: Array<{ label: string; value: number | string; detail: string; icon: ShopIconName; panel: 'orders' | 'deliveries' | 'products' | 'offers' }> = [
-    { label: 'Commandes', value: !loaded.orders ? '…' : access.orders === 'allowed' ? orders.total : '—', detail: 'reçues par la boutique', icon: 'cart', panel: 'orders' },
-    { label: 'Livraisons', value: !loaded.deliveries ? '…' : access.deliveries === 'allowed' ? deliveries.total : '—', detail: 'expéditions enregistrées', icon: 'truck', panel: 'deliveries' },
-    { label: 'Produits actifs', value: !loaded.products ? '…' : access.products === 'allowed' ? activeProducts : '—', detail: 'dans votre catalogue', icon: 'package', panel: 'products' },
-    { label: 'Offres publiées', value: !loaded.offers ? '…' : access.offers === 'allowed' ? publishedOffers : '—', detail: 'visibles sur KatiMarket', icon: 'tag', panel: 'offers' },
+    { label: en ? 'Orders' : 'Commandes', value: !loaded.orders ? '…' : access.orders === 'allowed' ? orders.total : '—', detail: en ? 'received by your shop' : 'reçues par la boutique', icon: 'cart', panel: 'orders' },
+    { label: en ? 'Deliveries' : 'Livraisons', value: !loaded.deliveries ? '…' : access.deliveries === 'allowed' ? deliveries.total : '—', detail: en ? 'shipments recorded' : 'expéditions enregistrées', icon: 'truck', panel: 'deliveries' },
+    { label: en ? 'Active products' : 'Produits actifs', value: !loaded.products ? '…' : access.products === 'allowed' ? activeProducts : '—', detail: en ? 'in your catalogue' : 'dans votre catalogue', icon: 'package', panel: 'products' },
+    { label: en ? 'Published offers' : 'Offres publiées', value: !loaded.offers ? '…' : access.offers === 'allowed' ? publishedOffers : '—', detail: en ? 'visible on KatiMarket' : 'visibles sur KatiMarket', icon: 'tag', panel: 'offers' },
   ]
 
   return <div className={styles.dashboard}>
-    <div className={styles.dashboardIntro}><p>{space.mesRoles.includes('magasinier') && !space.mesRoles.includes('gestionnaire') ? 'Vos produits et vos offres, au même endroit.' : 'Commandes, catalogue et livraisons au même endroit.'}</p><span><ShopIcon name="clock" /> {date}</span></div>
+    <div className={styles.dashboardIntro}><p>{space.mesRoles.includes('magasinier') && !space.mesRoles.includes('gestionnaire') ? (en ? 'Your products and offers, all in one place.' : 'Vos produits et vos offres, au même endroit.') : (en ? 'Orders, catalogue, and deliveries in one place.' : 'Commandes, catalogue et livraisons au même endroit.')}</p><span><ShopIcon name="clock" /> {date}</span></div>
     {space.vendeur.statutVerification !== 'approuve' && access.documents !== 'denied' ? <section className={styles.activationNotice}>
-      <div><strong>Votre dossier avance</strong><p>{!loaded.documents ? 'Chargement de votre dossier…' : access.documents === 'allowed' ? `${validatedDocuments} justificatif(s) validé(s). Complétez le dossier pour ouvrir la vente.` : 'Le suivi des justificatifs est réservé au gestionnaire du dossier.'}</p></div>
+      <div><strong>{en ? 'Your application progress' : 'Votre dossier avance'}</strong><p>{!loaded.documents ? (en ? 'Loading your application…' : 'Chargement de votre dossier…') : access.documents === 'allowed' ? (en ? `${validatedDocuments} document(s) approved. Complete your application to start selling.` : `${validatedDocuments} justificatif(s) validé(s). Complétez le dossier pour ouvrir la vente.`) : (en ? 'Only the application manager can view document status.' : 'Le suivi des justificatifs est réservé au gestionnaire du dossier.')}</p></div>
       <span>{!loaded.documents || progress === null ? '—' : `${progress}%`}</span>
-      <button disabled={access.documents !== 'allowed'} onClick={() => onPanel('verification')}>Voir la vérification <ShopIcon name="arrow" /></button>
+      <button disabled={access.documents !== 'allowed'} onClick={() => onPanel('verification')}>{en ? 'View verification' : 'Voir la vérification'} <ShopIcon name="arrow" /></button>
     </section> : null}
-    <section className={styles.metricStrip} aria-label="Activité de la boutique">
+    <section className={styles.metricStrip} aria-label={en ? 'Shop activity' : 'Activité de la boutique'}>
       {metrics.filter(metric => access[metric.panel] !== 'denied').map(metric => <button key={metric.panel} onClick={() => onPanel(metric.panel)}>
         <span className={styles.metricIcon}><ShopIcon name={metric.icon} /></span><span className={styles.metricCopy}><small>{metric.label}</small><strong>{metric.value}</strong><em>{access[metric.panel] === 'allowed' ? metric.detail : 'Données indisponibles'}</em></span>
       </button>)}
@@ -460,8 +467,8 @@ function Overview({ space, products, offers, orders, deliveries, access, loaded,
     <div className={styles.dashboardColumns}>
       <div className={styles.dashboardMain}>
         {access.orders !== 'denied' ? <section className={styles.dashboardPanel}>
-          <header className={styles.dashboardPanelHead}><div><h2>Commandes récentes</h2><p>Les dernières commandes confiées à votre boutique.</p></div><button disabled={access.orders !== 'allowed'} onClick={() => onPanel('orders')}>Toutes les commandes <ShopIcon name="arrow" /></button></header>
-          {!loaded.orders ? <p className={styles.dashboardEmpty}>Actualisation des commandes…</p> : access.orders !== 'allowed' ? <p className={styles.dashboardEmpty}>Les commandes ne sont pas accessibles avec ce rôle pour le moment.</p> : orders.elements.length ? <div className={styles.orderTableScroll}><table className={styles.orderTable}><thead><tr><th>Commande</th><th>Produit</th><th>Montant produits</th><th>Statut</th><th>Date</th></tr></thead><tbody>{orders.elements.slice(0, 5).map(order => <tr key={order.id}><td><button onClick={() => onPanel('orders')}>{order.reference}</button></td><td>{order.lignes.map(line => `${line.quantite} × ${line.produitNomCapture}`).join(', ')}</td><td>{money(order.totalNetProduits)}</td><td><span data-status={order.statut}>{STATUS_LABELS[order.statut] ?? order.statut.replaceAll('_', ' ')}</span></td><td>{new Intl.DateTimeFormat('fr-CM', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(order.creeLe))}</td></tr>)}</tbody></table></div> : <p className={styles.dashboardEmpty}>Aucune commande reçue pour l’instant. Vos nouvelles commandes apparaîtront ici.</p>}
+          <header className={styles.dashboardPanelHead}><div><h2>{en ? 'Recent orders' : 'Commandes récentes'}</h2><p>{en ? 'The latest orders assigned to your shop.' : 'Les dernières commandes confiées à votre boutique.'}</p></div><button disabled={access.orders !== 'allowed'} onClick={() => onPanel('orders')}>{en ? 'All orders' : 'Toutes les commandes'} <ShopIcon name="arrow" /></button></header>
+          {!loaded.orders ? <p className={styles.dashboardEmpty}>{en ? 'Refreshing orders…' : 'Actualisation des commandes…'}</p> : access.orders !== 'allowed' ? <p className={styles.dashboardEmpty}>{en ? 'Orders are not available to this role yet.' : 'Les commandes ne sont pas accessibles avec ce rôle pour le moment.'}</p> : orders.elements.length ? <div className={styles.orderTableScroll}><table className={styles.orderTable}><thead><tr><th>{en ? 'Order' : 'Commande'}</th><th>{en ? 'Product' : 'Produit'}</th><th>{en ? 'Products total' : 'Montant produits'}</th><th>{en ? 'Status' : 'Statut'}</th><th>{en ? 'Date' : 'Date'}</th></tr></thead><tbody>{orders.elements.slice(0, 5).map(order => <tr key={order.id}><td><button onClick={() => onPanel('orders')}>{order.reference}</button></td><td>{order.lignes.map(line => `${line.quantite} × ${line.produitNomCapture}`).join(', ')}</td><td>{money(order.totalNetProduits)}</td><td><span data-status={order.statut}>{en ? ({nouvelle:'New', acceptee:'Accepted', en_preparation:'Preparing', prete:'Ready', remise_transporteur:'Handed to carrier', retiree_client:'Picked up', en_livraison:'Out for delivery', livree:'Delivered'}[order.statut] ?? order.statut.replaceAll('_', ' ')) : STATUS_LABELS[order.statut] ?? order.statut.replaceAll('_', ' ')}</span></td><td>{new Intl.DateTimeFormat(en ? 'en-CM' : 'fr-CM', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(order.creeLe))}</td></tr>)}</tbody></table></div> : <p className={styles.dashboardEmpty}>{en ? 'No orders yet. New orders will appear here.' : 'Aucune commande reçue pour l’instant. Vos nouvelles commandes apparaîtront ici.'}</p>}
         </section> : null}
         <section className={styles.quickPanel}><div><h2>Avancer aujourd’hui</h2><p>Deux gestes utiles pour garder votre boutique à jour.</p></div><div className={styles.quickActions}><button disabled={!canPublish || access.products !== 'allowed'} onClick={() => onPanel('products')}><ShopIcon name="package" /> Proposer un produit <ShopIcon name="arrow" /></button><button disabled={access.offers !== 'allowed'} onClick={() => onPanel('offers')}><ShopIcon name="grid" /> Gérer le stock <ShopIcon name="arrow" /></button></div></section>
       </div>

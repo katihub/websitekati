@@ -16,6 +16,7 @@ import {
 } from '@/lib/commandes'
 import { formatPrice } from '@/lib/format'
 import { lienCommande, resoudreJeton } from '@/lib/suivi'
+import { useMarketplaceLanguage } from '@/lib/language'
 
 type Etat =
   | { phase: 'chargement' }
@@ -32,10 +33,12 @@ type Etat =
  * lire par la session repondrait « introuvable ».
  */
 export function DetailCommande({ reference, jetonUrl }: { reference: string; jetonUrl?: string }) {
+  const { locale } = useMarketplaceLanguage()
+  const en = locale === 'en'
   const [etat, setEtat] = useState<Etat>(
     apiDisponible
       ? { phase: 'chargement' }
-      : { phase: 'refus', message: 'Le suivi de commande n’est pas encore ouvert sur cette boutique.' },
+      : { phase: 'refus', message: en ? 'Order tracking is not available for this shop yet.' : 'Le suivi de commande n’est pas encore ouvert sur cette boutique.' },
   )
   const [confirmation, setConfirmation] = useState<'repos' | 'envoi'>('repos')
   const [erreurAction, setErreurAction] = useState<string | null>(null)
@@ -44,16 +47,16 @@ export function DetailCommande({ reference, jetonUrl }: { reference: string; jet
   useEffect(() => {
     if (!apiDisponible) return
     const controleur = new AbortController()
-    charger(reference, resoudreJeton(reference, jetonUrl), controleur.signal).then((r) => {
+    charger(reference, resoudreJeton(reference, jetonUrl), controleur.signal, en).then((r) => {
       if (!controleur.signal.aborted) setEtat(r)
     })
     return () => controleur.abort()
-  }, [reference, jetonUrl])
+  }, [reference, jetonUrl, en])
 
   if (etat.phase === 'chargement') {
     return (
       <p className="text-small text-ink-3" role="status">
-        Chargement de la commande…
+        {en ? 'Loading order…' : 'Chargement de la commande…'}
       </p>
     )
   }
@@ -63,7 +66,7 @@ export function DetailCommande({ reference, jetonUrl }: { reference: string; jet
       <div className="rounded-well border border-rule bg-space p-4">
         <p className="text-small text-ink">{etat.message}</p>
         <Link href="/" className="mt-3 inline-flex text-micro text-secondary underline underline-offset-2">
-          Retour à la boutique
+          {en ? 'Back to the shop' : 'Retour à la boutique'}
         </Link>
       </div>
     )
@@ -95,19 +98,18 @@ export function DetailCommande({ reference, jetonUrl }: { reference: string; jet
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <p className="t-label text-ink-3">Commande</p>
+        <p className="t-label text-ink-3">{en ? 'Order' : 'Commande'}</p>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <h1 className="text-h3 font-semibold tracking-[-0.01em] text-ink">{c.reference}</h1>
-          <Pastille ton={tonStatut(c.statut)}>{libelleStatut(c.statut)}</Pastille>
+          <Pastille ton={tonStatut(c.statut)}>{en ? STATUT_EN[c.statut] ?? c.statut.replaceAll('_', ' ') : libelleStatut(c.statut)}</Pastille>
         </div>
       </header>
 
       {receptionConfirmable(c) ? (
         <section className="rounded-well border border-secondary bg-secondary p-4">
-          <p className="text-small font-semibold text-ink">Avez-vous reçu votre commande ?</p>
+          <p className="text-small font-semibold text-ink">{en ? 'Have you received your order?' : 'Avez-vous reçu votre commande ?'}</p>
           <p className="mt-1 text-micro text-ink-2">
-            Confirmez la réception une fois la marchandise entre vos mains. C’est cette confirmation
-            qui clôture votre commande.
+            {en ? 'Confirm receipt once you have the goods. This confirmation closes your order.' : 'Confirmez la réception une fois la marchandise entre vos mains. C’est cette confirmation qui clôture votre commande.'}
           </p>
           {erreurAction ? (
             <p className="mt-2 text-micro text-warn" role="alert">
@@ -120,25 +122,25 @@ export function DetailCommande({ reference, jetonUrl }: { reference: string; jet
             disabled={confirmation === 'envoi'}
             className="press fill mt-3 inline-flex min-h-11 items-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface [--fill-to:var(--secondary)] disabled:opacity-60"
           >
-            {confirmation === 'envoi' ? 'Enregistrement…' : 'J’ai reçu ma commande'}
+            {confirmation === 'envoi' ? (en ? 'Saving…' : 'Enregistrement…') : (en ? 'I received my order' : 'J’ai reçu ma commande')}
           </button>
         </section>
       ) : null}
 
       {c.confirmeParClient ? (
         <p className="text-small text-ink-2">
-          ✓ Vous avez confirmé la réception{c.recuLe ? ` le ${formatDate(c.recuLe)}` : ''}.
+          ✓ {en ? 'You confirmed receipt' : 'Vous avez confirmé la réception'}{c.recuLe ? ` ${en ? 'on ' : 'le '}${formatDate(c.recuLe, en)}` : ''}.
         </p>
       ) : null}
 
-      {jeton ? <LienDeSuivi reference={c.reference} jeton={jeton} copie={copie} onCopie={setCopie} /> : null}
+      {jeton ? <LienDeSuivi reference={c.reference} jeton={jeton} copie={copie} onCopie={setCopie} en={en} /> : null}
 
       {paiementEnLigneDu(c) ? (
         <Link
           href={lienCommande(c.reference, jeton, '/paiement')}
           className="press fill inline-flex min-h-11 items-center justify-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface [--fill-to:var(--secondary)]"
         >
-          Régler ma commande — {formatPrice(c.resteAPayer)}
+          {en ? 'Pay for my order' : 'Régler ma commande'} — {formatPrice(c.resteAPayer)}
         </Link>
       ) : null}
 
@@ -156,46 +158,46 @@ export function DetailCommande({ reference, jetonUrl }: { reference: string; jet
           ))}
         </ul>
         <div className="flex items-baseline justify-between border-t border-rule px-4 py-3">
-          <span className="text-small text-ink-2">Total</span>
+          <span className="text-small text-ink-2">{en ? 'Total' : 'Total'}</span>
           <span className="t-num text-h4 font-semibold text-ink">{formatPrice(total)}</span>
         </div>
         {c.resteAPayer > 0 ? (
           <p className="border-t border-rule px-4 py-2 text-micro text-ink-3">
-            Reste à payer : <span className="t-num">{formatPrice(c.resteAPayer)}</span>
+            {en ? 'Remaining balance: ' : 'Reste à payer : '}<span className="t-num">{formatPrice(c.resteAPayer)}</span>
           </p>
         ) : (
-          <p className="border-t border-rule px-4 py-2 text-micro text-ink-3">Réglée.</p>
+          <p className="border-t border-rule px-4 py-2 text-micro text-ink-3">{en ? 'Paid.' : 'Réglée.'}</p>
         )}
       </section>
 
       <section className="grid gap-3 text-small sm:grid-cols-2">
-        <Info label="Remise">{libelleRemise(c.modeRemise)}</Info>
-        <Info label="Paiement">{libellePaiement(c.modePaiementSouhaite)}</Info>
+        <Info label={en ? 'Delivery' : 'Remise'}>{en ? MODE_EN[c.modeRemise] ?? c.modeRemise : libelleRemise(c.modeRemise)}</Info>
+        <Info label={en ? 'Payment' : 'Paiement'}>{en ? PAYMENT_EN[c.modePaiementSouhaite] ?? c.modePaiementSouhaite : libellePaiement(c.modePaiementSouhaite)}</Info>
         {c.modeRemise === 'retrait' ? (
-          <Info label="Comptoir">{c.comptoir ?? '—'}</Info>
+          <Info label={en ? 'Pickup point' : 'Comptoir'}>{c.comptoir ?? '—'}</Info>
         ) : (
-          <Info label="Adresse">
+          <Info label={en ? 'Address' : 'Adresse'}>
             {[c.adresseFigee?.ville, c.adresseFigee?.quartier, c.adresseFigee?.repere]
               .filter(Boolean)
               .join(', ') || '—'}
           </Info>
         )}
         {c.livreur ? (
-          <Info label="Livreur">
+          <Info label={en ? 'Courier' : 'Livreur'}>
             {c.livreur.nom}
             {c.livreur.telephone ? ` · ${c.livreur.telephone}` : ''}
           </Info>
         ) : null}
-        <Info label="Passée le">{formatDate(c.creeLe)}</Info>
+        <Info label={en ? 'Placed on' : 'Passée le'}>{formatDate(c.creeLe, en)}</Info>
       </section>
 
       {jeton ? (
         <Link href="/" className="text-micro text-secondary underline underline-offset-2">
-          ← Retour à la boutique
+          ← {en ? 'Back to the shop' : 'Retour à la boutique'}
         </Link>
       ) : (
         <Link href="/compte/commandes" className="text-micro text-secondary underline underline-offset-2">
-          ← Toutes mes commandes
+          ← {en ? 'All my orders' : 'Toutes mes commandes'}
         </Link>
       )}
     </div>
@@ -214,11 +216,13 @@ function LienDeSuivi({
   jeton,
   copie,
   onCopie,
+  en,
 }: {
   reference: string
   jeton: string
   copie: boolean
   onCopie: (copie: boolean) => void
+  en: boolean
 }) {
   const copier = async () => {
     try {
@@ -230,23 +234,22 @@ function LienDeSuivi({
   }
   return (
     <section className="rounded-well border border-rule bg-space p-4">
-      <p className="text-small font-semibold text-ink">Gardez le lien de cette page</p>
+      <p className="text-small font-semibold text-ink">{en ? 'Keep this page link' : 'Gardez le lien de cette page'}</p>
       <p className="mt-1 text-micro leading-[1.6] text-ink-2">
-        Vous avez commandé sans compte : ce lien est la clé de votre commande. Il sert à la payer,
-        à la suivre et à confirmer sa réception, depuis n’importe quel téléphone.
+        {en ? 'You placed this order without an account. This link is the key to paying for it, tracking it, and confirming delivery from any phone.' : 'Vous avez commandé sans compte : ce lien est la clé de votre commande. Il sert à la payer, à la suivre et à confirmer sa réception, depuis n’importe quel téléphone.'}
       </p>
       <button
         type="button"
         onClick={copier}
         className="press mt-3 inline-flex min-h-10 items-center rounded-control border border-rule px-4 text-micro font-semibold text-ink hover:border-ink hover:text-secondary"
       >
-        {copie ? 'Lien copié ✓' : 'Copier le lien'}
+        {copie ? (en ? 'Link copied ✓' : 'Lien copié ✓') : (en ? 'Copy link' : 'Copier le lien')}
       </button>
     </section>
   )
 }
 
-async function charger(reference: string, jeton: string | null, signal: AbortSignal): Promise<Etat> {
+async function charger(reference: string, jeton: string | null, signal: AbortSignal, en: boolean): Promise<Etat> {
   try {
     const commande = await api<Commande>(
       jeton
@@ -262,14 +265,14 @@ async function charger(reference: string, jeton: string | null, signal: AbortSig
       phase: 'refus',
       message:
         code === 401
-          ? 'Connectez-vous avec le compte qui a passé cette commande pour la suivre.'
+          ? (en ? 'Sign in with the account used to place this order to track it.' : 'Connectez-vous avec le compte qui a passé cette commande pour la suivre.')
           : code === 404 && jeton
-            ? 'Ce lien n’ouvre aucune commande. Vérifiez qu’il est complet, ou appelez-nous avec la référence.'
+            ? (en ? 'This link does not open an order. Check that it is complete, or contact us with the reference.' : 'Ce lien n’ouvre aucune commande. Vérifiez qu’il est complet, ou appelez-nous avec la référence.')
             : code === 404
-            ? 'Cette commande est introuvable, ou elle appartient à un autre compte.'
+            ? (en ? 'This order could not be found, or belongs to another account.' : 'Cette commande est introuvable, ou elle appartient à un autre compte.')
             : erreur instanceof ErreurApi
               ? erreur.message
-              : 'La commande n’a pas pu être chargée. Vérifiez votre connexion.',
+              : (en ? 'The order could not be loaded. Check your connection.' : 'La commande n’a pas pu être chargée. Vérifiez votre connexion.'),
     }
   }
 }
@@ -303,10 +306,14 @@ function Pastille({
   )
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, en = false): string {
   try {
-    return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(iso))
+    return new Intl.DateTimeFormat(en ? 'en-GB' : 'fr-FR', { dateStyle: 'long' }).format(new Date(iso))
   } catch {
     return iso
   }
 }
+
+const STATUT_EN: Record<string, string> = { soumise: 'Submitted', confirmee: 'Confirmed', refusee: 'Declined', en_preparation: 'Preparing', prete_au_retrait: 'Ready for pickup', en_remise: 'Out for delivery', retour_ouvert: 'Return opened', annulation_demandee: 'Cancellation requested', annulee: 'Cancelled', close: 'Completed' }
+const MODE_EN: Record<string, string> = { retrait: 'Store pickup', domicile: 'Home delivery', agence: 'Agency shipping', point_relais: 'Pickup point' }
+const PAYMENT_EN: Record<string, string> = { espece: 'Cash', mobile_money: 'Mobile Money', carte: 'Card', mixte: 'Split payment', a_la_livraison: 'Cash on delivery' }

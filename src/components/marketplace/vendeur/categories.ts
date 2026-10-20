@@ -13,7 +13,7 @@ import { api } from '@/lib/api'
  */
 
 export type GarantieCategorie = { mois: number; unite: 'mois' | 'annees'; heritee: boolean; libelle: string }
-export type SousCategorie = { id: string; nom: string; slug: string; garantie: GarantieCategorie }
+export type SousCategorie = { id: string; nom: string; slug: string; garantie: GarantieCategorie; sousCategories: SousCategorie[] }
 export type CategorieMarketplace = SousCategorie & { sousCategories: SousCategorie[] }
 
 /** La categorie d'un produit telle que l'API la rend avec lui. */

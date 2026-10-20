@@ -13,6 +13,7 @@ import { CartProvider } from '@/lib/cart'
 import { SessionProvider } from '@/lib/session'
 import { KatiAssistantLazy } from '@/components/assistant/KatiAssistantLazy'
 import { EmailVerificationBanner } from '@/components/account/EmailVerificationBanner'
+import { LanguageProvider } from '@/lib/language'
 
 export const metadata: Metadata = {
   title: {
@@ -67,6 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* LA SESSION ENVELOPPE LA FICHE, ET PAS L INVERSE. La fiche du comptoir
             existe sans compte et doit continuer a fonctionner pour qui ne se
             connectera jamais; la session vient s ajouter. */}
+        <LanguageProvider>
         <SessionProvider>
         <AccountProvider pointsVente={[]}>
           <CartProvider>
@@ -89,6 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             compte les porte déjà. Hors du fournisseur, `useSession()` lève. */}
         <KatiAssistantLazy />
         </SessionProvider>
+        </LanguageProvider>
         <Reveal />
         {/* `useSearchParams` opts its whole subtree into client rendering unless
             it is wrapped, and this component renders nothing, so the boundary

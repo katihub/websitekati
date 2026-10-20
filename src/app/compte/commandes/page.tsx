@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
 import { MesCommandes } from './MesCommandes'
+import { LocalizedText } from '@/lib/language'
 
 /**
  * LA LISTE DES COMMANDES DU CLIENT.
@@ -23,8 +24,8 @@ export default async function Page() {
   await connection()
   return (
     <main className="mx-auto w-full max-w-[42rem] px-4 pt-10 pb-band md:pt-14">
-      <p className="t-label text-ink-3">Mon compte</p>
-      <h1 className="mt-1 text-h3 font-semibold tracking-[-0.01em] text-ink">Mes commandes</h1>
+      <p className="t-label text-ink-3"><LocalizedText fr="Mon compte" en="My account" /></p>
+      <h1 className="mt-1 text-h3 font-semibold tracking-[-0.01em] text-ink"><LocalizedText fr="Mes commandes" en="My orders" /></h1>
       <div className="mt-7">
         <MesCommandes />
       </div>

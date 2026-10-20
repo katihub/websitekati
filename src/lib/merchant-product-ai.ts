@@ -3,6 +3,7 @@ export type MerchantProductDraft = {
   marque: string
   categorie: string
   sousCategorie: string
+  accessoireCategorie?: string
   description: string
   descriptionCourte: string
   ficheTechnique: string

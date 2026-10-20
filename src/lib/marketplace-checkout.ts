@@ -14,8 +14,8 @@ export interface LiveOffer {
   /** `adresseRetrait` : ou le client retire sa commande, si la boutique propose le retrait. */
   boutique: { id: string; nom: string; slug: string; ville?: string | null; adresseRetrait?: string | null }
 }
-export interface LiveProduct { nom: string; slug: string; offres: LiveOffer[] }
-export interface CheckedLine { line: CartLine; offer: LiveOffer | null; issue: string | null }
+export interface LiveProduct { nom: string; slug: string; categorieId?: string | null; offres: LiveOffer[] }
+export interface CheckedLine { line: CartLine; offer: LiveOffer | null; issue: string | null; categorieId: string | null }
 export interface DeliveryGroup { id: string; name: string; lines: CheckedLine[]; modes: DeliveryMode[]; ville: string | null; adresseRetrait: string | null }
 export interface MarketplaceOrder {
   reference: string; statut: string; totalFermeTtc: number; fraisLivraison: number
@@ -33,7 +33,7 @@ export function checkLines(lines: readonly CartLine[], products: LiveProduct[]):
       : line.qty < (offer.quantiteMinimale ?? 1) ? `Minimum de commande : ${offer.quantiteMinimale} unités. Ajustez la quantité.`
       : offer.disponible < line.qty ? `Stock disponible : ${offer.disponible} unité(s). Ajustez la quantité.`
       : null
-    return { line, offer, issue }
+    return { line, offer, issue, categorieId: bySlug.get(line.slug)?.categorieId ?? null }
   })
 }
 export function groupDeliveries(checked: CheckedLine[]): DeliveryGroup[] {

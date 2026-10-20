@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useMarketplaceLanguage } from '@/lib/language'
 import styles from './marketplace-avantages.module.css'
 
 /**
@@ -51,9 +52,20 @@ const AVANTAGES: readonly Avantage[] = [
   },
 ]
 
+const AVANTAGES_EN: readonly Avantage[] = [
+  { titre: 'Delivered to your door with Kati Express', texte: 'Our couriers deliver your order to your home in Douala and Yaoundé. Collect it with your personal code so no one else can claim it.', image: '/marketplace-hero-douala.png', alt: 'A commercial street in Douala', href: '/catalogue', action: 'Shop now' },
+  { titre: 'Earn KATI with every purchase', texte: 'Delivered orders earn KATI points that can pay for part of your next purchase. Refer a friend and earn more.', image: '/marketplace-telephone-kati.png', alt: 'A phone displaying the KatiMarket app', href: '/compte/kati', action: 'View my KATI' },
+  { titre: 'Free pickup at the shop', texte: 'Pick up your order when it is ready. The shop sends you a pickup code valid for 7 days. No delivery fee.', image: '/marketplace-shop-tech-cover.png', alt: 'The counter of a high-tech shop', href: '/boutiques', action: 'Browse shops' },
+  { titre: 'Request quotes for your business', texte: 'Ask several shops for the quantities you need, compare their offers, and place an order in one click.', image: '/marchande-katihub-cameroun.png', alt: 'A Cameroonian shopkeeper in her store', href: '/catalogue', action: 'Choose my items' },
+  { titre: 'Shop with peace of mind', texte: 'Pay with Orange Money or MTN Mobile Money, choose a deposit or full payment, and add optional KATI cover to your products.', image: '/marketplace-catalogue-cover.png', alt: 'A selection of KatiMarket catalogue products', href: '/catalogue', action: 'Browse the catalogue' },
+  { titre: 'Fashion from local creators', texte: 'Clothing, shoes, and accessories from verified Cameroonian shops, delivered or ready for pickup near you.', image: '/marketplace-mode-cameroun.png', alt: 'A customer showing an outfit from a local shop', href: '/recherche?q=Mode', action: 'Discover fashion' },
+]
+
 const INTERVALLE_MS = 6000
 
 export function MarketplaceAvantages() {
+  const { locale, text } = useMarketplaceLanguage()
+  const avantages = locale === 'fr' ? AVANTAGES : AVANTAGES_EN
   const piste = useRef<HTMLDivElement>(null)
   const [page, setPage] = useState(0)
   const [pages, setPages] = useState(Math.ceil(AVANTAGES.length / 2))
@@ -113,10 +125,10 @@ export function MarketplaceAvantages() {
   return <section className={styles.section} aria-roledescription="carrousel" aria-labelledby="avantages-titre">
     <header className={styles.entete}>
       <div>
-        <h2 id="avantages-titre">Plus qu’un panier : les avantages KatiMarket</h2>
-        <p>Livraison Kati Express, points KATI, retrait gratuit en boutique, devis pour les pros : ce que la marketplace ajoute à chacun de vos achats, sans frais cachés.</p>
+        <h2 id="avantages-titre">{text('moreThanCart')}</h2>
+        <p>{text('benefitsText')}</p>
       </div>
-      <Link href="/catalogue">Ouvrir le catalogue</Link>
+      <Link href="/catalogue">{text('openCatalogue')}</Link>
     </header>
 
     <div
@@ -129,7 +141,7 @@ export function MarketplaceAvantages() {
       onTouchStart={() => setSuspendu(true)}
       aria-live={autoActif ? 'off' : 'polite'}
     >
-      {AVANTAGES.map((avantage, index) => <article key={avantage.titre} className={styles.carte} role="group" aria-roledescription="diapositive" aria-label={`${index + 1} sur ${AVANTAGES.length}`}>
+      {avantages.map((avantage, index) => <article key={avantage.titre} className={styles.carte} role="group" aria-roledescription="diapositive" aria-label={text('carouselSlide', { number: index + 1, total: avantages.length })}>
         <div className={styles.texte}>
           <h3>{avantage.titre}</h3>
           <p>{avantage.texte}</p>
@@ -140,8 +152,8 @@ export function MarketplaceAvantages() {
     </div>
 
     <div className={styles.controles}>
-      <div className={styles.points}>{Array.from({ length: pages }, (_, index) => <button key={index} type="button" aria-label={`Afficher les avantages ${index + 1} sur ${pages}`} aria-current={index === page} onClick={() => allerA(index)} />)}</div>
-      {!mouvementReduit ? <button type="button" className={styles.pause} onClick={() => setEnPause(!enPause)} aria-label={enPause ? 'Reprendre le défilement' : 'Mettre le défilement en pause'}>{enPause ? '▶' : '❚❚'}</button> : null}
+      <div className={styles.points}>{Array.from({ length: pages }, (_, index) => <button key={index} type="button" aria-label={text('carouselSlide', { number: index + 1, total: pages })} aria-current={index === page} onClick={() => allerA(index)} />)}</div>
+      {!mouvementReduit ? <button type="button" className={styles.pause} onClick={() => setEnPause(!enPause)} aria-label={enPause ? text('resumeScroll') : text('pauseScroll')}>{enPause ? '▶' : '❚❚'}</button> : null}
     </div>
   </section>
 }

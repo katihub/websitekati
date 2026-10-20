@@ -62,7 +62,7 @@ export type MarketplaceProduct = {
   categorie: string | null
   /** Le referencement valide par KatiMarket ; absent, la page compose le sien. */
   /** La categorie KatiMarket du produit et la garantie minimale qu'elle impose. */
-  categorieDetail?: { nom: string; slug: string; parent: { nom: string; slug: string } | null; garantieMinimaleMois: number; garantie: string; attributsVariante?: string[] } | null
+  categorieDetail?: { id: string; nom: string; slug: string; parent: { id?: string; nom: string; slug: string; parent?: { nom: string; slug: string } | null } | null; garantieMinimaleMois: number; garantie: string; attributsVariante?: string[] } | null
   /** Sous le titre de la fiche : trois lignes au plus, ecrites par le marchand. */
   descriptionCourte?: string | null
   /** La fiche technique en texte (une caracteristique par ligne) et/ou en PDF. */

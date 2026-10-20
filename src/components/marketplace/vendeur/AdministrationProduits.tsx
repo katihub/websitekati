@@ -131,7 +131,7 @@ function ListeProduits({ produits, offres, onFiche, onAjouter, onLot }: { produi
 }
 
 function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }: { boutiqueId: string; nomBoutique: string; canPublish: boolean; onAnnuler: () => void; onCree: () => Promise<void> }) {
-  const [values, setValues] = useState<MerchantProductDraft>({ nom: '', marque: '', categorie: '', sousCategorie: '', description: '', descriptionCourte: '', ficheTechnique: '', metaTitre: '', metaDescription: '' })
+  const [values, setValues] = useState<MerchantProductDraft>({ nom: '', marque: '', categorie: '', sousCategorie: '', accessoireCategorie: '', description: '', descriptionCourte: '', ficheTechnique: '', metaTitre: '', metaDescription: '' })
   const [photos, setPhotos] = useState<PhotoLocale[]>([])
   const photosRef = useRef<PhotoLocale[]>([])
   const [pdf, setPdf] = useState<File | null>(null)
@@ -146,9 +146,10 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
   const { categories, erreur: erreurCategories } = useCategoriesMarketplace()
   const racine = categories?.find((categorie) => categorie.id === values.categorie)
   const sousCategorie = racine?.sousCategories.find((sous) => sous.id === values.sousCategorie)
-  const categorieId = racine ? (racine.sousCategories.length ? sousCategorie?.id : racine.id) : undefined
-  const garantie = sousCategorie?.garantie ?? (racine && !racine.sousCategories.length ? racine.garantie : null)
-  const libelleCategorie = sousCategorie?.nom ?? racine?.nom ?? 'Catégorie à choisir'
+  const accessoireCategorie = sousCategorie?.sousCategories.find((accessoire) => accessoire.id === values.accessoireCategorie)
+  const categorieId = accessoireCategorie?.id ?? (racine ? (racine.sousCategories.length ? sousCategorie?.id : racine.id) : undefined)
+  const garantie = accessoireCategorie?.garantie ?? sousCategorie?.garantie ?? (racine && !racine.sousCategories.length ? racine.garantie : null)
+  const libelleCategorie = accessoireCategorie?.nom ?? sousCategorie?.nom ?? racine?.nom ?? 'Catégorie à choisir'
   const image = photos[0]?.url
   const lignes = useMemo(() => values.ficheTechnique.split('\n').map((ligne) => ligne.trim()).filter(Boolean).slice(0, 5), [values.ficheTechnique])
 
@@ -184,8 +185,11 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
       if (!suggestion) throw new Error('La proposition reçue est incomplète. Relancez la génération.')
       const categorieProposee = suggestion.categorieId
         ? categories?.flatMap((categorie) => [
-            ...(categorie.id === suggestion.categorieId && !categorie.sousCategories.length ? [{ categorie: categorie.id, sousCategorie: '' }] : []),
-            ...categorie.sousCategories.filter((sous) => sous.id === suggestion.categorieId).map((sous) => ({ categorie: categorie.id, sousCategorie: sous.id })),
+            ...(categorie.id === suggestion.categorieId && !categorie.sousCategories.length ? [{ categorie: categorie.id, sousCategorie: '', accessoireCategorie: '' }] : []),
+            ...categorie.sousCategories.flatMap((sous) => [
+              ...(sous.id === suggestion.categorieId ? [{ categorie: categorie.id, sousCategorie: sous.id, accessoireCategorie: '' }] : []),
+              ...sous.sousCategories.filter((accessoire) => accessoire.id === suggestion.categorieId).map((accessoire) => ({ categorie: categorie.id, sousCategorie: sous.id, accessoireCategorie: accessoire.id })),
+            ]),
           ])[0]
         : undefined
       setAvantIa(values)
@@ -196,6 +200,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
         marque: suggestion.marque || actuelles.marque,
         categorie: categorieProposee?.categorie ?? actuelles.categorie,
         sousCategorie: categorieProposee?.sousCategorie ?? actuelles.sousCategorie,
+        accessoireCategorie: categorieProposee?.accessoireCategorie ?? actuelles.accessoireCategorie,
         descriptionCourte: suggestion.descriptionCourte || actuelles.descriptionCourte,
         description: suggestion.description || actuelles.description,
         ficheTechnique: suggestion.ficheTechnique || actuelles.ficheTechnique,
@@ -270,7 +275,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
           {messageIa ? <p className={styles.aiStatus} role="status">{messageIa}</p> : null}
           {suggestionIa ? <div className={styles.aiReview} data-testid="assistant-produit-resultat"><div><strong>8 champs proposés et appliqués</strong><small>Photos, PDF, prix et stock restent sous votre contrôle.</small></div>{suggestionIa.pointsAValider.length ? <div className={styles.aiWarnings}><strong>À vérifier avant validation</strong><ul>{suggestionIa.pointsAValider.map((point) => <li key={point}>{point}</li>)}</ul></div> : <p className={styles.aiClean}>Aucun fait manquant signalé. Une relecture humaine reste requise.</p>}</div> : null}
         </section>
-        <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/150</em><input required minLength={2} maxLength={150} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}</div>{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
+        <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/150</em><input required minLength={2} maxLength={150} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '', accessoireCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value, accessoireCategorie: '' })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{sousCategorie?.sousCategories.length ? <label className={styles.full}>Catégorie d’accessoires <span>(facultatif)</span><select value={values.accessoireCategorie} onChange={(e) => setValues({ ...values, accessoireCategorie: e.target.value })}><option value="">Garder la sous-catégorie parente</option>{sousCategorie.sousCategories.map((accessoire) => <option key={accessoire.id} value={accessoire.id}>{accessoire.nom}</option>)}</select></label> : null}</div>{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
         <fieldset><legend><span>2</span>Médias</legend><p className={styles.help}>La première image devient le visuel principal · JPEG, PNG ou WebP · 5 Mio maximum.</p><label className={styles.dropzone}>＋ Ajouter des photos<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => choisirPhotos(e.currentTarget.files)} /></label>{photos.length ? <div className={styles.thumbnails}>{photos.map((photo, index) => <figure key={photo.url}><img src={photo.url} alt=""/><button type="button" onClick={() => retirerPhoto(index)} aria-label={`Retirer la photo ${index + 1}`}>×</button><figcaption>{index === 0 ? 'Principale' : index + 1}</figcaption></figure>)}</div> : null}</fieldset>
         <fieldset><legend><span>3</span>Contenu</legend><label>Description courte <em>{values.descriptionCourte.length}/300</em><textarea minLength={10} maxLength={300} rows={3} value={values.descriptionCourte} onChange={(e) => setValues({ ...values, descriptionCourte: e.target.value })} placeholder="La promesse essentielle du produit en trois lignes." /></label><label>Description détaillée<textarea rows={5} value={values.description} onChange={(e) => setValues({ ...values, description: e.target.value })} placeholder="Usage, bénéfices et éléments de différenciation…" /></label><label>Fiche technique<textarea rows={6} maxLength={20000} value={values.ficheTechnique} onChange={(e) => setValues({ ...values, ficheTechnique: e.target.value })} placeholder={'Écran : 16 pouces\nMémoire : 16 Go\nStockage : SSD 1 To'} /></label><label>Fiche technique PDF<input type="file" accept="application/pdf" onChange={(e) => setPdf(e.currentTarget.files?.[0] ?? null)} /></label></fieldset>
         <fieldset><legend><span>4</span>Référencement</legend><label>Meta title <em>{values.metaTitre.length}/70</em><input maxLength={70} value={values.metaTitre} onChange={(e) => setValues({ ...values, metaTitre: e.target.value })} placeholder={values.nom || 'Titre visible sur Google'} /></label><label>Meta description <em>{values.metaDescription.length}/170</em><textarea rows={3} maxLength={170} value={values.metaDescription} onChange={(e) => setValues({ ...values, metaDescription: e.target.value })} /></label></fieldset>
