@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { IconCamera, IconClose, IconSearch } from '@/components/brand/Icons'
+import { reduireImage } from '@/lib/reduire-image'
 
 type Etat = 'pret' | 'analyse' | 'erreur'
 
@@ -44,20 +45,37 @@ export function ImageSearchButton() {
   async function rechercher() {
     if (!fichier || etat === 'analyse') return
     setEtat('analyse')
-    setMessage('Nous identifions le produit visible…')
-    const body = new FormData()
-    body.set('image', fichier)
+    setMessage('Préparation de la photo…')
+    // Trente secondes au plus : le serveur s'arrete a vingt pour l'analyse.
+    const delai = new AbortController()
+    const minuterie = setTimeout(() => delai.abort(), 30_000)
     try {
-      const reponse = await fetch('/api/recherche-image', { method: 'POST', body })
-      const resultat = await reponse.json() as { query?: string; label?: string; message?: string }
-      if (!reponse.ok || !resultat.query) throw new Error(resultat.message || 'La photo n’a pas pu être analysée.')
-      setMessage(resultat.label ? `${resultat.label} — ouverture des résultats…` : 'Produit reconnu — ouverture des résultats…')
+      let envoi: Blob = fichier
+      try {
+        envoi = await reduireImage(fichier)
+      } catch {
+        // Un navigateur qui ne sait pas lire ce format : le serveur tranchera.
+        if (fichier.size > 6 * 1024 * 1024) throw new Error('Cette photo est trop lourde. Choisissez une image de moins de 6 Mo.')
+      }
+      setMessage('Nous identifions le produit visible…')
+      const body = new FormData()
+      body.set('image', envoi, 'photo.jpg')
+      const reponse = await fetch('/api/recherche-image', { method: 'POST', body, signal: delai.signal })
+      const resultat = await reponse.json().catch(() => ({})) as { query?: string; label?: string; total?: number; message?: string }
+      if (!reponse.ok || !resultat.query) throw new Error(resultat.message || 'La photo n’a pas pu être analysée. Réessayez dans un instant.')
+      setMessage(resultat.total
+        ? `${resultat.label || 'Produit reconnu'} — ouverture des résultats…`
+        : `${resultat.label || 'Produit reconnu'} — aucun produit identique en vente, voici les plus proches…`)
       const params = new URLSearchParams({ q: resultat.query, source: 'image' })
       router.push(`/recherche?${params}`)
       fermer()
     } catch (cause) {
       setEtat('erreur')
-      setMessage(cause instanceof Error ? cause.message : 'La recherche par image est indisponible.')
+      setMessage(cause instanceof DOMException && cause.name === 'AbortError'
+        ? 'L’analyse prend trop de temps. Vérifiez votre connexion et réessayez.'
+        : cause instanceof Error ? cause.message : 'La recherche par image est indisponible.')
+    } finally {
+      clearTimeout(minuterie)
     }
   }
 
@@ -66,7 +84,7 @@ export function ImageSearchButton() {
       <input
         ref={input}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         className="sr-only"
         tabIndex={-1}
         onChange={(event) => {

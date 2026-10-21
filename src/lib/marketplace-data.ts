@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { entetesLectureCommune } from '@/lib/appel-backend'
+
 export interface BoutiqueMarketplace {
   id: string
   nom: string
@@ -66,7 +68,7 @@ export interface CategorieArbre {
 /** Vide quand l'API ne repond pas : le menu se replie alors sur « Toutes les categories ». */
 export async function lireCategoriesMarketplace(): Promise<CategorieArbre[]> {
   try {
-    const reponse = await fetch(`${BASE}/v1/marketplace/categories`, { next: { revalidate: 300 } })
+    const reponse = await fetch(`${BASE}/v1/marketplace/categories`, { headers: entetesLectureCommune(), next: { revalidate: 300 } })
     return reponse.ok ? await reponse.json() as CategorieArbre[] : []
   } catch {
     return []
@@ -77,7 +79,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3101'
 
 export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
   try {
-    const reponse = await fetch(`${BASE}/v1/marketplace/accueil`, { next: { revalidate: 60 } })
+    const reponse = await fetch(`${BASE}/v1/marketplace/accueil`, { headers: entetesLectureCommune(), next: { revalidate: 60 } })
     if (!reponse.ok) return { boutiques: [], offres: [] }
     return await reponse.json() as AccueilMarketplace
   } catch {
@@ -87,7 +89,7 @@ export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
 
 export async function lireBoutiqueMarketplace(slug: string): Promise<BoutiquePubliqueMarketplace | null> {
   try {
-    const reponse = await fetch(`${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`, { next: { revalidate: 60 } })
+    const reponse = await fetch(`${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`, { headers: entetesLectureCommune(), next: { revalidate: 60 } })
     if (!reponse.ok) return null
     return await reponse.json()
   } catch {
@@ -125,7 +127,7 @@ export async function lireOffresMarketplace(params: {
     filtres: { q: params.q ?? null, categorie: params.categorie ?? null, boutique: params.boutique ?? null, tri: params.tri ?? 'recent' },
   }
   try {
-    const reponse = await fetch(`${BASE}/v1/marketplace/offres?${query}`, { next: { revalidate: 30 } })
+    const reponse = await fetch(`${BASE}/v1/marketplace/offres?${query}`, { headers: entetesLectureCommune(), next: { revalidate: 30 } })
     if (!reponse.ok) return vide
     return await reponse.json() as ListeOffresMarketplace
   } catch {
