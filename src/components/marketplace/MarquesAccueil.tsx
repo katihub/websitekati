@@ -6,12 +6,14 @@ import styles from './marketplace-marques.module.css'
 /**
  * « LES MARQUES DE NOS BOUTIQUES » : les marques vendues sur KatiMarket, des plus
  * presentes aux moins presentes, lues dans les facettes du catalogue. Une
- * marque dont le site tient le logo l'affiche, aux couleurs de la marque ; les
- * autres, souvent des marques locales, ont leurs initiales aux couleurs de
- * KatiMarket. Chaque tuile ouvre le catalogue filtre sur la marque.
+ * marque dont le site tient le logo l'affiche en monochrome discret, a sa
+ * couleur au survol ; les autres, souvent des marques locales, ont leurs
+ * initiales. Des tuiles compactes, pour en montrer beaucoup sans qu'elles
+ * prennent le pas sur les produits. Chaque tuile ouvre le catalogue filtre.
  */
 
-const LIMITE = 12
+// 40 remplit des rangees entieres sur 8, 5 ou 4 colonnes.
+const LIMITE = 40
 
 function initiales(nom: string) {
   const mots = nom.replace(/[^\p{L}\p{N} ]/gu, ' ').split(/\s+/).filter(Boolean)
@@ -38,8 +40,8 @@ export function MarquesAccueil({ marques, totalOffres }: { marques: Array<{ nom:
             <span aria-hidden="true" className={styles.visuel}>{logo
               ? <span className={styles.logo} style={{ '--mark-src': `url(/brands/${logo.file}.svg)`, '--mark-ink': logo.paint } as React.CSSProperties} />
               : <span className={styles.monogramme}>{initiales(marque.nom)}</span>}</span>
-            <span className={styles.identite}><b>{marque.nom}</b><small>{nombre.format(marque.nombre)} offre{marque.nombre > 1 ? 's' : ''}</small></span>
-            <span className={styles.fleche} aria-hidden="true">→</span>
+            <b className={styles.nom}>{marque.nom}</b>
+            <small className={styles.compte} aria-hidden="true">{nombre.format(marque.nombre)}</small>
           </Link>
         </li>
       })}

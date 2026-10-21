@@ -8,24 +8,22 @@
 .entete>a:hover{transform:translateY(-2px);border-color:#ff9a3d;background:#ffffff18}
 .entete>a:focus-visible{outline:3px solid #ff9a3d;outline-offset:3px}
 
-.grille{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:24px 0 0;padding:0;list-style:none}
-.grille li{min-width:0;animation:entree .45s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 35ms)}
-@keyframes entree{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.tuile{display:grid;grid-template-columns:58px minmax(0,1fr) 24px;align-items:center;gap:10px;min-height:82px;height:100%;border:1px solid #ffffffa8;border-radius:11px;background:#fff;padding:11px;color:var(--navy);box-shadow:0 7px 18px #020d2140;transition:transform .22s cubic-bezier(.2,.7,.2,1),border-color .22s ease,box-shadow .22s ease}
-.tuile:hover{transform:translateY(-3px);border-color:#ff9a3d;box-shadow:0 12px 24px #020d2154}
-.tuile:focus-visible{outline:3px solid #ff9a3d;outline-offset:3px}
-.visuel{display:grid;place-items:center;width:58px;height:52px;border-right:1px solid #e6ebf2;padding-right:10px}
-.logo{display:block;width:46px;height:38px;background-color:var(--mark-ink,var(--navy));mask-image:var(--mark-src);mask-repeat:no-repeat;mask-position:center;mask-size:contain;-webkit-mask-image:var(--mark-src);-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
-.monogramme{display:grid;place-items:center;width:42px;height:42px;border-radius:10px;background:linear-gradient(145deg,#061f4f,#0b4389);color:#fff;font-size:.8rem;font-weight:850;letter-spacing:.02em;transition:transform .25s cubic-bezier(.2,.7,.2,1),background .25s ease}
-.tuile:hover .logo{transform:scale(1.08)}
-.tuile:hover .monogramme{transform:rotate(-4deg);background:linear-gradient(145deg,#ff7900,#ff9a3d)}
-.identite{display:grid;min-width:0;gap:4px}
-.identite b{overflow:hidden;color:#233654;font-size:.68rem;letter-spacing:.02em;text-overflow:ellipsis;white-space:nowrap}
-.identite small{color:var(--muted);font-size:.62rem;font-variant-numeric:tabular-nums}
-.fleche{display:grid;width:24px;height:24px;place-items:center;border-radius:50%;background:#eef3f9;color:#6680a2;font-size:.75rem;transition:background .2s ease,color .2s ease,transform .2s ease}
-.tuile:hover .fleche{transform:translateX(2px);background:#fff0e3;color:#d65d00}
+/* Des tuiles compactes et ton sur ton : beaucoup de marques, peu de bruit. Le
+   logo reste un filigrane clair ; sa couleur n'apparait qu'au survol. */
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:7px;margin:22px 0 0;padding:0;list-style:none}
+.grille li{min-width:0;animation:entree .4s ease both;animation-delay:calc(var(--i,0) * 12ms)}
+@keyframes entree{from{opacity:0}to{opacity:1}}
+.tuile{display:flex;align-items:center;gap:9px;height:42px;border:1px solid #ffffff14;border-radius:9px;background:#ffffff08;padding:0 11px;color:#c9d7ec;transition:border-color .2s ease,background .2s ease,color .2s ease}
+.tuile:hover{border-color:#ff9a3d73;background:#ffffff12;color:#fff}
+.tuile:focus-visible{outline:2px solid #ff9a3d;outline-offset:2px}
+.visuel{display:grid;flex:none;place-items:center;width:30px;height:20px}
+.logo{display:block;width:30px;height:20px;background-color:#c9d7ec;opacity:.55;mask-image:var(--mark-src);mask-repeat:no-repeat;mask-position:center;mask-size:contain;-webkit-mask-image:var(--mark-src);-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;transition:opacity .2s ease,background-color .2s ease}
+.tuile:hover .logo{opacity:1;background-color:var(--mark-ink,#fff)}
+.monogramme{display:grid;place-items:center;width:22px;height:20px;border:1px solid #ffffff2e;border-radius:5px;color:#9fb3d1;font-size:.5rem;font-weight:800;letter-spacing:.03em;transition:border-color .2s ease,color .2s ease}
+.tuile:hover .monogramme{border-color:#ff9a3d;color:#ff9a3d}
+.nom{min-width:0;flex:1;overflow:hidden;font-size:.62rem;font-weight:700;letter-spacing:.03em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
+.compte{flex:none;color:#7f97ba;font-size:.56rem;font-variant-numeric:tabular-nums}
 
-@media(max-width:1200px){.grille{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:900px){.section{width:min(100% - 28px,1480px);margin-top:40px;padding:24px}.entete{align-items:flex-start;flex-direction:column;gap:15px}.grille{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:650px){.section{width:min(100% - 22px,1480px);padding:22px 18px}.entete h2{font-size:1.45rem}.entete p{font-size:.78rem}.entete>a{width:100%;justify-content:space-between}.grille{grid-template-rows:repeat(2,82px);grid-template-columns:none;grid-auto-columns:205px;grid-auto-flow:column;gap:9px;overflow-x:auto;margin:20px -18px 0;padding:2px 18px 10px;scroll-snap-type:x mandatory;scrollbar-width:none}.grille::-webkit-scrollbar{display:none}.grille li{scroll-snap-align:start}.tuile{min-height:82px}}
-@media(prefers-reduced-motion:reduce){.grille li{animation:none}.tuile,.logo,.monogramme,.fleche,.entete>a{transition:none}.tuile:hover,.tuile:hover .logo,.tuile:hover .monogramme,.tuile:hover .fleche,.entete>a:hover{transform:none}}
+@media(max-width:900px){.section{width:min(100% - 28px,1480px);margin-top:40px;padding:24px}.entete{align-items:flex-start;flex-direction:column;gap:15px}}
+@media(max-width:650px){.section{width:min(100% - 22px,1480px);padding:22px 18px}.entete h2{font-size:1.45rem}.entete p{font-size:.78rem}.entete>a{width:100%;justify-content:space-between}.grille{grid-template-rows:repeat(3,40px);grid-template-columns:none;grid-auto-columns:156px;grid-auto-flow:column;gap:6px;overflow-x:auto;margin:18px -18px 0;padding:0 18px 8px;scroll-snap-type:x proximity;scrollbar-width:none}.grille::-webkit-scrollbar{display:none}.grille li{scroll-snap-align:start}.tuile{height:40px}}
+@media(prefers-reduced-motion:reduce){.grille li{animation:none}.tuile,.logo,.monogramme,.entete>a{transition:none}.entete>a:hover{transform:none}}
