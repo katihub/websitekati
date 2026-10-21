@@ -193,3 +193,15 @@
 @media(max-width:1050px){.commerceGrid{display:grid;grid-template-columns:minmax(0,1fr) 280px}.promoRail{grid-column:auto;grid-template-columns:1fr;grid-template-rows:260px auto}.page{padding-top:12px}.commerceGrid+.section{margin-top:24px}}
 @media(max-width:850px){.commerceGrid{grid-template-columns:1fr}.promoRail{grid-column:auto;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto}.pubAccueil{min-height:240px}.centerStage>.hero{min-height:380px}}
 @media(max-width:560px){.commerceGrid{width:100%}.promoRail{display:none}.centerStage>.hero{min-height:420px}}
+
+/* Le carrousel principal reste marquant, mais occupe moins de hauteur au-dessus du catalogue. */
+.centerStage>.hero{min-height:clamp(320px,24vw,360px)}
+.centerStage>.hero .heroCopy{justify-content:center;padding:26px 42px}
+.centerStage>.hero .heroCopy h1{max-width:480px;font-size:clamp(2.05rem,2.75vw,2.7rem)}
+.centerStage>.hero .heroEyebrow{margin-bottom:10px;padding:5px 10px}
+.centerStage>.hero .heroCopy p{margin:12px 0 17px}
+.centerStage>.hero .heroCopy>a{min-width:185px;padding:11px 18px}
+.centerStage>.hero .heroDots{bottom:11px}
+@media(max-width:1200px){.centerStage>.hero{min-height:340px}}
+@media(max-width:850px){.centerStage>.hero{min-height:320px}.centerStage>.hero .heroCopy{padding:24px 34px}}
+@media(max-width:560px){.centerStage>.hero{min-height:350px}.centerStage>.hero .heroCopy{inset:auto 0 0;width:100%;min-height:76%;justify-content:flex-end;padding:24px 22px}.centerStage>.hero .heroCopy h1{font-size:1.72rem}.centerStage>.hero .heroCopy p{margin:10px 0 14px}.centerStage>.hero .heroDots{bottom:9px}}

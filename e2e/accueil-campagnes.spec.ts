@@ -2,6 +2,30 @@ import { expect, test } from '@playwright/test'
 import os from 'node:os'
 import path from 'node:path'
 
+test('le carrousel principal reste compact et navigable', async ({ page }, testInfo) => {
+  const errors: string[] = []
+  page.on('console', message => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveTitle(/KatiMarket/i)
+  await expect(page.getByText(/Application error|Unhandled Runtime Error|Internal Server Error/i)).toHaveCount(0)
+  const hero = page.locator('section[aria-roledescription="carrousel"]').first()
+  await expect(hero).toBeVisible()
+  const dimensions = await hero.boundingBox()
+  expect(dimensions).not.toBeNull()
+  expect(dimensions!.height).toBeLessThanOrEqual(testInfo.project.name === 'mobile' ? 351 : 360)
+
+  const titre = hero.getByRole('heading', { level: 1 })
+  const avant = await titre.innerText()
+  await hero.getByRole('button', { name: /suivante/i }).click()
+  await expect(titre).not.toHaveText(avant)
+  await page.screenshot({ path: path.join(os.tmpdir(), `katimarket-hero-compact-${testInfo.project.name}.png`) })
+  expect(errors).toEqual([])
+})
+
 test('six campagnes sur deux lignes de trois défilent automatiquement sur la page d’accueil', async ({ page }, testInfo) => {
   const errors: string[] = []
   page.on('console', (message) => {
