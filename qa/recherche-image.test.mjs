@@ -36,6 +36,7 @@ test('a query only counts as found when its best result holds every useful word'
   assert.equal(couvre('caméra de surveillance', 'Caméra dôme surveillance 4 MP'), true)
   assert.equal(couvre('Hikvision DS-2CD9999', 'Détecteur de fumée Hikvision DS-PDSMK'), false)
   assert.equal(couvre('de la', 'tout'), false)
+  assert.equal(couvre('APC Easy-UPS', 'Onduleur APC Easy UPS BVX2200LI'), true)
 })
 
 test('skips a precise query that only matches by the brand, sounding all at once', async () => {

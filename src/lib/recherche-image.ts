@@ -69,7 +69,8 @@ export function candidatsRecherche(analyse: AnalyseImage): string[] {
 /** Ce que la recherche publique repond a une requete : son total et le texte de son meilleur resultat. */
 export type Sondage = { total: number; apercu: string }
 
-const sansAccent = (valeur: string) => valeur.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('fr')
+/** Sans accent, en minuscules, le tiret lu comme un espace : « Easy-UPS » vaut « Easy UPS ». */
+const sansAccent = (valeur: string) => valeur.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('fr').replace(/-/g, ' ')
 const MOTS_VIDES = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'un', 'une', 'et', 'ou', 'en', 'au', 'aux', 'a', 'pour', 'par', 'sur', 'avec', 'sans', 'dans'])
 
 /** Vrai quand chaque mot utile de la requete figure dans le texte du resultat. */
