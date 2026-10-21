@@ -72,6 +72,8 @@ const COPY = {
   customerService: { fr: 'Service client 24/7', en: '24/7 customer support' },
   localTeam: { fr: 'Une équipe locale vous répond.', en: 'Our local team is here to help.' },
   bestSellersTitle: { fr: 'Meilleures ventes', en: 'Best sellers' },
+  mixedCategoriesTitle: { fr: 'À découvrir dans nos catégories', en: 'Discover products across categories' },
+  mixedCategoriesText: { fr: 'Une sélection variée : informatique, maison, outils, beauté et bien plus encore.', en: 'A varied selection across tech, home, tools, beauty, and more.' },
   viewAll: { fr: 'Voir tout', en: 'View all' },
   offersSoon: { fr: 'Les offres seront bientôt disponibles.', en: 'Offers will be available soon.' },
   popularCategories: { fr: 'Catégories populaires', en: 'Popular categories' },

@@ -23,7 +23,7 @@ const AVANTAGES: readonly Avantage[] = [
   {
     titre: 'Livré chez vous par Kati Express',
     texte: 'Nos livreurs apportent votre commande à domicile à Douala et Yaoundé. Vous la recevez contre un code personnel : personne d’autre ne la récupère.',
-    image: '/marketplace-hero-douala.png', alt: 'Une rue commerçante de Douala', href: '/catalogue', action: 'Commander maintenant',
+    image: '/home-avantage-livraison.png', alt: 'Un livreur remet une commande à une cliente à Douala', href: '/catalogue', action: 'Commander maintenant',
   },
   {
     titre: 'Des KATI à chaque achat',
@@ -33,32 +33,32 @@ const AVANTAGES: readonly Avantage[] = [
   {
     titre: 'Retrait gratuit en boutique',
     texte: 'Passez chercher votre commande quand elle est prête : la boutique vous envoie un code de retrait valable 7 jours. Aucun frais de livraison.',
-    image: '/marketplace-shop-tech-cover.png', alt: 'Le comptoir d’une boutique high-tech', href: '/boutiques', action: 'Voir les boutiques',
+    image: '/home-avantage-retrait.png', alt: 'Un client retire sa commande dans une boutique high-tech', href: '/boutiques', action: 'Voir les boutiques',
   },
   {
     titre: 'Des devis pour votre entreprise',
     texte: 'Demandez les quantités dont vous avez besoin à plusieurs boutiques à la fois, comparez leurs réponses et commandez en un clic.',
-    image: '/marchande-katihub-cameroun.png', alt: 'Une commerçante camerounaise dans sa boutique', href: '/catalogue', action: 'Choisir mes articles',
+    image: '/home-avantage-devis.png', alt: 'Deux professionnels camerounais étudient un devis sur une tablette', href: '/catalogue', action: 'Choisir mes articles',
   },
   {
     titre: 'Achetez l’esprit tranquille',
     texte: 'Paiement par Orange Money ou MTN Mobile Money, acompte ou paiement complet, et assurance KATI en option sur vos produits.',
-    image: '/marketplace-catalogue-cover.png', alt: 'Une sélection de produits du catalogue KatiMarket', href: '/catalogue', action: 'Ouvrir le catalogue',
+    image: '/home-avantage-paiement.png', alt: 'Une cliente effectue un paiement mobile sécurisé', href: '/catalogue', action: 'Ouvrir le catalogue',
   },
   {
     titre: 'La mode des créateurs d’ici',
     texte: 'Vêtements, chaussures et accessoires de boutiques camerounaises vérifiées, livrés ou à retirer près de chez vous.',
-    image: '/marketplace-mode-cameroun.png', alt: 'Une cliente présente une tenue d’une boutique locale', href: '/recherche?q=Mode', action: 'Découvrir la mode',
+    image: '/home-avantage-mode-locale.png', alt: 'Une créatrice camerounaise ajuste une veste confectionnée localement', href: '/recherche?q=Mode', action: 'Découvrir la mode',
   },
 ]
 
 const AVANTAGES_EN: readonly Avantage[] = [
-  { titre: 'Delivered to your door with Kati Express', texte: 'Our couriers deliver your order to your home in Douala and Yaoundé. Collect it with your personal code so no one else can claim it.', image: '/marketplace-hero-douala.png', alt: 'A commercial street in Douala', href: '/catalogue', action: 'Shop now' },
+  { titre: 'Delivered to your door with Kati Express', texte: 'Our couriers deliver your order to your home in Douala and Yaoundé. Collect it with your personal code so no one else can claim it.', image: '/home-avantage-livraison.png', alt: 'A courier handing an order to a customer in Douala', href: '/catalogue', action: 'Shop now' },
   { titre: 'Earn KATI with every purchase', texte: 'Delivered orders earn KATI points that can pay for part of your next purchase. Refer a friend and earn more.', image: '/marketplace-telephone-kati.png', alt: 'A phone displaying the KatiMarket app', href: '/compte/kati', action: 'View my KATI' },
-  { titre: 'Free pickup at the shop', texte: 'Pick up your order when it is ready. The shop sends you a pickup code valid for 7 days. No delivery fee.', image: '/marketplace-shop-tech-cover.png', alt: 'The counter of a high-tech shop', href: '/boutiques', action: 'Browse shops' },
-  { titre: 'Request quotes for your business', texte: 'Ask several shops for the quantities you need, compare their offers, and place an order in one click.', image: '/marchande-katihub-cameroun.png', alt: 'A Cameroonian shopkeeper in her store', href: '/catalogue', action: 'Choose my items' },
-  { titre: 'Shop with peace of mind', texte: 'Pay with Orange Money or MTN Mobile Money, choose a deposit or full payment, and add optional KATI cover to your products.', image: '/marketplace-catalogue-cover.png', alt: 'A selection of KatiMarket catalogue products', href: '/catalogue', action: 'Browse the catalogue' },
-  { titre: 'Fashion from local creators', texte: 'Clothing, shoes, and accessories from verified Cameroonian shops, delivered or ready for pickup near you.', image: '/marketplace-mode-cameroun.png', alt: 'A customer showing an outfit from a local shop', href: '/recherche?q=Mode', action: 'Discover fashion' },
+  { titre: 'Free pickup at the shop', texte: 'Pick up your order when it is ready. The shop sends you a pickup code valid for 7 days. No delivery fee.', image: '/home-avantage-retrait.png', alt: 'A customer collecting an order from a high-tech shop', href: '/boutiques', action: 'Browse shops' },
+  { titre: 'Request quotes for your business', texte: 'Ask several shops for the quantities you need, compare their offers, and place an order in one click.', image: '/home-avantage-devis.png', alt: 'Two Cameroonian professionals reviewing a quote on a tablet', href: '/catalogue', action: 'Choose my items' },
+  { titre: 'Shop with peace of mind', texte: 'Pay with Orange Money or MTN Mobile Money, choose a deposit or full payment, and add optional KATI cover to your products.', image: '/home-avantage-paiement.png', alt: 'A customer making a secure mobile payment', href: '/catalogue', action: 'Browse the catalogue' },
+  { titre: 'Fashion from local creators', texte: 'Clothing, shoes, and accessories from verified Cameroonian shops, delivered or ready for pickup near you.', image: '/home-avantage-mode-locale.png', alt: 'A Cameroonian designer fitting a locally made jacket', href: '/recherche?q=Mode', action: 'Discover fashion' },
 ]
 
 const INTERVALLE_MS = 6000

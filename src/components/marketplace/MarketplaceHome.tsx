@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { MarketplaceText } from '@/lib/language'
 import { getBanners, type PublishedBanner } from '@/lib/banners'
 import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
+import { interleaveCategoryProducts } from '@/lib/mixed-category-products'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
 import { DerniersArrivages } from './DerniersArrivages'
 import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
@@ -27,11 +28,11 @@ const PROMOS_KATIMARKET: PublishedBanner[] = [
     description: 'Des boutiques locales et une livraison suivie au Cameroun.',
     action: 'Découvrir',
     tonalite: 'navy',
-    alt: 'Une cliente KatiMarket reçoit sa commande',
+    alt: 'Un couple camerounais découvre sa commande KatiMarket',
     focus: 50,
     emplacement: 'promo',
-    large: { url: '/marketplace-hero-douala.png', largeur: 2048, hauteur: 1024 },
-    mobile: { url: '/marketplace-hero-douala.png', largeur: 2048, hauteur: 1024 },
+    large: { url: '/home-promo-bienvenue.png', largeur: 1919, hauteur: 820 },
+    mobile: { url: '/home-promo-bienvenue.png', largeur: 1919, hauteur: 820 },
   },
   {
     id: 'katihub-high-tech',
@@ -53,11 +54,11 @@ const PROMOS_KATIMARKET: PublishedBanner[] = [
     description: 'Mode, beauté et accessoires proposés par nos boutiques.',
     action: 'Explorer',
     tonalite: 'light',
-    alt: 'Une cliente camerounaise avec ses achats KatiMarket',
+    alt: 'Une cliente camerounaise découvre une création locale en boutique',
     focus: 50,
     emplacement: 'promo',
-    large: { url: '/marketplace-mode-cameroun.png', largeur: 2172, hauteur: 724 },
-    mobile: { url: '/marketplace-mode-cameroun.png', largeur: 2172, hauteur: 724 },
+    large: { url: '/home-promo-mode-boutique.png', largeur: 1916, hauteur: 821 },
+    mobile: { url: '/home-promo-mode-boutique.png', largeur: 1916, hauteur: 821 },
   },
   {
     id: 'katihub-selection',
@@ -123,6 +124,7 @@ export async function MarketplaceHome() {
   const offresPremier = groupesCategories.find((groupe) => groupe.slug === premier?.slug)?.offres.slice(0, 8)
     ?? (premier ? (await lireOffresMarketplace({ categorieSlug: premier.slug, taille: 8 })).offres : [])
   const best = offres.slice(0, 20)
+  const mixedCategoryProducts = interleaveCategoryProducts(groupesCategories, 18)
   const fresh = [...offres].reverse().slice(0, 6)
   // Les promotions du panel restent prioritaires. Tant qu'aucune n'est
   // publiée, cette sélection KatiMarket évite de recréer un grand vide sous les
@@ -151,6 +153,7 @@ export async function MarketplaceHome() {
     </div>
 
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="bestSellersTitle" />} href="/catalogue" />{best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}><MarketplaceText id="offersSoon" /></p>}</section>
+    {mixedCategoryProducts.length ? <section className={`${styles.shell} ${styles.section}`} data-testid="mixed-category-products"><SectionHead title={<MarketplaceText id="mixedCategoriesTitle" />} href="/catalogue" label={<MarketplaceText id="viewAllCategories" />} /><p className={styles.sectionIntro}><MarketplaceText id="mixedCategoriesText" /></p><ProductCarouselAccueil offres={mixedCategoryProducts} label="Produits de différentes catégories" showCategory /></section> : null}
     <MarketplaceAvantages />
     {groupesCategories.some((groupe) => groupe.offres.length) ? <CategoryProductShowcase groupes={groupesCategories.filter((groupe) => groupe.offres.length)} /> : null}
     {rayons.length ? <RayonsAccueil rayons={rayons} initial={{ slug: premier!.slug, offres: offresPremier }} /> : null}
@@ -159,7 +162,7 @@ export async function MarketplaceHome() {
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="popularCategories" />} href="/catalogue" label={<MarketplaceText id="viewAllCategories" />} /><div className={styles.categoryRail}>{POPULAR.map(([icon, name]) => <Link href={`/recherche?q=${encodeURIComponent(name)}`} key={name}><span>{icon}</span><b>{name}</b></Link>)}</div></section>
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="recommendedShopsTitle" />} href="/boutiques" label={<MarketplaceText id="viewAllShops" />} />{boutiques.length ? <ShopCarouselAccueil boutiques={boutiques.slice(0, 20)} /> : <p className={styles.empty}><MarketplaceText id="shopsSoon" /></p>}</section>
 
-    <section className={`${styles.shell} ${styles.fashionBanner}`}><Image src="/marketplace-mode-cameroun.png" alt="Une cliente camerounaise présente une sélection mode" fill sizes="(max-width: 800px) 100vw, 1480px" /><div><h2><MarketplaceText id="fashionBannerTitle" /><br /><strong><MarketplaceText id="daily" /></strong></h2><p><MarketplaceText id="localFashionText" /></p><Link href="/recherche?q=Mode"><MarketplaceText id="discoverFashion" /> <span>→</span></Link></div></section>
+    <section className={`${styles.shell} ${styles.fashionBanner}`}><Image src="/home-banner-mode-createurs.png" alt="Trois jeunes Camerounais portent des tenues de créateurs locaux" fill sizes="(max-width: 800px) 100vw, 1480px" /><div><h2><MarketplaceText id="fashionBannerTitle" /><br /><strong><MarketplaceText id="daily" /></strong></h2><p><MarketplaceText id="localFashionText" /></p><Link href="/recherche?q=Mode"><MarketplaceText id="discoverFashion" /> <span>→</span></Link></div></section>
 
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="newArrivals" />} href="/catalogue?tri=recent" />{fresh.length ? <div className={styles.productGrid}>{fresh.map((offre) => <ProductCard key={offre.id} offre={offre} fresh />)}</div> : <p className={styles.empty}><MarketplaceText id="newArrivalsEmpty" /></p>}</section>
     <VendreSurKatihub />

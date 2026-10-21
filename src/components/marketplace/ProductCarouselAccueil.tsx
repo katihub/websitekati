@@ -12,7 +12,7 @@ function mouvementReduit() {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-export function ProductCarouselAccueil({ offres, label = 'Carrousel de produits' }: { offres: readonly OffreMarketplace[]; label?: string }) {
+export function ProductCarouselAccueil({ offres, label = 'Carrousel de produits', showCategory = false }: { offres: readonly OffreMarketplace[]; label?: string; showCategory?: boolean }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [pause, setPause] = useState(false)
   const [position, setPosition] = useState(1)
@@ -66,7 +66,7 @@ export function ProductCarouselAccueil({ offres, label = 'Carrousel de produits'
       tabIndex={0}
     >
       <div className={styles.productTrack}>
-        {offres.map((offre) => <div className={styles.productSlide} data-product-carousel-card key={offre.id}><ProductCard offre={offre} /></div>)}
+        {offres.map((offre) => <div className={styles.productSlide} data-product-carousel-card key={offre.id}><ProductCard offre={offre} showCategory={showCategory} /></div>)}
       </div>
     </div>
     {offres.length > 1 ? <>

@@ -15,7 +15,7 @@ import styles from './marketplace-home-v2.module.css'
 export function PubAccueil({ pub }: { pub: PublishedBanner | null }) {
   if (!pub) {
     return <Link href="/devenir-vendeur" className={styles.pubAccueil} data-testid="pub-accueil" data-defaut>
-      <Image src="/marchande-katihub-cameroun.png" alt="Une commerçante camerounaise dans sa boutique" fill sizes="(max-width: 1200px) 50vw, 248px" />
+      <Image src="/home-pub-vendeuse-beaute.png" alt="Une commerçante camerounaise organise les produits de sa boutique" fill sizes="(max-width: 1200px) 50vw, 248px" />
       <span className={styles.pubDefaut}><b>Vendez sur KatiMarket</b><small>Ouvrez votre boutique en quelques minutes →</small></span>
     </Link>
   }

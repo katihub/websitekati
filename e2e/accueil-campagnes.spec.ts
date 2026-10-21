@@ -27,6 +27,14 @@ test('quatre campagnes visibles sur une ligne défilent automatiquement sur la p
   await expect(pages).toHaveCount(2)
   const premieresCartes = pages.first().locator('a')
   await expect(premieresCartes).toHaveCount(4)
+  await expect(pages.nth(1).locator('a')).toHaveCount(2)
+  const imagesPromotionnelles = await pages.locator('img').evaluateAll((images) =>
+    images.map((image) => {
+      const source = new URL((image as HTMLImageElement).src)
+      return source.searchParams.get('url') ?? source.pathname
+    }),
+  )
+  expect(new Set(imagesPromotionnelles).size).toBe(imagesPromotionnelles.length)
   const largeur = await piste.evaluate((element) => element.clientWidth)
   const cartes = await premieresCartes.evaluateAll((elements) => elements.map((element) => {
     const { x, y, width } = element.getBoundingClientRect()

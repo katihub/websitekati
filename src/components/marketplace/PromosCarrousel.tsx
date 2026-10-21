@@ -21,8 +21,9 @@ const PAR_VUE = 4
 
 function grouperPromos(promos: PublishedBanner[]) {
   const nombreVues = Math.ceil(promos.length / PAR_VUE)
-  return Array.from({ length: nombreVues }, (_, index) =>
-    Array.from({ length: PAR_VUE }, (_vide, rang) => promos[(index * PAR_VUE + rang) % promos.length]!),
+  return Array.from(
+    { length: nombreVues },
+    (_, index) => promos.slice(index * PAR_VUE, (index + 1) * PAR_VUE),
   )
 }
 

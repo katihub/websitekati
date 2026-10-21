@@ -423,7 +423,17 @@ export async function demander(
 ): Promise<ReponseAssistant> {
   const reponse = await fetch('/api/assistant', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    /* La route Next sait relayer l'identité, mais elle ne peut relayer que ce
+       que le navigateur lui donne. Sans cet en-tête, toutes les questions
+       étaient anonymes, même depuis un compte client connecté : le fil ne se
+       rattachait jamais au compte et l'équipe perdait ce lien lorsqu'elle
+       devait reprendre la question. Le jeton est lu au clic, comme pour les autres appels, afin
+       de profiter d'un éventuel rafraîchissement de session. */
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...(await enteteAutorisation()),
+    },
     body: JSON.stringify({ question, ...(fil ? { fil } : {}), ...(choix ? { choix } : {}) }),
     signal,
   })

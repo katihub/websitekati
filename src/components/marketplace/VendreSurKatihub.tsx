@@ -35,7 +35,7 @@ export function VendreSurKatihub() {
       </div>
     </div>
     <div className={styles.vendreVisuel}>
-      <Image src="/marketplace-vendeur-cameroun.png" alt="Un vendeur camerounais dans sa boutique" fill sizes="(max-width: 900px) 100vw, 45vw" />
+      <Image src="/home-vendre-entrepreneurs.png" alt="Deux entrepreneurs camerounais préparent leurs commandes en boutique" fill sizes="(max-width: 900px) 100vw, 45vw" />
       <span className={`${styles.badge} ${styles.badgeHaut}`}><i aria-hidden="true">✓</i>Boutique vérifiée par KatiMarket</span>
       <span className={`${styles.badge} ${styles.badgeBas}`}><i aria-hidden="true">🛵</i>Kati Express livre vos clients</span>
     </div>
