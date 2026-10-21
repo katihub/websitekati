@@ -90,8 +90,8 @@ export type MarketplaceProduct = {
     quantiteMinimale?: number
     /** KatiMarket a recu et teste l'article de cette boutique. */
     verifieParKatiLe?: string | null
-    /** `ville` : la ville de la boutique, montree au client a la place de son nom. */
-    boutique: { id: string; nom: string; slug: string; ville?: string | null; adresseRetrait?: string | null }
+    /** `ville` : la ville principale ; `villesLivraison` : toutes les villes couvertes par la boutique. */
+    boutique: { id: string; nom: string; slug: string; ville?: string | null; villesLivraison?: string[]; adresseRetrait?: string | null }
   }>
 }
 
