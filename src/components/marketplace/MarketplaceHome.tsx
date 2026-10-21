@@ -6,6 +6,7 @@ import { getBanners, type PublishedBanner } from '@/lib/banners'
 import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
 import { interleaveCategoryProducts } from '@/lib/mixed-category-products'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
+import { MarketplaceCategoryMenu } from './MarketplaceCategoryMenu'
 import { DerniersArrivages } from './DerniersArrivages'
 import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
 import { PromosCarrousel } from './PromosCarrousel'
@@ -138,6 +139,7 @@ export async function MarketplaceHome() {
   ]
   return <div className={styles.page}>
     <div className={`${styles.shell} ${styles.commerceGrid}`}>
+      <MarketplaceCategoryMenu rayons={rayons} />
       <div className={styles.centerStage}>
         <MarketplaceHeroCarousel />
         <PromosCarrousel promos={promosAccueil} afficherLibelles={!bannieres.promos.length} />

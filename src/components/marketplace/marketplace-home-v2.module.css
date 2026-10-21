@@ -33,14 +33,14 @@
 .moyens small{border:1px solid var(--line);border-radius:5px;padding:3px 6px;color:#0a2b60;font-size:.55rem;font-weight:800}
 /* Ouverture de l'accueil : grand carrousel, colonne vendeur/engagements et
    deux campagnes en dessous, comme le modele KatiHub. */
-.commerceGrid{grid-template-columns:minmax(0,1fr) 310px;align-items:stretch}
+.commerceGrid{grid-template-columns:235px minmax(0,1fr) 310px;align-items:stretch}
 .centerStage{display:grid;min-width:0;grid-template-rows:minmax(0,1fr) auto}
 .centerStage>.hero{min-height:clamp(390px,29vw,444px)}
 .centerStage>.hero .heroCopy{justify-content:flex-start;padding-top:37px}
 .centerStage>.hero .heroCopy h1{max-width:500px;font-size:clamp(2.35rem,3.2vw,3.25rem)}
 .promoRail{grid-template-columns:1fr;grid-template-rows:313px auto;gap:12px}
 .engagements{align-content:start}
-@media(max-width:1200px){.commerceGrid{grid-template-columns:minmax(0,1fr) 285px}.promoRail{grid-column:auto;grid-template-columns:1fr;grid-template-rows:280px auto}.centerStage>.hero{min-height:390px}.pubAccueil{min-height:0}}
+@media(max-width:1200px){.commerceGrid{grid-template-columns:minmax(0,1fr) 285px}.categoryMenu{display:none}.promoRail{grid-column:auto;grid-template-columns:1fr;grid-template-rows:280px auto}.centerStage>.hero{min-height:390px}.pubAccueil{min-height:0}}
 @media(max-width:1050px){.commerceGrid{display:grid;grid-template-columns:minmax(0,1fr) 280px}.promoRail{grid-column:auto;grid-template-columns:1fr;grid-template-rows:260px auto}.page{padding-top:12px}.commerceGrid+.section{margin-top:24px}}
 @media(max-width:850px){.commerceGrid{grid-template-columns:1fr}.promoRail{grid-column:auto;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto}.pubAccueil{min-height:240px}.centerStage>.hero{min-height:380px}}
 @media(max-width:560px){.commerceGrid{width:100%}.promoRail{display:none}.centerStage>.hero{min-height:420px}}
