@@ -76,7 +76,7 @@ export function ReglementCommande({ produitsFcfa, options, disponibleKati, choix
     </fieldset>
 
     {!completImpose && choix.mode === 'acompte' ? <div className={styles.acompteLibre}>
-      <label htmlFor="acompte-produits">Montant de l’acompte sur les produits</label>
+      <label htmlFor="acompte-produits">Paiement d’une avance sur les produits</label>
       <div><input id="acompte-produits" type="number" inputMode="numeric" min={minimumAcompte} max={produitsFcfa} step="1" value={acompteSaisi} aria-invalid={acompteInvalide} aria-describedby="aide-acompte" data-testid="acompte-produits" onFocus={event => event.currentTarget.select()} onChange={event => onChange({ ...choix, acompteProduitsFcfa: event.target.value === '' ? null : Math.floor(Number(event.target.value)) })}/><span>FCFA</span></div>
       <small id="aide-acompte">Minimum accepté : <b>{money(minimumAcompte)}</b> (10 % des produits, avec un plancher de 1 000 FCFA). Vous pouvez aller jusqu’à {money(produitsFcfa)}.</small>
       {acompteInvalide ? <p role="alert">Choisissez un montant compris entre {money(minimumAcompte)} et {money(produitsFcfa)}.</p> : null}
