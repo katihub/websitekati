@@ -15,9 +15,9 @@
 
 import { enteteAutorisation } from './api'
 
-/** One product, exactly as the shop's own catalogue route returns it. */
+/** One marketplace offer cited by the assistant: the same offers, prices and pages as the storefront. */
 export interface ProduitCite {
-  readonly id: number
+  readonly id: string
   readonly slug: string
   readonly nom: string
   readonly prix: number

@@ -1171,7 +1171,7 @@ function SousLaBulle({
 function Article({ produit }: { produit: ProduitCite }) {
   return (
     <Link
-      href={`/produit/${produit.slug}`}
+      href={`/marketplace/produits/${encodeURIComponent(produit.slug)}`}
       className="press flex items-center gap-3 rounded-well border border-rule bg-paper p-2 transition-colors duration-[var(--t-fast)] hover:bg-space"
     >
       <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[0.375rem] bg-space">
