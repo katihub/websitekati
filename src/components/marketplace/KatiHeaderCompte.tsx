@@ -94,9 +94,27 @@ function MenuCompte({ profil, courriel, onDeconnexion }: { profil: Profil | null
 }
 
 /** Les deux actions de compte de la barre principale, a cote du panier. */
+/**
+ * LA LANGUE DU SITE EST AUSSI CELLE DES E-MAILS. Le client connecte transmet sa
+ * langue a son compte, une fois par langue et par session de navigateur ; une
+ * erreur (compte vendeur, reseau) ne gene rien : les e-mails restent en francais.
+ */
+function useLangueDuCompte(userId: string | null, langue: string) {
+  useEffect(() => {
+    if (!userId) return
+    const cle = 'katimarket.langue-compte'
+    const valeur = `${userId}:${langue}`
+    try { if (window.sessionStorage.getItem(cle) === valeur) return } catch { /* stockage indisponible */ }
+    api('/profil/langue', { methode: 'PUT', corps: { langue } })
+      .then(() => { try { window.sessionStorage.setItem(cle, valeur) } catch { /* stockage indisponible */ } })
+      .catch(() => undefined)
+  }, [userId, langue])
+}
+
 export function ActionsCompte() {
-  const { text } = useMarketplaceLanguage()
+  const { text, locale } = useMarketplaceLanguage()
   const { session, chargement, courriel, deconnecter } = useSession()
+  useLangueDuCompte(session?.userId ?? null, locale)
   const profil = useProfil(session?.userId ?? null)
   const router = useRouter()
   const deconnexion = async () => { await deconnecter(); router.refresh() }
