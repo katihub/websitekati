@@ -64,6 +64,8 @@ export async function simulerApi(page: Page): Promise<ApiSimulee> {
     // Les services du panier : sans assurance ni installation par defaut, un test les active.
     { methode: 'GET', motif: /^\/marketplace\/services-commande\?/, gestionnaire: () => ({ assurance: { active: false, tauxBps: 0 }, installations: [] }) },
     { methode: 'GET', motif: /^\/marketplace\/localites$/, gestionnaire: () => LOCALITES },
+    // Le bandeau du contrat vendeur : rien a lire par defaut, un test le declenche.
+    { methode: 'GET', motif: /^\/contenus\/boutiques\/[^/]+\/contrat-vendeur$/, gestionnaire: () => ({ aLire: false, version: null }) },
   ]
   const appels: Appel[] = []
   const nonPrevues: string[] = []

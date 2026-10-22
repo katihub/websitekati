@@ -20,6 +20,7 @@ import { FenetreNouvelleVariante, FenetrePrixVariante, revisionOuverte, type Rev
 import { ShopIcon, type ShopIconName } from './ShopIcon'
 import styles from '@/app/espace-vendeur/seller-workspace.module.css'
 import { PlansBoutique } from './vendeur/PlansBoutique'
+import { BandeauContrat } from './vendeur/BandeauContrat'
 import { useMarketplaceLanguage } from '@/lib/language'
 
 const chargementOnglet = () => <p className={styles.dashboardEmpty}>Chargement de cette rubrique…</p>
@@ -404,6 +405,7 @@ export function SellerWorkspace() {
             <div><h1>{panel === 'overview' ? `${en ? 'Hello' : 'Bonjour'}, ${space.nom}` : en ? ({verification: 'Shop verification', products: 'Seller catalogue', offers: 'Shop offers', quotes: 'Quotes', orders: 'Shop orders', deliveries: 'Shop deliveries', disputes: 'Disputes & returns', payments: 'Finance & payouts', reviews: 'Customer reviews', customers: 'Customers', members: 'Shop team', settings: 'Shop settings'}[panel] ?? 'Seller overview') : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Catalogue vendeur' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? (en ? 'Here is what is happening in your shop.' : 'Voici ce qui se passe dans votre boutique.') : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
             <div className={styles.headTools}><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{en ? ({brouillon:'Draft', soumis:'Submitted', en_verification:'Under review', approuve:'Verified shop', modification_demandee:'Changes requested', refuse:'Application rejected'}[space.vendeur.statutVerification] ?? space.vendeur.statutVerification) : STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> {en ? 'View my shop' : 'Voir ma boutique'}</Link></div>
           </header>
+          <BandeauContrat key={space.id} shopId={space.id} />
 
           {panel === 'overview' ? <Overview
             space={space} products={products} offers={offers} orders={orders} deliveries={deliveries} access={access}

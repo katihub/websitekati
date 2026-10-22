@@ -132,3 +132,9 @@
 .plansEchelonnement summary{cursor:pointer;font-weight:700}
 .plansEchelonnement table{width:100%;margin-top:10px;border-collapse:collapse;font-size:12px}
 .plansEchelonnement th,.plansEchelonnement td{padding:6px 8px;border-bottom:1px solid #eef2f7;text-align:left}
+/* Le contrat vendeur a changé : bandeau jusqu’à la confirmation de lecture. */
+.bandeauContrat{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px;padding:12px 16px;border:1px solid #f5c26b;border-radius:10px;background:#fff8eb;font-size:13px}
+.bandeauContrat p{margin:2px 0 0;color:#475569}
+.bandeauContrat>div:last-child{display:flex;align-items:center;gap:12px}
+.bandeauContrat a{font-weight:700;text-decoration:underline}
+.bandeauContrat button{padding:8px 14px;border-radius:8px;background:#0f2a4a;color:#fff;font-weight:700}
