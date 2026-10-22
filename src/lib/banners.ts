@@ -1,4 +1,5 @@
 import { BANNERS } from '@/constants/banners'
+import { adresseMarketplace } from '@/lib/adresses-marketplace'
 import { ETIQUETTE_BANNIERES } from '@/lib/catalogue-en-direct'
 
 /**
@@ -112,7 +113,7 @@ function repli(): PublishedBanner[] {
     const tailles = TAILLES_LOCALES[b.file] ?? { large: [14179, 3000], mobile: [2400, 788] }
     return {
       id: b.file,
-      href: b.href,
+      href: adresseMarketplace(b.href),
       label: b.label,
       description: '',
       action: 'Découvrir',
@@ -162,7 +163,8 @@ function normaliser(valeur: unknown): PublishedBanner | null {
   }
   return {
     id: b.id as number | string,
-    href: b.href,
+    // Une banniere saisie avant la marketplace peut viser une page de l'ancien catalogue.
+    href: adresseMarketplace(b.href),
     label: b.label,
     description: typeof b.description === 'string' ? b.description : '',
     action: typeof b.action === 'string' && b.action ? b.action : 'Découvrir',

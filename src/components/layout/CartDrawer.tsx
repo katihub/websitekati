@@ -15,6 +15,7 @@ import { formatPrice } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { dialable } from "@/constants/site";
 import { shopPhone } from "@/lib/comptoirs";
+import { adresseMarketplace } from "@/lib/adresses-marketplace";
 
 /**
  * The basket, as a drawer.
@@ -196,7 +197,7 @@ export function CartDrawer() {
                       }`}
                     >
                       <Link
-                        href={line.offerId ? `/marketplace/produits/${line.slug}` : `/produit/${line.slug}`}
+                        href={line.offerId ? `/marketplace/produits/${line.slug}` : adresseMarketplace(`/produit/${line.slug}`)}
                         onClick={close}
                         className="relative block size-[72px] shrink-0 overflow-hidden rounded-well bg-surface"
                       >
@@ -213,7 +214,7 @@ export function CartDrawer() {
 
                       <div className="min-w-0 flex-1">
                         <Link
-                          href={line.offerId ? `/marketplace/produits/${line.slug}` : `/produit/${line.slug}`}
+                          href={line.offerId ? `/marketplace/produits/${line.slug}` : adresseMarketplace(`/produit/${line.slug}`)}
                           onClick={close}
                           /* `clamp-2` is `-webkit-box`, so the floor is a
                              min-height and not a flex centring: the utility
