@@ -106,3 +106,23 @@
 .shopStatus[data-tone=good]{color:#0b5dcc}
 .statusBox span[data-tone=good],.documentSummary li b[data-status=valide],.featureList li>b[data-status=actif],.offerMeta b[data-status=publiee],.orderTable td span[data-status=acceptee],.orderTable td span[data-status=livree],.deliverySpotlight>span[data-status=livree],.memberControls>b,.verifie{background:#eaf2ff;color:#1458a6}
 .metricStrip button:nth-child(3) .metricIcon{background:#eaf2ff;color:#215eb7}
+
+/* L'etat du dossier en tete de la verification : une alerte par piece a fournir,
+   comme une notification du systeme, avec son bouton pour la deposer. */
+.alertesDossier{display:grid;gap:8px;margin-bottom:14px}
+.alertePiece{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:12px;border:1px solid #fcd9b8;border-left:4px solid #ea580c;border-radius:9px;background:#fff7ed;padding:11px 14px;color:#7c2d12}
+.alertePiece>span{display:grid;width:26px;height:26px;place-items:center;border-radius:50%;background:#ea580c;color:#fff;font-size:14px;font-weight:900}
+.alertePiece strong{display:block;font-size:13px}
+.alertePiece small{display:block;margin-top:2px;color:#9a3412;font-size:12px;line-height:1.45}
+.alertePiece button{border:0;border-radius:7px;background:var(--orange);padding:9px 14px;color:#fff;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer}
+.alertePiece[data-etat=refuse],.alertePiece[data-etat=expire]{border-color:#fecaca;border-left-color:#dc2626;background:#fef2f2;color:#7f1d1d}
+.alertePiece[data-etat=refuse]>span,.alertePiece[data-etat=expire]>span{background:#dc2626}
+.alertePiece[data-etat=refuse] small,.alertePiece[data-etat=expire] small{color:#991b1b}
+.alertePiece[data-etat=complet]{grid-template-columns:28px minmax(0,1fr);border-color:#bbf7d0;border-left-color:#16a34a;background:#f0fdf4;color:#14532d}
+.alertePiece[data-etat=complet]>span{background:#16a34a}
+.alertePiece[data-etat=complet] small{color:#166534}
+.alertePiece[data-etat=suggestion]{border-color:#dbe4f0;border-left-color:#0b4a8d;background:#f5f8fc;color:#0b2a55}
+.alertePiece[data-etat=suggestion]>span{background:#0b4a8d}
+.alertePiece[data-etat=suggestion] small{color:#475569}
+.alertePiece[data-etat=suggestion] button{background:#0b4a8d}
+@media(max-width:640px){.alertePiece{grid-template-columns:28px minmax(0,1fr)}.alertePiece button{grid-column:2;justify-self:start}}

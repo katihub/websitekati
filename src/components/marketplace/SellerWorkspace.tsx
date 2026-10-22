@@ -142,10 +142,11 @@ const overviewSections: Section[] = ['documents', 'products', 'offers', 'orders'
 
 const DOCUMENT_LABELS: Record<string, string> = {
   identite: 'Pièce d’identité (CNI ou passeport)',
-  domicile: 'Justificatif de domicile',
+  domicile: 'Justificatif d’adresse',
   rccm: 'Registre du commerce (RCCM)',
-  niu: 'Attestation de non-redevance',
-  rib: 'Relevé d’identité bancaire (RIB)',
+  niu: 'Numéro d’identifiant unique (NIU)',
+  rib: 'Compte de reversement (RIB)',
+  photo_boutique: 'Photo de la boutique',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -780,37 +781,99 @@ function MemberRow({ shopId, member, canManage, onRefresh }: {
   return <li className={styles.memberRow}><div><strong>{member.nom}</strong><small>{member.courriel}</small><small>{member.premiereConnexionLe ? `Première connexion le ${new Intl.DateTimeFormat('fr-CM').format(new Date(member.premiereConnexionLe))}` : 'En attente de première connexion'}</small>{message ? <small role="status">{message}</small> : null}</div><div className={styles.memberControls}><b data-status={member.actif ? 'active' : 'suspendue'}>{member.actif ? MEMBER_ROLES[currentRole] ?? currentRole : 'Accès révoqué'}</b>{canManage && !isOwner ? <div className={styles.memberActions}>{member.actif ? <><label><span className={styles.srOnly}>Rôle de {member.nom}</span><select aria-label={`Rôle de ${member.nom}`} value={role} onChange={event => setRole(event.target.value)}><option value="magasinier">Magasinier</option><option value="gestionnaire">Gestionnaire</option></select></label><button disabled={pending || role === currentRole} onClick={() => void changeRole()}>Enregistrer</button></> : null}<button className={styles.memberRevoke} disabled={pending} onClick={() => void toggleAccess()}>{member.actif ? 'Révoquer' : 'Réactiver'}</button></div> : null}</div></li>
 }
 
+type EtatPiece = 'valide' | 'en_attente' | 'refuse' | 'expire' | 'manquant'
+type ExigencePiece = { type: string; libelle: string; aide: string; obligatoire: boolean; multiple: boolean; etat: EtatPiece; motif: string | null; nombre: number }
+type ExigencesDossier = { pieces: ExigencePiece[]; manquantes: number; photosMax: number }
+
+const ALERTE_PIECE: Partial<Record<EtatPiece, string>> = {
+  manquant: 'Pièce obligatoire manquante',
+  refuse: 'Pièce refusée, à remplacer',
+  expire: 'Pièce expirée, à renouveler',
+}
+
+/**
+ * LA VERIFICATION DE LA BOUTIQUE, AVEC CE QUI MANQUE EN TETE.
+ *
+ * Le vendeur voyait l'historique de ce qu'il avait envoye, jamais ce qu'il
+ * lui restait a fournir : il l'apprenait quand l'equipe lui demandait une
+ * modification. Les pieces obligatoires manquantes, refusees ou expirees
+ * s'affichent maintenant en alertes, chacune avec son bouton pour la deposer.
+ * La regle vient du backend (`pieces-requises.ts`, d'apres la matrice KYC),
+ * la meme que lit l'equipe de verification.
+ *
+ * LES PHOTOS DE LA BOUTIQUE se deposent a plusieurs, images seulement, dans
+ * la limite que rend le backend. Elles sont facultatives.
+ */
 function VerificationPanel({ shopId, documents, onRefresh }: { shopId: string; documents: SellerDocument[]; onRefresh: () => Promise<void> }) {
   const [type, setType] = useState('identite')
-  const [fichier, setFichier] = useState<File | null>(null)
+  const [fichiers, setFichiers] = useState<File[]>([])
   const [refus, setRefus] = useState('')
   const [expiry, setExpiry] = useState('')
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
+  const [exigences, setExigences] = useState<ExigencesDossier | null>(null)
   const champ = useRef<HTMLInputElement>(null)
-  const verification = useMemo<VerificationPieces>(() => fichier ? verifierPieces([fichier]) : { acceptees: [], refus: [] }, [fichier])
+  const formulaire = useRef<HTMLFormElement>(null)
+  const verification = useMemo<VerificationPieces>(() => ({ acceptees: fichiers, refus: [] }), [fichiers])
+  const piece = exigences?.pieces.find((p) => p.type === type)
+  const photos = type === 'photo_boutique'
+  const photosRestantes = photos && exigences && piece ? Math.max(0, exigences.photosMax - piece.nombre) : null
+  const aFournir = exigences?.pieces.filter((p) => p.obligatoire && ALERTE_PIECE[p.etat]) ?? []
+  const photosProposees = exigences?.pieces.find((p) => p.type === 'photo_boutique' && p.nombre === 0)
+
+  // Relue a chaque changement de la liste : un depot ou une decision de l'equipe deplace les alertes.
+  useEffect(() => {
+    let actif = true
+    api<ExigencesDossier>(`/vendeurs/mes-boutiques/${shopId}/documents/exigences`)
+      .then((lu) => { if (actif) setExigences(lu) })
+      .catch(() => { if (actif) setExigences(null) })
+    return () => { actif = false }
+  }, [shopId, documents])
+
+  function preparer(prochain: string) {
+    setType(prochain); setFichiers([]); setRefus(''); setMessage('')
+    if (champ.current) champ.current.value = ''
+    formulaire.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    champ.current?.focus({ preventScroll: true })
+  }
 
   function choisir(liste: FileList | null) {
-    const premier = liste?.[0] ?? null
-    const controle = premier ? verifierPieces([premier]) : null
-    setRefus(controle?.refus[0] ? `${controle.refus[0].nom} : ${controle.refus[0].raison}.` : '')
-    setFichier(controle?.acceptees[0] ?? null)
+    const tous = Array.from(liste ?? [])
+    const candidats = photos ? tous.filter((f) => f.type.startsWith('image/')) : tous.slice(0, 1)
+    const controle = verifierPieces(candidats)
+    const plafond = photos ? Math.min(controle.acceptees.length, photosRestantes ?? controle.acceptees.length) : 1
+    const refuses = [
+      ...(photos && candidats.length < tous.length ? [`${tous.length - candidats.length} fichier(s) ignoré(s) : les photos doivent être des images`] : []),
+      ...controle.refus.map((r) => `${r.nom} : ${r.raison}`),
+      ...(controle.acceptees.length > plafond ? [`${controle.acceptees.length - plafond} photo(s) au-delà de la limite de ${exigences?.photosMax ?? ''} photos`] : []),
+    ]
+    setRefus(refuses.length ? `${refuses.join('. ')}.` : '')
+    setFichiers(controle.acceptees.slice(0, plafond))
     setMessage('')
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!fichier) return setMessage('Choisissez le fichier du justificatif (PDF ou photo, 10 Mio maximum).')
+    if (!fichiers.length) return setMessage(photos ? 'Choisissez une ou plusieurs photos de la boutique (JPEG, PNG ou WebP).' : 'Choisissez le fichier du justificatif (PDF ou photo, 10 Mio maximum).')
     setPending(true); setMessage('')
+    let envoyes = 0
     try {
-      const corps = new FormData()
-      corps.append('fichier', fichier)
-      corps.append('type', type)
-      if (expiry) corps.append('expireLe', expiry)
-      await api(`/vendeurs/mes-boutiques/${shopId}/documents/fichier`, { methode: 'POST', corps })
-      setFichier(null); setExpiry(''); if (champ.current) champ.current.value = ''
-      setMessage('Justificatif transmis à KatiMarket pour vérification.'); await onRefresh()
-    } catch (cause) { setMessage(errorText(cause)) } finally { setPending(false) }
+      for (const fichier of fichiers) {
+        const corps = new FormData()
+        corps.append('fichier', fichier)
+        corps.append('type', type)
+        if (expiry && !photos) corps.append('expireLe', expiry)
+        await api(`/vendeurs/mes-boutiques/${shopId}/documents/fichier`, { methode: 'POST', corps })
+        envoyes += 1
+      }
+      setFichiers([]); setExpiry(''); if (champ.current) champ.current.value = ''
+      setMessage(photos ? `${envoyes} photo(s) transmise(s) à KatiMarket.` : 'Justificatif transmis à KatiMarket pour vérification.')
+    } catch (cause) {
+      setMessage(envoyes ? `${envoyes} fichier(s) transmis, puis : ${errorText(cause)}` : errorText(cause))
+    } finally {
+      setPending(false)
+      await onRefresh()
+    }
   }
 
   async function telecharger(document: SellerDocument) {
@@ -818,7 +881,28 @@ function VerificationPanel({ shopId, documents, onRefresh }: { shopId: string; d
     catch (cause) { setMessage(errorText(cause)) }
   }
 
-  return <div className={styles.featureGrid}><section className={styles.featureList}><header><h2>Historique des justificatifs</h2><span>{documents.length} document(s)</span></header>{documents.length ? <ul>{documents.map((document) => <li key={document.id}><div><strong>{DOCUMENT_LABELS[document.type] ?? document.type}</strong><small>Soumis le {new Intl.DateTimeFormat('fr-FR').format(new Date(document.creeLe))}{document.expireLe ? ` · expire le ${new Intl.DateTimeFormat('fr-FR').format(new Date(document.expireLe))}` : ''}</small>{document.nomFichier ? <small>{document.nomFichier}{document.tailleOctets ? ` · ${taillePiece(document.tailleOctets)}` : ''} · <button type="button" className={styles.lienAction} onClick={() => void telecharger(document)}>Télécharger</button></small> : null}{document.motifDecision ? <em>{document.motifDecision}</em> : null}</div><b data-status={document.statut}>{STATUS_LABELS[document.statut] ?? document.statut}</b></li>)}</ul> : <p className={styles.blank}>Aucun document n’a encore été transmis.</p>}</section><section className={styles.actionPanel}><h2>Ajouter un justificatif</h2><p>Déposez un PDF ou une photo lisible (JPEG, PNG, WebP), 10 Mio maximum. Le fichier est analysé par un antivirus puis conservé chiffré ; seule l’équipe de vérification KatiMarket y a accès.</p><form onSubmit={submit}><label>Type de document<select value={type} onChange={(e) => setType(e.target.value)}>{Object.entries(DOCUMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Fichier<input ref={champ} type="file" required accept={TYPES_PIECES.join(',')} onChange={(e) => choisir(e.currentTarget.files)} /></label>{refus ? <p className={styles.feedback} role="alert">{refus}</p> : null}{fichier ? <ApercuPieces verification={verification} /> : null}<label>Date d’expiration, si applicable<input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></label>{message ? <p className={styles.feedback} role="status">{message}</p> : null}<button disabled={pending || !fichier}>{pending ? 'Envoi sécurisé…' : 'Transmettre le justificatif'}</button></form></section></div>
+  const libelle = (cle: string) => exigences?.pieces.find((p) => p.type === cle)?.libelle ?? DOCUMENT_LABELS[cle] ?? cle
+  const options = exigences?.pieces.map((p) => ({ value: p.type, label: `${p.libelle} — ${p.obligatoire ? 'obligatoire' : 'facultatif'}` }))
+    ?? Object.entries(DOCUMENT_LABELS).map(([value, label]) => ({ value, label }))
+
+  return <>
+    {exigences ? <section className={styles.alertesDossier} aria-label="État du dossier" data-testid="alertes-dossier">
+      {aFournir.length ? aFournir.map((p) => <div key={p.type} className={styles.alertePiece} data-etat={p.etat} role="alert">
+        <span aria-hidden="true">!</span>
+        <div><strong>{ALERTE_PIECE[p.etat]} : {p.libelle}</strong><small>{p.etat === 'refuse' && p.motif ? `Motif : ${p.motif}. ` : ''}{p.aide}</small></div>
+        <button type="button" onClick={() => preparer(p.type)}>Ajouter cette pièce</button>
+      </div>) : <div className={styles.alertePiece} data-etat="complet" role="status">
+        <span aria-hidden="true">✓</span>
+        <div><strong>Toutes les pièces obligatoires sont transmises</strong><small>L’équipe KatiMarket les vérifie ; vous serez prévenu de sa décision.</small></div>
+      </div>}
+      {photosProposees ? <div className={styles.alertePiece} data-etat="suggestion">
+        <span aria-hidden="true">+</span>
+        <div><strong>Facultatif : {photosProposees.libelle}</strong><small>{photosProposees.aide}</small></div>
+        <button type="button" onClick={() => preparer('photo_boutique')}>Ajouter des photos</button>
+      </div> : null}
+    </section> : null}
+    <div className={styles.featureGrid}><section className={styles.featureList}><header><h2>Historique des justificatifs</h2><span>{documents.length} document(s)</span></header>{documents.length ? <ul>{documents.map((document) => <li key={document.id}><div><strong>{libelle(document.type)}</strong><small>Soumis le {new Intl.DateTimeFormat('fr-FR').format(new Date(document.creeLe))}{document.expireLe ? ` · expire le ${new Intl.DateTimeFormat('fr-FR').format(new Date(document.expireLe))}` : ''}</small>{document.nomFichier ? <small>{document.nomFichier}{document.tailleOctets ? ` · ${taillePiece(document.tailleOctets)}` : ''} · <button type="button" className={styles.lienAction} onClick={() => void telecharger(document)}>Télécharger</button></small> : null}{document.motifDecision ? <em>{document.motifDecision}</em> : null}</div><b data-status={document.statut}>{STATUS_LABELS[document.statut] ?? document.statut}</b></li>)}</ul> : <p className={styles.blank}>Aucun document n’a encore été transmis.</p>}</section><section className={styles.actionPanel}><h2>{photos ? 'Ajouter des photos de la boutique' : 'Ajouter un justificatif'}</h2><p>{photos ? `Images JPEG, PNG ou WebP, 10 Mio maximum chacune${photosRestantes !== null ? `, ${photosRestantes} photo(s) encore possible(s)` : ''}. Elles sont conservées chiffrées ; seule l’équipe de vérification KatiMarket y a accès.` : 'Déposez un PDF ou une photo lisible (JPEG, PNG, WebP), 10 Mio maximum. Le fichier est analysé par un antivirus puis conservé chiffré ; seule l’équipe de vérification KatiMarket y a accès.'}</p><form ref={formulaire} onSubmit={submit}><label>Type de document<select value={type} onChange={(e) => preparer(e.target.value)} data-testid="type-piece">{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>{piece ? <p className={styles.hint}>{piece.aide}</p> : null}<label>{photos ? 'Photos' : 'Fichier'}<input ref={champ} type="file" required multiple={photos} accept={photos ? 'image/jpeg,image/png,image/webp' : TYPES_PIECES.join(',')} onChange={(e) => choisir(e.currentTarget.files)} disabled={photos && photosRestantes === 0} /></label>{refus ? <p className={styles.feedback} role="alert">{refus}</p> : null}{fichiers.length ? <ApercuPieces verification={verification} /> : null}{photos ? null : <label>Date d’expiration, si applicable<input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></label>}{message ? <p className={styles.feedback} role="status">{message}</p> : null}<button disabled={pending || !fichiers.length}>{pending ? 'Envoi sécurisé…' : photos ? `Transmettre ${fichiers.length > 1 ? `les ${fichiers.length} photos` : 'la photo'}` : 'Transmettre le justificatif'}</button></form></section></div>
+  </>
 }
 
 /** Une fiche refusee ou archivee ne se modifie plus : elle ne sera pas publiee. */
