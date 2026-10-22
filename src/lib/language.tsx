@@ -19,6 +19,7 @@ const COPY = {
   myShop: { fr: 'Ma boutique', en: 'My shop' },
   myOrders: { fr: 'Mes commandes', en: 'My orders' },
   myQuotes: { fr: 'Mes devis', en: 'My quotes' },
+  faq: { fr: 'Questions fréquentes', en: 'FAQ' },
   myPoints: { fr: 'Mes KATI', en: 'My KATI' },
   myInstallments: { fr: 'Mes paiements en plusieurs fois', en: 'My installment plans' },
   myFavorites: { fr: 'Mes favoris', en: 'My favorites' },

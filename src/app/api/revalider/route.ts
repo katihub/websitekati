@@ -118,6 +118,8 @@ export async function POST(request: Request) {
       .filter((etiquette): etiquette is string => typeof etiquette === 'string' && /^contenu:[a-z0-9][a-z0-9._-]{0,79}$/.test(etiquette))
       .slice(0, 50)
     for (const etiquette of contenus) revalidateTag(etiquette, EXPIRER)
+    // La FAQ tient a jour les fiches que la page de commande lit (conditions de livraison, garantie, paiement).
+    if (contenus.includes('contenu:faq')) revalidateTag('conditions', EXPIRER)
     return NextResponse.json({ revalide: contenus })
   }
 
