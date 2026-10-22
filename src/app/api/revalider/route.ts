@@ -47,6 +47,8 @@ const EXPIRER = { expire: 0 } as const
 interface Demande {
   /** Les fiches a rafraichir nommement, quand l'appelant sait lesquelles. */
   readonly slugs?: readonly string[]
+  /** Les textes du site publies (`contenu:<cle>`) : seules leurs copies expirent, pas le catalogue. */
+  readonly etiquettes?: readonly string[]
 }
 
 /**
@@ -109,6 +111,16 @@ export async function POST(request: Request) {
      aujourd'hui que des slugs de produits. C'est aussi une decision du
      proprietaire, puisqu'elle rouvre, sur les pages non nommees, la visite
      qui montre encore l'ancien prix. */
+  /* UN TEXTE DU SITE PUBLIE N'EXPIRE QUE SA PROPRE COPIE. Seules les etiquettes
+     `contenu:<cle>` sont acceptees : un appel ne peut pas vider d'autres caches. */
+  if (Array.isArray(demande.etiquettes)) {
+    const contenus = demande.etiquettes
+      .filter((etiquette): etiquette is string => typeof etiquette === 'string' && /^contenu:[a-z0-9][a-z0-9._-]{0,79}$/.test(etiquette))
+      .slice(0, 50)
+    for (const etiquette of contenus) revalidateTag(etiquette, EXPIRER)
+    return NextResponse.json({ revalide: contenus })
+  }
+
   const fixes = [...ETIQUETTES_FIXES]
   for (const etiquette of fixes) revalidateTag(etiquette, EXPIRER)
 

@@ -3,11 +3,16 @@ import Link from 'next/link'
 import { connection } from 'next/server'
 
 import { PageHeader } from '@/components/layout/PageHeader'
+import { lireContenuBilingue } from '@/lib/catalogue-en-direct'
 import { formatAmount } from '@/lib/format'
+import { LocalizedText } from '@/lib/language'
 import { lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
+import type { PageContenu } from '@/lib/pages-contenu'
+import { AProposBlocs, AProposParagraphes, AProposTextes, AProposTitre, AProposValeur } from './AProposTextes'
 
 /** Ecrites en entier : Tailwind ne genere pas une classe composee a l'execution. */
 const COLONNES: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3' }
+const TITRE_SECTION = 'mb-7 max-w-[24ch] text-title font-bold leading-[1.06] tracking-[-0.03em] text-balance sm:mb-10'
 
 export const metadata: Metadata = {
   title: 'À propos de KatiMarket',
@@ -19,12 +24,9 @@ export const metadata: Metadata = {
 /**
  * A PROPOS, DE LA PLATEFORME ET NON D'UN MAGASIN.
  *
- * La page racontait la boutique NowTech : « un magasin mis en ligne », ses
- * comptoirs, « douze rayons » tires de son ancien catalogue. Elle lisait ses
- * chiffres dans ce catalogue historique, absent d'une base marketplace, et
- * basculait alors sur l'ecran de panne. Elle dit maintenant ce qu'est
- * KatiMarket, avec les mots des pages qui engagent la plateforme (conditions
- * de vente, livraison et retours, securite des achats).
+ * LES TEXTES SE REDIGENT DEPUIS LE PANEL (contenu `a-propos`, FR et EN), avec
+ * leur structure fixee ici : un redacteur change les mots, pas la mise en page.
+ * Le texte du code reste le secours tant que l'API ne repond pas.
  *
  * LES CHIFFRES SONT LUS EN DIRECT, ET TOLERANTS. Produits en vente, marques et
  * categories viennent de la meme lecture que le catalogue du site. Si elle
@@ -34,37 +36,35 @@ export const metadata: Metadata = {
  */
 export default async function AboutPage() {
   await connection()
-  const [catalogue, categories] = await Promise.all([
+  const [catalogue, categories, textes] = await Promise.all([
     lireOffresMarketplace({ taille: 1 }),
     lireCategoriesMarketplace(),
+    lireContenuBilingue<PageContenu>('a-propos'),
   ])
   const enVente = !catalogue.indisponible && catalogue.pagination.total > 0
   const parCategorie = new Map((catalogue.facettes?.categories ?? []).map((c) => [c.nom, c.nombre]))
   const chiffres = enVente
     ? [
-        { valeur: formatAmount(catalogue.pagination.total), libelle: 'Produits en vente' },
-        { valeur: formatAmount(catalogue.facettes?.marques.length ?? 0), libelle: 'Marques' },
-        ...(categories.length ? [{ valeur: String(categories.length), libelle: 'Grandes catégories' }] : []),
+        { valeur: formatAmount(catalogue.pagination.total), fr: 'Produits en vente', en: 'Products for sale' },
+        { valeur: formatAmount(catalogue.facettes?.marques.length ?? 0), fr: 'Marques', en: 'Brands' },
+        ...(categories.length ? [{ valeur: String(categories.length), fr: 'Grandes catégories', en: 'Main categories' }] : []),
       ]
     : []
 
   return (
-    <>
-      <PageHeader
-        title="Les boutiques du Cameroun, au même endroit"
-        lead="KatiMarket est une marketplace camerounaise : des boutiques indépendantes y présentent leurs produits, et vous comparez, commandez, payez et suivez votre livraison sur un seul site."
-      />
+    <AProposTextes fr={textes.fr?.contenu ?? null} en={textes.en?.contenu ?? null}>
+      <PageHeader title={<AProposValeur champ="titre" />} lead={<AProposValeur champ="intro" />} />
 
       {chiffres.length ? (
         <section className="shell">
           <dl className={`grid border-y border-rule ${COLONNES[chiffres.length] ?? 'sm:grid-cols-3'}`}>
             {chiffres.map((fait, index) => (
               <div
-                key={fait.libelle}
+                key={fait.fr}
                 className={`py-7 sm:py-10 sm:pr-10 ${index > 0 ? 'border-t border-rule sm:border-t-0 sm:border-l sm:pl-10' : ''}`}
               >
                 <dt className="t-num mb-1 text-title font-bold tracking-[-0.03em]">{fait.valeur}</dt>
-                <dd className="text-small text-ink-2">{fait.libelle}</dd>
+                <dd className="text-small text-ink-2"><LocalizedText fr={fait.fr} en={fait.en} /></dd>
               </div>
             ))}
           </dl>
@@ -72,41 +72,13 @@ export default async function AboutPage() {
       ) : null}
 
       <section className="shell mt-band">
-        <h2 className="mb-7 max-w-[24ch] text-title font-bold leading-[1.06] tracking-[-0.03em] text-balance sm:mb-10">
-          Acheter sur KatiMarket
-        </h2>
-        <div className="grid gap-x-14 gap-y-10 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              titre: 'Des boutiques vérifiées',
-              texte: 'Une boutique ne vend qu’après vérification de son dossier par KatiMarket. Elle s’engage sur l’exactitude de ses offres, la conformité de ses produits et le suivi après-vente.',
-            },
-            {
-              titre: 'Chaque offre dit qui vend',
-              texte: 'La fiche produit et votre commande indiquent toujours la boutique, son prix, sa garantie et ses conditions de livraison. Un même produit peut être proposé par plusieurs boutiques.',
-            },
-            {
-              titre: 'Un paiement encadré',
-              texte: 'Vous réglez un acompte par Orange Money ou MTN Mobile Money, puis le solde à la livraison. Votre code secret reste dans l’application de votre opérateur, jamais dans un message.',
-            },
-            {
-              titre: 'La livraison qui vous convient',
-              texte: 'Kati Express, livraison par la boutique, retrait gratuit à la boutique ou expédition en agence : les options possibles s’affichent pendant la commande, avec leurs frais.',
-            },
-          ].map((bloc) => (
-            <div key={bloc.titre}>
-              <h3 className="mb-3 text-body font-semibold">{bloc.titre}</h3>
-              <p className="text-small leading-[1.65] text-ink-2">{bloc.texte}</p>
-            </div>
-          ))}
-        </div>
+        <AProposTitre cle="acheter" className={TITRE_SECTION} />
+        <AProposBlocs cle="acheter" />
       </section>
 
       {categories.length ? (
         <section className="shell mt-band">
-          <h2 className="mb-7 max-w-[24ch] text-title font-bold leading-[1.06] tracking-[-0.03em] text-balance sm:mb-10">
-            Ce que vous y trouvez
-          </h2>
+          <AProposTitre cle="categories" className={TITRE_SECTION} />
           <ul className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
             {categories.map((categorie) => (
               <li key={categorie.id}>
@@ -130,26 +102,21 @@ export default async function AboutPage() {
       <section className="shell mt-band pb-band">
         <div className="grid gap-x-14 gap-y-8 border-t border-rule pt-10 md:grid-cols-2">
           <div>
-            <h2 className="mb-3 text-title font-bold leading-[1.06] tracking-[-0.03em]">Vous avez une boutique ?</h2>
-            <p className="max-w-[54ch] text-body leading-[1.6] text-ink-2">
-              Rejoignez KatiMarket pour présenter vos produits à des acheteurs de tout le Cameroun. Vous gérez vos
-              offres, vos stocks et vos commandes depuis votre espace vendeur.
-            </p>
+            <AProposTitre cle="vendeur" className="mb-3 text-title font-bold leading-[1.06] tracking-[-0.03em]" />
+            <AProposParagraphes cle="vendeur" className="max-w-[54ch] text-body leading-[1.6] text-ink-2" />
             <Link href="/devenir-vendeur" className="mt-5 inline-flex min-h-11 items-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface">
-              Devenir vendeur
+              <LocalizedText fr="Devenir vendeur" en="Become a seller" />
             </Link>
           </div>
           <div>
-            <h2 className="mb-3 text-title font-bold leading-[1.06] tracking-[-0.03em]">Une question ?</h2>
-            <p className="max-w-[54ch] text-body leading-[1.6] text-ink-2">
-              Kati, l’assistante KatiMarket, répond à toute heure, et l’équipe reprend votre demande si besoin.
-            </p>
+            <AProposTitre cle="question" className="mb-3 text-title font-bold leading-[1.06] tracking-[-0.03em]" />
+            <AProposParagraphes cle="question" className="max-w-[54ch] text-body leading-[1.6] text-ink-2" />
             <Link href="/contact" className="mt-5 inline-flex min-h-11 items-center text-small font-semibold text-secondary underline underline-offset-4">
-              Nous contacter
+              <LocalizedText fr="Nous contacter" en="Contact us" />
             </Link>
           </div>
         </div>
       </section>
-    </>
+    </AProposTextes>
   )
 }

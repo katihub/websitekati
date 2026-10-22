@@ -638,3 +638,63 @@ export async function lirePointsVenteOuVide(): Promise<readonly PointDeVente[]> 
     return []
   }
 }
+
+// -----------------------------------------------------------------------------
+// LES TEXTES DU SITE (pages legales, « A propos », FAQ), REDIGES DEPUIS LE PANEL
+// -----------------------------------------------------------------------------
+
+const FRAICHEUR_CONTENUS_S = 300
+/** Toutes les copies des textes, et celle d'un texte : la publication n'expire que la sienne. */
+export const ETIQUETTE_CONTENUS = 'contenus'
+export const etiquetteContenu = (cle: string) => `contenu:${cle}`
+
+export interface ContenuPublic<T = unknown> {
+  cle: string
+  type: 'legal' | 'editorial' | 'faq'
+  numero: number
+  publieLe: string
+  /** Faux pour une ancienne version, lue depuis les archives. */
+  enVigueur: boolean
+  /** La langue effectivement servie : le francais quand l'anglais manque ou n'a pas suivi. */
+  langue: 'fr' | 'en'
+  anglaisDisponible: boolean
+  contenu: T
+}
+
+export interface VersionArchivee {
+  numero: number
+  publieLe: string
+  nature: 'mineur' | 'important'
+  resume: string | null
+  statut: 'publie' | 'archive'
+}
+
+/**
+ * UN TEXTE PUBLIE, OU `null`. Jamais de panne : une page qui ne peut pas lire
+ * son texte garde celui de son code, qui reste la version de secours.
+ */
+async function lireContenuOuNull<T>(chemin: string, cle: string): Promise<T | null> {
+  try {
+    return (await lireJson(chemin, FRAICHEUR_CONTENUS_S, avecEtiquettes(ETIQUETTE_CONTENUS, etiquetteContenu(cle)), DELAI_MS, true, null)) as T | null
+  } catch {
+    return null
+  }
+}
+
+export function lireContenuPublic<T>(cle: string, langue: 'fr' | 'en') {
+  return lireContenuOuNull<ContenuPublic<T>>(`/contenus/publics/${encodeURIComponent(cle)}?langue=${langue}`, cle)
+}
+
+/** Le francais et l'anglais d'un texte, lus ensemble : la langue se choisit dans le navigateur. */
+export async function lireContenuBilingue<T>(cle: string) {
+  const [fr, en] = await Promise.all([lireContenuPublic<T>(cle, 'fr'), lireContenuPublic<T>(cle, 'en')])
+  return { fr, en: en?.langue === 'en' ? en : null }
+}
+
+export async function lireHistoriqueContenu(cle: string): Promise<VersionArchivee[]> {
+  return (await lireContenuOuNull<VersionArchivee[]>(`/contenus/publics/${encodeURIComponent(cle)}/versions`, cle)) ?? []
+}
+
+export function lireVersionContenu<T>(cle: string, numero: number, langue: 'fr' | 'en') {
+  return lireContenuOuNull<ContenuPublic<T>>(`/contenus/publics/${encodeURIComponent(cle)}/versions/${numero}?langue=${langue}`, cle)
+}
