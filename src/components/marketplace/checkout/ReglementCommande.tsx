@@ -42,8 +42,8 @@ export function useDisponibleKati(actif: boolean) {
 }
 
 /**
- * LES CHOIX DE REGLEMENT : paiement complet ou acompte, assurance KATI (cochee
- * par defaut), installation par KatiMarket pour les categories qui la proposent,
+ * LES CHOIX DE REGLEMENT : paiement complet ou acompte, assurance KATI (decochee
+ * par defaut, le client la coche s'il la veut), installation par KatiMarket pour les categories qui la proposent,
  * et KATI a utiliser sur les produits. Les montants affiches sont estimes ; le
  * serveur les recalcule a la commande.
  */
@@ -84,7 +84,7 @@ export function ReglementCommande({ produitsFcfa, options, disponibleKati, choix
 
     {options?.assurance.active && assurance > 0 ? <label className={styles.optionService}>
       <input type="checkbox" checked={choix.assurance} onChange={(event) => onChange({ ...choix, assurance: event.target.checked })} data-testid="option-assurance"/>
-      <span><b>Assurance KATI · {money(assurance)}</b><small>{pourcentage(options.assurance.tauxBps)} du montant des produits. Facultative : décochez-la si vous n’en voulez pas.</small></span>
+      <span><b>Assurance KATI · {money(assurance)}</b><small>{pourcentage(options.assurance.tauxBps)} du montant des produits. Facultative : cochez-la pour protéger votre commande.</small></span>
     </label> : null}
 
     {options?.installations.map((installation) => <label key={installation.categorieId} className={styles.optionService}>

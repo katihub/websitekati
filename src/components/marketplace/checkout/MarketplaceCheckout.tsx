@@ -121,8 +121,8 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   const fees = groupFees.every(fee => fee !== null) ? groupFees.reduce<number>((sum, fee) => sum + (fee ?? 0), fraisAgence) : null
   const blocked = loading || Boolean(serviceError) || !lines.length || checked.some(item => item.issue) || groups.some(group => !group.modes.length) || !Number.isSafeInteger(total) || limitsExceeded || fees === null
 
-  // Les choix de reglement : l'assurance est cochee par defaut ; l'agence impose le paiement complet.
-  const [choix, setChoix] = useState<ChoixReglement>({ mode: 'acompte', acompteProduitsFcfa: null, assurance: true, installations: [], katiUtilises: 0 })
+  // Les choix de reglement : l'assurance est decochee par defaut, le client la coche s'il la veut ; l'agence impose le paiement complet.
+  const [choix, setChoix] = useState<ChoixReglement>({ mode: 'acompte', acompteProduitsFcfa: null, assurance: false, installations: [], katiUtilises: 0 })
   const modePaiement = enAgence ? 'complet' : choix.mode
   const minimumAcompte = estimatedDeposit(total)
   const acompteProduitsFcfa = choix.acompteProduitsFcfa ?? minimumAcompte

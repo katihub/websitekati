@@ -40,10 +40,13 @@ async function jusquaLaRevue(page: Page) {
   await expect(page.getByTestId('reglement-commande')).toBeVisible()
 }
 
-test('l’acompte, l’assurance cochée par défaut, l’installation et le paiement complet changent ce qui se paie maintenant', async ({ page }) => {
+test('l’acompte, l’assurance décochée par défaut, l’installation et le paiement complet changent ce qui se paie maintenant', async ({ page }) => {
   await jusquaLaRevue(page)
+  // L'assurance n'est pas imposee : le client la coche s'il la veut.
+  await expect(page.getByTestId('option-assurance')).not.toBeChecked()
+  await expect(page.getByTestId('a-payer-maintenant')).toContainText(montant(29_800))
   // 298 000 de produits : acompte 29 800 + assurance 5 % (14 900) maintenant ; le reste et 2 000 de frais a la livraison.
-  await expect(page.getByTestId('option-assurance')).toBeChecked()
+  await page.getByTestId('option-assurance').check()
   await expect(page.getByTestId('reglement-commande')).toContainText(montant(14_900))
   await expect(page.getByTestId('a-payer-maintenant')).toContainText(montant(44_700))
   await expect(page.getByTestId('a-payer-livraison')).toContainText(montant(270_200))
