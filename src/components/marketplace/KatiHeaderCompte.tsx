@@ -85,6 +85,7 @@ function MenuCompte({ profil, courriel, onDeconnexion }: { profil: Profil | null
       {profil === 'marchand' ? lien('/espace-vendeur', text('sellerSpace')) : null}
       {lien('/compte/commandes', text('myOrders'))}
       {lien('/compte/devis', text('myQuotes'))}
+      {lien('/compte/paiements-plusieurs-fois', text('myInstallments'))}
       {lien('/compte/kati', text('myPoints'))}
       {lien('/compte/favoris', text('myFavorites'))}
       <button type="button" role="menuitem" onClick={() => { setOuvert(false); void onDeconnexion() }}>{text('signOut')}</button>

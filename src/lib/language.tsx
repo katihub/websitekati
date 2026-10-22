@@ -20,6 +20,7 @@ const COPY = {
   myOrders: { fr: 'Mes commandes', en: 'My orders' },
   myQuotes: { fr: 'Mes devis', en: 'My quotes' },
   myPoints: { fr: 'Mes KATI', en: 'My KATI' },
+  myInstallments: { fr: 'Mes paiements en plusieurs fois', en: 'My installment plans' },
   myFavorites: { fr: 'Mes favoris', en: 'My favorites' },
   footerIntro: { fr: 'Votre marketplace de confiance au Cameroun. Des produits utiles, des vendeurs locaux vérifiés et une livraison suivie.', en: 'Your trusted marketplace in Cameroon. Useful products, verified local sellers, and tracked delivery.' },
   buy: { fr: 'Acheter sur KatiMarket', en: 'Shop on KatiMarket' },

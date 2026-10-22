@@ -4,7 +4,7 @@ import { simulerApi, type ApiSimulee } from './support/api'
 
 /**
  * LE REGLEMENT A LA COMMANDE (lot 4) : acompte ou paiement complet, assurance
- * KATI cochee par defaut, installation par categorie, et ce que la page de
+ * KATI decochee par defaut, installation par categorie, et ce que la page de
  * paiement dit d'une commande payee en entier ou confirmee par les KATI.
  */
 

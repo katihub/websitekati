@@ -126,3 +126,9 @@
 .alertePiece[data-etat=suggestion] small{color:#475569}
 .alertePiece[data-etat=suggestion] button{background:#0b4a8d}
 @media(max-width:640px){.alertePiece{grid-template-columns:28px minmax(0,1fr)}.alertePiece button{grid-column:2;justify-self:start}}
+/* Paiement en plusieurs fois : l’accord par offre et la liste des plans. */
+.optionEchelonnement{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:#334155}
+.plansEchelonnement{margin-top:18px;border-top:1px solid #e2e8f0;padding-top:12px;font-size:13px}
+.plansEchelonnement summary{cursor:pointer;font-weight:700}
+.plansEchelonnement table{width:100%;margin-top:10px;border-collapse:collapse;font-size:12px}
+.plansEchelonnement th,.plansEchelonnement td{padding:6px 8px;border-bottom:1px solid #eef2f7;text-align:left}

@@ -276,6 +276,17 @@ export function AccountMenu() {
           ) : null}
           {session ? (
             <Link
+              href="/compte/paiements-plusieurs-fois"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex min-h-11 flex-col justify-center px-4 py-2.5 text-small transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
+            >
+              Mes paiements en plusieurs fois
+              <span className="text-micro text-ink-3">Versements, réservation et livraison</span>
+            </Link>
+          ) : null}
+          {session ? (
+            <Link
               href="/compte/kati"
               role="menuitem"
               onClick={() => setOpen(false)}
