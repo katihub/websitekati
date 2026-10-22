@@ -20,7 +20,7 @@ import { LIBELLE_MODE, estModeLivraison, type DeliveryMode } from '@/lib/modes-l
  * Les colis Kati Express sont operes par KatiMarket : ils s'affichent sans action.
  */
 
-type Agent = { id: string; nom: string; telephone: string; actif: boolean; verifieLe: string | null; plafondEspecesFcfa: number | null }
+type Agent = { id: string; nom: string; telephone: string; courriel?: string | null; numeroPieceIdentite?: string | null; actif: boolean; verifieLe: string | null; plafondEspecesFcfa: number | null }
 type Adresse = { ville?: string; quartier?: string; repere?: string; adresseRetrait?: string; agence?: string }
 type Livraison = {
   id: string; reference: string; statut: string; modeLivraison: string; ville: string; creeLe: string
@@ -130,9 +130,13 @@ export function LivraisonsBoutique({ shopId }: { shopId: string }) {
   async function ajouterAgent(donnees: FormData) {
     const nom = String(donnees.get('nom') ?? '').trim()
     const telephone = normalisePhone(String(donnees.get('telephone') ?? ''))
+    const courriel = String(donnees.get('courriel') ?? '').trim().toLowerCase()
+    const numeroPieceIdentite = String(donnees.get('numeroPieceIdentite') ?? '').trim()
     if (nom.length < 2) throw new Error('Indiquez le nom de l’agent.')
     if (!telephone) throw new Error('Indiquez un numéro mobile camerounais, commençant par 6.')
-    await valider(() => api(`/marketplace/expeditions/boutiques/${shopId}/agents`, { methode: 'POST', corps: { nom, telephone } }), `${nom} est ajouté : KatiMarket doit le vérifier avant sa première livraison.`)
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(courriel)) throw new Error('Indiquez l’adresse e-mail de l’agent.')
+    if (numeroPieceIdentite && !/^[A-Za-z0-9][A-Za-z0-9 -]{3,39}$/.test(numeroPieceIdentite)) throw new Error('Le numéro de pièce d’identité ne contient que des lettres, des chiffres, des espaces et des tirets (4 à 40 caractères).')
+    await valider(() => api(`/marketplace/expeditions/boutiques/${shopId}/agents`, { methode: 'POST', corps: { nom, telephone, courriel, ...(numeroPieceIdentite ? { numeroPieceIdentite } : {}) } }), `${nom} est ajouté : KatiMarket doit le vérifier avant sa première livraison.`)
   }
 
   async function prendreEnCharge(livraison: Livraison, donnees: FormData) {
@@ -234,7 +238,7 @@ export function LivraisonsBoutique({ shopId }: { shopId: string }) {
         <button type="button" className={principal} onClick={() => setFenetre({ type: 'agent' })} data-testid="ajouter-agent">Ajouter un agent</button>
       </div>
       {agents.length ? <ul className="mt-4 divide-y divide-rule">{agents.map((agent) => <li key={agent.id} className="flex flex-wrap items-center justify-between gap-3 py-3" data-testid={`agent-ligne-${agent.nom}`}>
-        <div><b className="text-small">{agent.nom}</b><span className="ml-2 text-micro text-ink-3">{agent.telephone}</span>
+        <div><b className="text-small">{agent.nom}</b><span className="ml-2 text-micro text-ink-3">{agent.telephone}{agent.courriel ? ` · ${agent.courriel}` : ''}{agent.numeroPieceIdentite ? ` · pièce n° ${agent.numeroPieceIdentite}` : ''}</span>
           <p className={`text-micro ${!agent.actif ? 'text-ink-3' : agent.verifieLe ? 'text-primary' : 'text-warn'}`}>{!agent.actif ? 'Retiré' : agent.verifieLe ? `Vérifié par KatiMarket${agent.plafondEspecesFcfa !== null ? ` · peut encaisser jusqu’à ${fcfa(agent.plafondEspecesFcfa)}` : ''}` : 'En attente de vérification KatiMarket'}</p></div>
         {agent.actif ? <button type="button" className={secondaire} disabled={Boolean(enCours)} onClick={() => void agir(agent.id, () => api(`/marketplace/expeditions/boutiques/${shopId}/agents/${agent.id}/desactivation`, { methode: 'POST' }), `${agent.nom} est retiré.`)}>Retirer</button> : null}
       </li>)}</ul> : <p className="mt-4 text-small text-ink-3">Aucun agent pour l’instant.</p>}
@@ -271,6 +275,8 @@ export function LivraisonsBoutique({ shopId }: { shopId: string }) {
     {fenetre?.type === 'agent' ? <FenetreAction ouverte titre="Ajouter un agent" description="Un livreur ou un employé du comptoir. KatiMarket le vérifie avant sa première livraison." libelleValider="Ajouter" onValider={ajouterAgent} onFermer={() => setFenetre(null)}>
       <ChampTexte nom="nom" libelle="Nom complet" required minLength={2} maxLength={120} autoComplete="name" />
       <ChampTexte nom="telephone" libelle="Téléphone mobile" required type="tel" inputMode="tel" maxLength={20} placeholder="6 77 12 34 56" />
+      <ChampTexte nom="courriel" libelle="Adresse e-mail" required type="email" inputMode="email" maxLength={320} autoComplete="email" placeholder="agent@exemple.cm" />
+      <ChampTexte nom="numeroPieceIdentite" libelle="N° de pièce d’identité (facultatif)" aide="CNI ou passeport. Visible seulement par votre boutique et l’équipe de vérification KatiMarket." maxLength={40} pattern="[A-Za-z0-9][A-Za-z0-9 \-]{3,39}" autoComplete="off" />
     </FenetreAction> : null}
 
     {fenetre?.type === 'prise' && fenetreLivraison ? <FenetreAction ouverte titre={`${LIBELLE_PRISE[fenetreLivraison.modeLivraison] ?? 'Prise en charge'} — ${fenetreLivraison.reference}`} description="La photo du colis prêt (ou sa référence) prouve que la commande est prise en charge. Elle protège la boutique en cas de contestation." libelleValider="Enregistrer" onValider={(donnees) => prendreEnCharge(fenetreLivraison, donnees)} onFermer={() => setFenetre(null)}>
