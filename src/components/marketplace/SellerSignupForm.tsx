@@ -12,10 +12,11 @@ import { ShopIcon } from './ShopIcon'
 import styles from '@/app/devenir-vendeur/seller.module.css'
 
 type Receipt = { reference: string; statut: 'candidature_recue'; boutique: { nom: string; slug: string } }
+type SavMode = 'kati_service' | 'boutique'
 type Values = {
   owner: string; email: string; phone: string; password: string; confirmation: string
   legal: string; type: 'personne_physique' | 'entreprise'; niu: string; rccm: string
-  shop: string; description: string; cities: string[]; categories: string[]; modes: DeliveryMode[]; pickup: string; stock: 'suivi' | 'non_suivi'
+  shop: string; description: string; cities: string[]; categories: string[]; modes: DeliveryMode[]; pickup: string; stock: 'suivi' | 'non_suivi'; sav: SavMode | ''
 }
 
 const steps = ['Vos coordonnées', 'Votre boutique', 'Votre activité', 'Vérification']
@@ -24,7 +25,7 @@ const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036
 
 export function SellerSignupForm() {
   const [step, setStep] = useState(0)
-  const [values, setValues] = useState<Values>({ owner: '', email: '', phone: '', password: '', confirmation: '', legal: '', type: 'entreprise', niu: '', rccm: '', shop: '', description: '', cities: ['Douala'], categories: [], modes: ['katihub'], pickup: '', stock: 'suivi' })
+  const [values, setValues] = useState<Values>({ owner: '', email: '', phone: '', password: '', confirmation: '', legal: '', type: 'entreprise', niu: '', rccm: '', shop: '', description: '', cities: ['Douala'], categories: [], modes: ['katihub'], pickup: '', stock: 'suivi', sav: '' })
   const [cni, setCni] = useState<File | null>(null)
   const [villeLibre, setVilleLibre] = useState('')
   const [accepted, setAccepted] = useState(false)
@@ -69,6 +70,7 @@ export function SellerSignupForm() {
       if (!values.categories.length) return 'Choisissez au moins une categorie de produits.'
       if (!values.modes.length) return 'Choisissez au moins une façon de remettre vos commandes.'
       if (values.modes.includes('retrait') && values.pickup.trim().length < 5) return 'Indiquez l’adresse où vos clients retirent leurs commandes.'
+      if (!values.sav) return 'Choisissez qui prendra en charge votre service après-vente.'
     }
     if (currentStep === 2) {
       if (values.legal.trim().length < 2) return 'Indiquez le nom sous lequel vous exercez votre activité.'
@@ -116,7 +118,7 @@ export function SellerSignupForm() {
         formulaire.append('nomLegal', values.legal.trim())
         if (values.niu.trim()) formulaire.append('niu', values.niu.trim())
         if (values.rccm.trim()) formulaire.append('rccm', values.rccm.trim())
-        formulaire.append('boutique', JSON.stringify({ nom: values.shop.trim(), slug, description: values.description.trim(), modesLivraison: MODES_LIVRAISON.filter(mode => values.modes.includes(mode)), villesLivraison: values.cities, ville: villePrincipale, categoriesVente: values.categories, suiviStock: values.stock === 'suivi', ...(values.modes.includes('retrait') ? { adresseRetrait: values.pickup.trim() } : {}) }))
+        formulaire.append('boutique', JSON.stringify({ nom: values.shop.trim(), slug, description: values.description.trim(), gestionSav: values.sav, modesLivraison: MODES_LIVRAISON.filter(mode => values.modes.includes(mode)), villesLivraison: values.cities, ville: villePrincipale, categoriesVente: values.categories, suiviStock: values.stock === 'suivi', ...(values.modes.includes('retrait') ? { adresseRetrait: values.pickup.trim() } : {}) }))
         formulaire.append('proprietaire', JSON.stringify({ courriel: values.email.trim().toLowerCase(), nom: values.owner.trim(), telephone: values.phone.replace(/[\s().-]/g, '') }))
         formulaire.append('cni', cni!, cni!.name)
         saved = await api<Receipt>('/vendeurs/inscription', {
@@ -180,6 +182,7 @@ export function SellerSignupForm() {
             <fieldset className={styles.wide}><legend>Comment vos clients reçoivent-ils leurs commandes ? <b>*</b></legend>{(['vendeur', 'retrait', 'katihub', 'agence'] as const).map(mode => <label key={mode}><input type="checkbox" checked={values.modes.includes(mode)} onChange={() => basculerMode(mode)} data-testid={`mode-${mode}`}/>{CHOIX_VENDEUR[mode]}</label>)}</fieldset>
             {values.modes.includes('retrait') ? <label className={styles.wide}>Adresse de retrait <b>*</b><input value={values.pickup} onChange={set('pickup')} maxLength={240} placeholder="Ex. Akwa, rue Joss, face à la station Total" /></label> : null}
             <label className={styles.wide}>Suivez-vous votre stock sur KatiMarket ? <b>*</b><select value={values.stock} onChange={set('stock')}><option value="suivi">Oui, je tiens mes quantités à jour</option><option value="non_suivi">Non, je confirme chaque commande et refuse un article manquant</option></select></label>
+            <fieldset className={`${styles.wide} ${styles.sellerType} ${styles.savChoice}`}><legend>Qui gérera votre service après-vente (SAV) ? <b>*</b></legend><label><input type="radio" name="sav-mode" value="kati_service" checked={values.sav === 'kati_service'} onChange={set('sav')} /><span><strong>Kati Service gère mon SAV</strong><small>L’équipe KatiMarket prend en charge les demandes clients, les retours et leur suivi.</small></span></label><label><input type="radio" name="sav-mode" value="boutique" checked={values.sav === 'boutique'} onChange={set('sav')} /><span><strong>Je gère moi-même mon SAV</strong><small>Votre boutique répond directement aux clients et traite les demandes après-vente.</small></span></label></fieldset>
           </div>
           {slug ? <p className={styles.shopPreview}>Adresse prévue : <strong>katihub.cm/boutiques/{slug}</strong></p> : null}
         </> : null}
@@ -190,7 +193,7 @@ export function SellerSignupForm() {
         </> : null}
         {step === 3 ? <>
           <div className={styles.sectionHead}><h2 id="signup-form-title">Tout est bon pour vous ?</h2><p>Relisez les informations avant d’envoyer votre candidature.</p></div>
-          <dl className={styles.review}><div><dt>Contact</dt><dd>{values.owner}<br />{values.email}<br />{values.phone}</dd><button type="button" onClick={() => setStep(0)}>Modifier</button></div><div><dt>Boutique</dt><dd>{values.shop} · {values.cities.join(', ')}<br />{categoriesDisponibles.filter(c => values.categories.includes(c.id)).map(c => c.label).join(', ')}<br />{values.description}<br />{values.modes.map(mode => LIBELLE_MODE[mode]).join(', ')} · {values.stock === 'suivi' ? 'stock suivi' : 'stock non suivi'}</dd><button type="button" onClick={() => setStep(1)}>Modifier</button></div><div><dt>Activité</dt><dd>{values.legal}<br />{values.type === 'entreprise' ? `Entreprise · NIU ${values.niu} · RCCM ${values.rccm}` : 'Vendeur individuel'}<br />CNI : {cni?.name}</dd><button type="button" onClick={() => setStep(2)}>Modifier</button></div></dl>
+          <dl className={styles.review}><div><dt>Contact</dt><dd>{values.owner}<br />{values.email}<br />{values.phone}</dd><button type="button" onClick={() => setStep(0)}>Modifier</button></div><div><dt>Boutique</dt><dd>{values.shop} · {values.cities.join(', ')}<br />{categoriesDisponibles.filter(c => values.categories.includes(c.id)).map(c => c.label).join(', ')}<br />{values.description}<br />{values.modes.map(mode => LIBELLE_MODE[mode]).join(', ')} · {values.stock === 'suivi' ? 'stock suivi' : 'stock non suivi'}<br />SAV : {values.sav === 'kati_service' ? 'géré par Kati Service' : 'géré par la boutique'}</dd><button type="button" onClick={() => setStep(1)}>Modifier</button></div><div><dt>Activité</dt><dd>{values.legal}<br />{values.type === 'entreprise' ? `Entreprise · NIU ${values.niu} · RCCM ${values.rccm}` : 'Vendeur individuel'}<br />CNI : {cni?.name}</dd><button type="button" onClick={() => setStep(2)}>Modifier</button></div></dl>
           <label className={styles.terms}><input type="checkbox" checked={accepted} onChange={event => { setAccepted(event.target.checked); setError('') }} /><span>J’accepte le <Link href="/contrat-vendeurs" target="_blank">contrat vendeur</Link> et j’ai pris connaissance de la <Link href="/politique-confidentialite" target="_blank">politique de confidentialité</Link>. <b>*</b></span></label>
         </> : null}
         {error ? <p className={styles.error} role="alert">{error}</p> : null}
