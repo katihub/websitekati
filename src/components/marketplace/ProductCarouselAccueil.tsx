@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 
 import type { OffreMarketplace } from '@/lib/marketplace-data'
 import { ProductCard } from './ProductCardAccueil'
@@ -66,7 +66,7 @@ export function ProductCarouselAccueil({ offres, label = 'Carrousel de produits'
       tabIndex={0}
     >
       <div className={styles.productTrack}>
-        {offres.map((offre) => <div className={styles.productSlide} data-product-carousel-card key={offre.id}><ProductCard offre={offre} showCategory={showCategory} /></div>)}
+        {offres.map((offre, index) => <div className={styles.productSlide} data-product-carousel-card key={offre.id} style={{ '--i': index } as CSSProperties}><ProductCard offre={offre} showCategory={showCategory} /></div>)}
       </div>
     </div>
     {offres.length > 1 ? <>

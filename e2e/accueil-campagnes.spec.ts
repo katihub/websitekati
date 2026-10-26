@@ -48,7 +48,7 @@ test('six campagnes sur deux lignes de trois défilent automatiquement sur la pa
   await expect(rail).toBeVisible()
   const piste = page.getByTestId('promos-track')
   const pages = rail.getByTestId('promo-page')
-  await expect(pages).toHaveCount(2)
+  await expect(pages).toHaveCount(4)
   const premieresCartes = pages.first().locator('a')
   await expect(premieresCartes).toHaveCount(6)
   await expect(pages.nth(1).locator('a')).toHaveCount(6)

@@ -68,16 +68,16 @@ export function MarketplaceAvantages() {
   const avantages = locale === 'fr' ? AVANTAGES : AVANTAGES_EN
   const piste = useRef<HTMLDivElement>(null)
   const [page, setPage] = useState(0)
-  const [pages, setPages] = useState(Math.ceil(AVANTAGES.length / 2))
+  const [pages, setPages] = useState(Math.ceil(AVANTAGES.length / 3))
   const [enPause, setEnPause] = useState(false)
   const [suspendu, setSuspendu] = useState(false)
   const [mouvementReduit, setMouvementReduit] = useState(false)
 
-  /** Le nombre de cartes visibles a la fois : deux sur un ecran large, une sur un telephone. */
+  /** Le nombre de cartes visibles a la fois suit la largeur réellement disponible. */
   const parVue = useCallback(() => {
     const element = piste.current
     const carte = element?.firstElementChild as HTMLElement | null
-    return element && carte ? Math.max(1, Math.round(element.clientWidth / carte.offsetWidth)) : 2
+    return element && carte ? Math.max(1, Math.round(element.clientWidth / carte.offsetWidth)) : 3
   }, [])
 
   const allerA = useCallback((cible: number) => {
