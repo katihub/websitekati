@@ -24,7 +24,14 @@ const INCIDENTS = [
   ['perdue', 'Colis perdu'],
 ] as const
 
-type Fenetre = { type: 'prise'; mission: Mission } | { type: 'incident'; mission: Mission } | null
+/** L'operateur du client ; « automatique » le deduit du numero. */
+const OPERATEURS = [['', 'Automatique (selon le numéro)'], ['orange', 'Orange Money'], ['mtn', 'MTN Mobile Money']] as const
+
+type Fenetre = { type: 'prise'; mission: Mission } | { type: 'incident'; mission: Mission } | { type: 'paiement'; mission: Mission } | null
+
+/** Combien de temps l'ecran guette la confirmation du paiement mobile, et a quel rythme. */
+const ATTENTE_PAIEMENT_MS = 180_000
+const INTERVALLE_PAIEMENT_MS = 5_000
 
 export function MissionsLivreur() {
   const [missions, setMissions] = useState<Mission[]>([])
@@ -91,6 +98,25 @@ export function MissionsLivreur() {
     setSucces(`Colis ${mission.reference} pris en charge.`)
   }
 
+  /**
+   * LE CLIENT PAIE SUR SON TELEPHONE, PAS DANS LA MAIN DU LIVREUR. La demande
+   * part par Kratospay pour le montant de l'expedition, relu par le backend.
+   * Une fois confirme, ce montant passe a zero : la livraison se confirme
+   * ensuite par le code, sans especes. L'ecran se recharge en attendant.
+   */
+  async function fairePayer(mission: Mission, donnees: FormData) {
+    const telephone = String(donnees.get('telephone') ?? '').trim()
+    const operateur = String(donnees.get('operateur') ?? '')
+    await api(`/paiements/expeditions/${mission.id}/direct`, { methode: 'POST', corps: { telephone, ...(operateur ? { operateur } : {}) } })
+    setFenetre(null)
+    setSucces(`Demande de paiement envoyée sur le ${telephone}. Le client compose son code ; le montant à encaisser passera à 0 dès que le paiement sera confirmé.`)
+    const debut = Date.now()
+    const minuteur = window.setInterval(() => {
+      if (Date.now() - debut > ATTENTE_PAIEMENT_MS) { window.clearInterval(minuteur); return }
+      void charger()
+    }, INTERVALLE_PAIEMENT_MS)
+  }
+
   async function declarerIncident(mission: Mission, donnees: FormData) {
     const statut = String(donnees.get('statut') ?? '')
     await appeler(mission.id, 'incidents', { statut, motif: String(donnees.get('motif') ?? '').trim() })
@@ -130,6 +156,25 @@ export function MissionsLivreur() {
       <ChampTexte nom="reference" libelle="Référence du bordereau ou du colis" required minLength={3} maxLength={120} />
     </FenetreAction>
     <FenetreAction
+      ouverte={fenetre?.type === 'paiement'}
+      titre={fenetre ? `Faire payer ${formatPrice(fenetre.mission.montantACollecterFcfa)} par mobile money` : ''}
+      description="La demande de paiement part sur le téléphone du client, qui compose son code. Vous n’encaissez aucune espèce : une fois le paiement confirmé, il ne reste plus rien à encaisser."
+      libelleValider="Envoyer la demande"
+      onFermer={() => setFenetre(null)}
+      onValider={(donnees) => (fenetre ? fairePayer(fenetre.mission, donnees) : Promise.resolve())}
+    >
+      <ChampTexte nom="telephone" libelle="Numéro mobile money du client" type="tel" inputMode="tel" required minLength={9} maxLength={20} defaultValue={fenetre?.mission.sousCommande.commande.telephoneLivraison ?? ''} />
+      <fieldset className="grid gap-2">
+        <legend className="text-small font-semibold">Opérateur</legend>
+        {OPERATEURS.map(([valeur, texte]) => (
+          <label key={valeur} className="flex min-h-11 items-center gap-3 rounded-control border border-rule px-3 text-small">
+            <input type="radio" name="operateur" value={valeur} defaultChecked={valeur === ''} className="size-5" />
+            {texte}
+          </label>
+        ))}
+      </fieldset>
+    </FenetreAction>
+    <FenetreAction
       ouverte={fenetre?.type === 'incident'}
       titre={fenetre ? `Incident sur ${fenetre.mission.reference}` : ''}
       libelleValider="Déclarer l’incident"
@@ -154,7 +199,7 @@ export function MissionsLivreur() {
 
 function CarteMission({ mission, occupe, ouvrir, executer, confirmer }: { mission: Mission; occupe: boolean; ouvrir: (fenetre: Fenetre) => void; executer: (id: string, chemin: string, corps?: unknown, messageSucces?: string) => Promise<void>; confirmer: (event: FormEvent<HTMLFormElement>, mission: Mission) => Promise<void> }) {
   const adresse = [mission.ville, mission.adresseFigee?.quartier, mission.adresseFigee?.repere].filter(Boolean).join(', ')
-  return <article className="rounded-well border border-rule bg-space p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="text-h4 font-semibold">{mission.reference}</h3><p className="mt-1 text-micro text-ink-3">{mission.sousCommande.boutique.nom} · {mission.sousCommande.commande.reference}</p></div><span className="rounded-full border border-primary px-2.5 py-1 text-micro font-semibold text-primary">{libelle(mission.statut)}</span></div><dl className="mt-5 grid gap-3 text-small sm:grid-cols-2"><div><dt className="text-ink-3">Adresse</dt><dd className="font-medium">{adresse || 'À confirmer'}</dd></div><div><dt className="text-ink-3">Téléphone</dt><dd className="font-medium"><a href={mission.sousCommande.commande.telephoneLivraison ? `tel:${mission.sousCommande.commande.telephoneLivraison}` : undefined}>{mission.sousCommande.commande.telephoneLivraison || 'Non renseigné'}</a></dd></div><div><dt className="text-ink-3">À encaisser</dt><dd className="t-num text-h4 font-semibold">{formatPrice(mission.montantACollecterFcfa)}</dd></div><div><dt className="text-ink-3">Créneau</dt><dd>{mission.livraisonPrevueDebut ? date(mission.livraisonPrevueDebut) : 'Non planifié'}</dd></div></dl><div className="mt-5 flex flex-wrap gap-2">{mission.statut === 'affectee' ? <button disabled={occupe} onClick={() => ouvrir({ type: 'prise', mission })} className="min-h-10 rounded-control bg-secondary px-4 text-small font-bold text-on-surface">Prendre en charge</button> : null}{mission.statut === 'prise_en_charge' ? <button disabled={occupe} onClick={() => void executer(mission.id, 'depart', undefined, `Livraison ${mission.reference} démarrée.`)} className="min-h-10 rounded-control bg-secondary px-4 text-small font-bold text-on-surface">Démarrer la livraison</button> : null}{mission.statut === 'en_livraison' ? <button disabled={occupe} onClick={() => void executer(mission.id, 'code', undefined, 'Code envoyé au client.')} className="min-h-10 rounded-control border border-rule px-4 text-small font-semibold">Envoyer le code client</button> : null}{['affectee', 'prise_en_charge', 'en_livraison', 'reportee'].includes(mission.statut) ? <button disabled={occupe} onClick={() => ouvrir({ type: 'incident', mission })} className="min-h-10 rounded-control border border-rule px-4 text-small font-semibold">Déclarer un incident</button> : null}</div>{mission.statut === 'en_livraison' ? <form onSubmit={(event) => void confirmer(event, mission)} className="mt-4 flex flex-col gap-2 rounded-control border border-rule bg-surface p-3 sm:flex-row"><label className="flex-1 text-micro font-semibold">Code à 6 chiffres<input name="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required className="mt-1 w-full rounded-control border border-rule p-2 text-small font-normal" /></label><button disabled={occupe} className="min-h-11 self-end rounded-control bg-primary px-4 text-small font-bold text-on-surface">Confirmer · {formatPrice(mission.montantACollecterFcfa)}</button></form> : null}</article>
+  return <article className="rounded-well border border-rule bg-space p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="text-h4 font-semibold">{mission.reference}</h3><p className="mt-1 text-micro text-ink-3">{mission.sousCommande.boutique.nom} · {mission.sousCommande.commande.reference}</p></div><span className="rounded-full border border-primary px-2.5 py-1 text-micro font-semibold text-primary">{libelle(mission.statut)}</span></div><dl className="mt-5 grid gap-3 text-small sm:grid-cols-2"><div><dt className="text-ink-3">Adresse</dt><dd className="font-medium">{adresse || 'À confirmer'}</dd></div><div><dt className="text-ink-3">Téléphone</dt><dd className="font-medium"><a href={mission.sousCommande.commande.telephoneLivraison ? `tel:${mission.sousCommande.commande.telephoneLivraison}` : undefined}>{mission.sousCommande.commande.telephoneLivraison || 'Non renseigné'}</a></dd></div><div><dt className="text-ink-3">À encaisser</dt><dd className="t-num text-h4 font-semibold">{formatPrice(mission.montantACollecterFcfa)}</dd></div><div><dt className="text-ink-3">Créneau</dt><dd>{mission.livraisonPrevueDebut ? date(mission.livraisonPrevueDebut) : 'Non planifié'}</dd></div></dl><div className="mt-5 flex flex-wrap gap-2">{mission.statut === 'affectee' ? <button disabled={occupe} onClick={() => ouvrir({ type: 'prise', mission })} className="min-h-10 rounded-control bg-secondary px-4 text-small font-bold text-on-surface">Prendre en charge</button> : null}{mission.statut === 'prise_en_charge' ? <button disabled={occupe} onClick={() => void executer(mission.id, 'depart', undefined, `Livraison ${mission.reference} démarrée.`)} className="min-h-10 rounded-control bg-secondary px-4 text-small font-bold text-on-surface">Démarrer la livraison</button> : null}{mission.statut === 'en_livraison' ? <button disabled={occupe} onClick={() => void executer(mission.id, 'code', undefined, 'Code envoyé au client.')} className="min-h-10 rounded-control border border-rule px-4 text-small font-semibold">Envoyer le code client</button> : null}{mission.statut === 'en_livraison' && mission.montantACollecterFcfa > 0 ? <button disabled={occupe} onClick={() => ouvrir({ type: 'paiement', mission })} data-testid={`payer-mobile-${mission.reference}`} className="min-h-10 rounded-control border border-primary px-4 text-small font-semibold text-primary">Faire payer par mobile money</button> : null}{['affectee', 'prise_en_charge', 'en_livraison', 'reportee'].includes(mission.statut) ? <button disabled={occupe} onClick={() => ouvrir({ type: 'incident', mission })} className="min-h-10 rounded-control border border-rule px-4 text-small font-semibold">Déclarer un incident</button> : null}</div>{mission.statut === 'en_livraison' ? <form onSubmit={(event) => void confirmer(event, mission)} className="mt-4 flex flex-col gap-2 rounded-control border border-rule bg-surface p-3 sm:flex-row"><label className="flex-1 text-micro font-semibold">Code à 6 chiffres<input name="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required className="mt-1 w-full rounded-control border border-rule p-2 text-small font-normal" /></label><button disabled={occupe} className="min-h-11 self-end rounded-control bg-primary px-4 text-small font-bold text-on-surface">Confirmer · {formatPrice(mission.montantACollecterFcfa)}</button></form> : null}</article>
 }
 
 function libelle(valeur: string) { return valeur.replaceAll('_', ' ') }

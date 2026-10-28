@@ -33,6 +33,28 @@ test('le livreur voit sa mission et le montant à encaisser', async ({ page }) =
   await expect(page.getByLabel('Code à 6 chiffres')).toBeVisible()
 })
 
+test('le livreur fait payer le client par mobile money, puis confirme sans espèces', async ({ page }) => {
+  let paye = false
+  api = (await simulerApi(page))
+    .quand('GET', /^\/marketplace\/expeditions\/miennes$/, () => [mission({ montantACollecterFcfa: paye ? 0 : 160_000 })])
+    .quand('POST', /^\/paiements\/expeditions\/[^/]+\/direct$/, () => {
+      paye = true
+      return { transId: 'KMPORTE1', montant: 160_000, telephone: '699000000', statut: 'en_attente', instruction: 'Composez votre code.' }
+    })
+
+  await page.goto('/espace-livreur')
+  await page.getByTestId('payer-mobile-CM-E2E-E1').click()
+  await expect(page.getByLabel('Numéro mobile money du client')).toHaveValue('699000000')
+  await page.getByLabel('Orange Money').check()
+  await page.getByRole('button', { name: 'Envoyer la demande' }).click()
+
+  await expect(page.getByText(/Demande de paiement envoyée sur le 699000000/)).toBeVisible()
+  expect(api.appelsVers('POST', /^\/paiements\/expeditions\/[^/]+\/direct$/)[0]?.corps).toEqual({ telephone: '699000000', operateur: 'orange' })
+  // Une fois le paiement confirme, plus rien a encaisser : le bouton disparait, la confirmation se fait a 0.
+  await expect(page.getByTestId('payer-mobile-CM-E2E-E1')).toBeHidden({ timeout: 15_000 })
+  await expect(page.getByRole('button', { name: /Confirmer · 0/ })).toBeVisible()
+})
+
 test('le marchand dépose un justificatif depuis son espace, et un format interdit est refusé avant l’envoi', async ({ page }) => {
   api = (await espaceVendeur(page, []))
     .quand('POST', /^\/vendeurs\/mes-boutiques\/[^/]+\/documents\/fichier$/, { id: 'doc1', statut: 'soumis' })
