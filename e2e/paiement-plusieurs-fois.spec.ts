@@ -51,7 +51,7 @@ test('ouvrir un paiement exige la regle acceptee, puis le premier versement se p
         versements: [{ reference: 'PE-4F7KM3-V01', nature: 'produits', montantFcfa: 10_000, statut: 'recu', recuLe: new Date().toISOString(), creeLe: new Date().toISOString() }],
       })
     })
-    .quand('POST', /^\/paiements\/fapshi\/echelonnement\/direct$/, { transId: 'TX-9', montant: 10_000 })
+    .quand('POST', /^\/paiements\/echelonnement\/direct$/, { transId: 'TX-9', montant: 10_000 })
 
   await page.goto(`/paiement-plusieurs-fois/nouveau?offre=${O}&quantite=1&nom=T%C3%A9l%C3%A9phone%20X`)
   await expect(page.getByTestId('total-plan')).toContainText(montant(65_000))
@@ -70,7 +70,7 @@ test('ouvrir un paiement exige la regle acceptee, puis le premier versement se p
   await page.getByTestId('paiement-versement').getByLabel(/Numéro/).fill('6 77 12 34 56')
   await page.getByRole('button', { name: /Payer 10.000 FCFA/ }).click()
   await expect(page.getByTestId('versement-en-attente')).toBeVisible()
-  expect(api.appelsVers('POST', /^\/paiements\/fapshi\/echelonnement\/direct$/)[0]?.corps).toEqual({ reference: 'PE-4F7KM3-V01', telephone: '+237 677 12 34 56' })
+  expect(api.appelsVers('POST', /^\/paiements\/echelonnement\/direct$/)[0]?.corps).toEqual({ reference: 'PE-4F7KM3-V01', telephone: '+237 677 12 34 56' })
   await expect(page.getByTestId('montant-verse')).toContainText(montant(10_000), { timeout: 15_000 })
   await expect(page.getByTestId('verser')).toBeVisible()
   await expect(page.getByTestId('historique-versements')).toContainText('Reçu')
@@ -113,7 +113,7 @@ test('une fois paye, le client choisit sa livraison, voit les frais, les paie et
     })
     .quand('POST', /^\/marketplace\/echelonnement\/plans\/PE-4F7KM3\/livraison\/estimation$/, { fraisLivraisonFcfa: 2_000, totalFcfa: 67_000 })
     .quand('POST', /^\/marketplace\/echelonnement\/plans\/PE-4F7KM3\/livraison$/, { plan: 'PE-4F7KM3', versement: 'PE-4F7KM3-V04', montantFcfa: 2_000 })
-    .quand('POST', /^\/paiements\/fapshi\/echelonnement\/direct$/, { transId: 'TX-10', montant: 2_000 })
+    .quand('POST', /^\/paiements\/echelonnement\/direct$/, { transId: 'TX-10', montant: 2_000 })
 
   await page.goto('/compte/paiements-plusieurs-fois/PE-4F7KM3')
   const choix = page.getByTestId('choix-livraison-plan')

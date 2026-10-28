@@ -58,7 +58,7 @@ export function PaiementVersement({ plan, versement, montantFcfa, libelle, onRec
     if (!numero) return setErreur('Indiquez un numéro camerounais valide commençant par 6.')
     verrou.current = true; setEnvoi(true); setErreur('')
     try {
-      const reponse = await api<{ transId: string }>('/paiements/fapshi/echelonnement/direct', { methode: 'POST', corps: { reference: versement, telephone: numero, ...(operateur ? { operateur } : {}) } })
+      const reponse = await api<{ transId: string }>('/paiements/echelonnement/direct', { methode: 'POST', corps: { reference: versement, telephone: numero, ...(operateur ? { operateur } : {}) } })
       setAttente({ transId: reponse.transId, depuis: Date.now() })
     } catch (cause) {
       verrou.current = false
@@ -82,7 +82,7 @@ export function PaiementVersement({ plan, versement, montantFcfa, libelle, onRec
       <input type="tel" required autoComplete="tel" value={telephone} placeholder="6 77 12 34 56" onChange={(e) => setTelephone(e.target.value)} className="min-h-11 rounded-control border border-rule bg-surface px-3 text-small text-ink"/>
     </label>
     <fieldset className="mt-3 flex flex-wrap gap-3 text-micro text-ink-2"><legend className="mb-1">Opérateur</legend>
-      {[['', 'Automatique'], ['orange money', 'Orange Money'], ['mobile money', 'MTN Mobile Money']].map(([valeur, nom]) => <label key={valeur} className="inline-flex items-center gap-1"><input type="radio" name="operateur" checked={operateur === valeur} onChange={() => setOperateur(valeur)}/>{nom}</label>)}
+      {[['', 'Automatique'], ['orange', 'Orange Money'], ['mtn', 'MTN Mobile Money']].map(([valeur, nom]) => <label key={valeur} className="inline-flex items-center gap-1"><input type="radio" name="operateur" checked={operateur === valeur} onChange={() => setOperateur(valeur)}/>{nom}</label>)}
     </fieldset>
     {erreur ? <p className="mt-3 text-small text-warn" role="alert">{erreur}</p> : null}
     <div className="mt-4 flex flex-wrap items-center gap-3">

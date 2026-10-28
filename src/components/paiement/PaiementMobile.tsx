@@ -10,12 +10,10 @@ import { shopWhatsapp, whatsappHref } from '@/lib/comptoirs'
 /**
  * PAYER SA COMMANDE DEPUIS SON TELEPHONE.
  *
- * WHY A PUSH AND NOT A LINK. Fapshi offers both. `initiate-pay` returns a URL:
- * the customer leaves the shop, picks their operator on a page that is not
- * ours, and comes back — the shape of a European checkout. `direct-pay` makes
- * their handset ring where they already are, and they enter their code without
- * leaving anything. In Cameroon mobile money happens on the phone, not in a
- * browser tab, and the second shape is the one people know.
+ * WHY A PUSH AND NOT A LINK. Kratospay rings the customer's handset where
+ * they already are, and they enter their code without leaving anything. In
+ * Cameroon mobile money happens on the phone, not in a browser tab, and this
+ * is the shape people know. Kratospay has no hosted payment page anyway.
  *
  * THE AMOUNT IS NEVER SENT. It is read from the order by the backend. This
  * component does not know how to say « pay 45 000 » — it can only say « pay
@@ -24,14 +22,14 @@ import { shopWhatsapp, whatsappHref } from '@/lib/comptoirs'
  *
  * WHAT IT DOES NOT PRETEND. A successful request means the prompt LEFT, never
  * that anything was paid: the customer may walk away, mistype their code, or
- * have no balance. What settles an order is Fapshi's callback to the backend,
+ * have no balance. What settles an order is Kratospay's confirmation to the backend,
  * and the only honest thing this screen can do is watch the order until the
  * shop says it is paid.
  */
 
 /** How long to keep watching before saying so plainly. */
 const ATTENTE_MAX_MS = 180_000
-/** Between two checks. Fapshi rate-limits status lookups, and so should we. */
+/** Between two checks: the backend learns of the payment from Kratospay, not from this screen. */
 const INTERVALLE_MS = 4_000
 
 type Etat =
@@ -54,7 +52,7 @@ interface Commande {
  * « Le numéro doit être un numéro camerounais à neuf chiffres » dit quoi
  * faire. D'autres traversent depuis plus loin : « ThrottlerException: Too
  * Many Requests » vient du limiteur de debit, « 500,000 XAF is the maximum
- * amount that can be paid » vient de Fapshi, en anglais. Une campagne de test
+ * amount that can be paid » vient de la passerelle, en anglais. Une campagne de test
  * les a vus s'afficher tels quels sur cette page, et c'est exactement ce
  * qu'un client ne doit jamais lire : ca ressemble a une panne, et ca n'explique
  * rien.
@@ -119,7 +117,7 @@ function expliquer(erreur: unknown): string {
 export function PaiementMobile({ commande, jeton = null }: { commande: Commande; jeton?: string | null }) {
   const whatsapp = shopWhatsapp(useAccount().pointsVente)
   const [telephone, setTelephone] = useState('')
-  const [operateur, setOperateur] = useState<'' | 'mobile money' | 'orange money'>('')
+  const [operateur, setOperateur] = useState<'' | 'mtn' | 'orange'>('')
   const [etat, setEtat] = useState<Etat>(
     commande.resteAPayer <= 0 ? { phase: 'paye' } : { phase: 'saisie' },
   )
@@ -133,12 +131,11 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
   /**
    * WATCHES THE ORDER, NOT THE GATEWAY.
    *
-   * Fapshi exposes a status lookup, and using it from here would be the
-   * obvious move — and the wrong one. It is rate-limited to six calls a
-   * minute, it would need the API keys in the browser, and above all it
-   * answers a different question: whether the GATEWAY thinks it collected,
-   * not whether the SHOP considers the order settled. Only the callback
-   * closes an order, so only the order can be believed.
+   * Asking the gateway from here would be the obvious move — and the wrong
+   * one. It would need the API key in the browser, and above all it answers
+   * a different question: whether the GATEWAY thinks it collected, not
+   * whether the SHOP considers the order settled. Only the backend closes an
+   * order, so only the order can be believed.
    */
   useEffect(() => {
     if (etat.phase !== 'attente') return
@@ -187,7 +184,7 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
 
     try {
       const reponse = await api<{ transId: string; montant: number }>(
-        jeton ? '/paiements/fapshi/sans-compte/direct' : '/paiements/fapshi/direct',
+        jeton ? '/paiements/sans-compte/direct' : '/paiements/direct',
         {
           methode: 'POST',
           corps: {
@@ -277,8 +274,8 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
             <div className="flex flex-wrap gap-2">
               {([
                 ['', 'Détecter automatiquement'],
-                ['mobile money', 'MTN Mobile Money'],
-                ['orange money', 'Orange Money'],
+                ['mtn', 'MTN Mobile Money'],
+                ['orange', 'Orange Money'],
               ] as const).map(([valeur, libelle]) => (
                 <button
                   key={valeur || 'auto'}
