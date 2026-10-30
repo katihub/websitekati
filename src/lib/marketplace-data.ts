@@ -21,6 +21,8 @@ export interface OffreMarketplace {
   etat: string | null
   delaiMaxJours: number | null
   disponible: number
+  /** La disponibilite decidee par l'equipe : hors `en_stock`, l'offre n'est plus commandable. */
+  statutStock?: 'en_stock' | 'rupture' | 'reapprovisionnement'
   quantiteMinimale?: number
   verifieParKatiLe?: string | null
   modesLivraison?: string[]

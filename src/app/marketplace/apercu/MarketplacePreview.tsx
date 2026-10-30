@@ -86,6 +86,8 @@ export type MarketplaceProduct = {
     villesLivraison: string[]
     delaiMaxJours: number | null
     disponible: number
+    /** La disponibilite decidee par l'equipe : hors `en_stock`, l'offre n'est plus commandable. */
+    statutStock?: 'en_stock' | 'rupture' | 'reapprovisionnement'
     /** MOQ : la quantite minimale commandable chez cette boutique. */
     quantiteMinimale?: number
     /** KatiMarket a recu et teste l'article de cette boutique. */
