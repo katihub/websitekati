@@ -44,11 +44,30 @@ export interface PiecesReponse {
     readonly marque?: string
     readonly prixMin?: number
     readonly prixMax?: number
+    /** « autour de 200 000 » : la fourchette en est déduite, les produits s'en approchent. */
+    readonly prixCible?: number
     readonly enStock?: boolean
     readonly enPromotion?: boolean
+    /** « pas cher » : du moins cher au plus cher, sans plafond inventé. */
+    readonly moinsCher?: boolean
   }
   /** True when the assistant is handing the question to a person. */
   readonly humain?: boolean
+  /**
+   * La passation à un conseiller : pourquoi, et un résumé que le formulaire
+   * reprend comme question, pour que le client n'ait rien à réécrire.
+   */
+  readonly passation?: { readonly motif: string; readonly resume: string }
+  /** Une question de précision : ses choix arrivent aussi dans `suites`. */
+  readonly precision?: { readonly choix: readonly string[] }
+  /** Les commandes du client connecté, quand il demande où en est la sienne. */
+  readonly commandes?: readonly {
+    readonly reference: string
+    readonly statut: string
+    readonly libelle: string
+    readonly creeLe: string
+    readonly total: number
+  }[]
   /** Le nœud de menu d'où vient la réponse, pour rouvrir l'arbre au bon endroit. */
   readonly menu?: { readonly noeud: string }
   /**

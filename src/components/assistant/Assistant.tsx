@@ -768,7 +768,7 @@ export function Assistant({ whatsapp }: { whatsapp: string | null }) {
                 <DemandeEquipe
                   id={`bod-demande-${message.id}`}
                   fil={fil}
-                  questionInitiale={derniereQuestionAvant(fil0, rang)}
+                  questionInitiale={message.pieces?.passation?.resume ?? derniereQuestionAvant(fil0, rang)}
                   connecte={session !== null}
                   courriel={session?.courriel ?? null}
                   onTransmise={surDemandeTransmise}
@@ -900,6 +900,15 @@ export function Assistant({ whatsapp }: { whatsapp: string | null }) {
             </button>
           )}
         </form>
+        {/* DIRE QUE C'EST UNE IA, SANS EN FAIRE UN BANDEAU. Le détail — ce
+            qui part chez OpenAI, ce qui n'y part pas — est dans la politique
+            de confidentialité, à un clic. */}
+        <p className="t-label mt-1.5 text-center text-ink-3">
+          Kati s’appuie sur une IA ; prix et stocks viennent du catalogue.{' '}
+          <Link href="/politique-confidentialite" className="underline underline-offset-2">
+            Confidentialité
+          </Link>
+        </p>
       </div>
     </motion.div>
   )
@@ -1088,12 +1097,15 @@ function SousLaBulle({
   const filtres = pieces.filtres
   const marques: string[] = []
   if (filtres?.termes) marques.push(filtres.termes)
-  if (filtres?.prixMin !== undefined && filtres.prixMax !== undefined) {
+  if (filtres?.marque) marques.push(filtres.marque)
+  if (filtres?.prixCible !== undefined) marques.push(`autour de ${formatPrice(filtres.prixCible)}`)
+  else if (filtres?.prixMin !== undefined && filtres.prixMax !== undefined) {
     marques.push(`${formatPrice(filtres.prixMin)} – ${formatPrice(filtres.prixMax)}`)
   } else if (filtres?.prixMax !== undefined) marques.push(`moins de ${formatPrice(filtres.prixMax)}`)
   else if (filtres?.prixMin !== undefined) marques.push(`plus de ${formatPrice(filtres.prixMin)}`)
   if (filtres?.enStock) marques.push('en stock')
   if (filtres?.enPromotion) marques.push('en promotion')
+  if (filtres?.moinsCher) marques.push('les moins chers d’abord')
 
   return (
     <>
