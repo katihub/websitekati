@@ -22,3 +22,6 @@
 .productSpecs li{max-width:100%;overflow:hidden;border-radius:4px;background:#eef2f6;padding:3px 5px;color:#52627a;font-size:9px;font-weight:650;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
 .compactCard .productSpecs{margin-bottom:5px}
 .compactCard .productSpecs li{padding:2px 4px;font-size:8px}
+/* Le logo choisi par la boutique remplace ses initiales (31 octobre 2026). */
+.storeLogoImage{position:relative;overflow:hidden;padding:0}.storeLogoImage img{object-fit:contain;padding:8px}
+.storePhone{color:inherit;font-weight:700;text-decoration:none}.storePhone:hover{text-decoration:underline}

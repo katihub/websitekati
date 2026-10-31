@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useRef, useState } from 'react'
 
@@ -63,9 +64,12 @@ export function ShopCarouselAccueil({ boutiques }: { boutiques: readonly Boutiqu
       <div className={styles.shopTrack}>
         {boutiques.map((boutique) => <div className={styles.shopSlide} data-shop-carousel-card key={boutique.id}>
           <Link href={`/boutiques/${boutique.slug}`} className={styles.shopCard} aria-label={`Découvrir ${boutique.nom}`}>
+            {boutique.banniereUrl ? <Image src={boutique.banniereUrl} alt="" fill sizes="220px" className={styles.shopBanner} /> : null}
             <i className={styles.shopWatermark} aria-hidden="true">{initiales(boutique.nom)}</i>
             <div className={styles.shopIdentity}>
-              <span className={styles.shopAvatar} aria-hidden="true">{initiales(boutique.nom)}</span>
+              {boutique.logoUrl
+                ? <span className={`${styles.shopAvatar} ${styles.shopAvatarLogo}`}><Image src={boutique.logoUrl} alt={`Logo de ${boutique.nom}`} fill sizes="42px" /></span>
+                : <span className={styles.shopAvatar} aria-hidden="true">{initiales(boutique.nom)}</span>}
               <span className={styles.shopName}>
                 <strong>{boutique.nom}<i className={styles.shopVerified} title="Boutique vérifiée" aria-label="Boutique vérifiée">✓</i></strong>
                 <small className={styles.shopLocation}>

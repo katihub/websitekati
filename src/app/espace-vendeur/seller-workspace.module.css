@@ -138,3 +138,15 @@
 .bandeauContrat>div:last-child{display:flex;align-items:center;gap:12px}
 .bandeauContrat a{font-weight:700;text-decoration:underline}
 .bandeauContrat button{padding:8px 14px;border-radius:8px;background:#0f2a4a;color:#fff;font-weight:700}
+/* Le logo et la banniere de la boutique (31 octobre 2026). */
+.visuel{display:flex;gap:16px;align-items:flex-start;padding:14px 0;border-top:1px solid #e3e8f1}
+.visuelLogo,.visuelBanniere{flex:0 0 auto;display:grid;place-items:center;overflow:hidden;border:1px dashed #c9d3e3;background:#f5f7fb;color:#68758c;font-size:.72rem;text-align:center}
+.visuelLogo{width:88px;height:88px;border-radius:50%}
+.visuelBanniere{width:220px;height:70px;border-radius:10px}
+.visuelLogo img{width:100%;height:100%;object-fit:contain;background:#fff}
+.visuelBanniere img{width:100%;height:100%;object-fit:cover}
+.visuelActions{display:flex;flex-direction:column;gap:6px;min-width:0}
+.visuelActions small{color:#68758c;font-size:.74rem;line-height:1.4}
+.visuelBouton{align-self:flex-start;cursor:pointer;border-radius:999px;background:#08265c;color:#fff;font-weight:700;font-size:.78rem;padding:7px 14px}
+.visuelRetirer{align-self:flex-start;border:0;background:none;color:#c23b3b;font-weight:700;font-size:.76rem;cursor:pointer;padding:0}
+@media(max-width:600px){.visuel{flex-direction:column}.visuelBanniere{width:100%}}

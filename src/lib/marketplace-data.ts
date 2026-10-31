@@ -11,6 +11,11 @@ export interface BoutiqueMarketplace {
   villesLivraison: string[]
   /** La ville de la boutique elle-meme ; nulle si le marchand ne l'a pas encore renseignee. */
   ville?: string | null
+  /** Le logo et la banniere choisis par la boutique ; sans eux, ses initiales et le fond par defaut. */
+  logoUrl?: string | null
+  banniereUrl?: string | null
+  /** Le numero publie sur la page de la boutique (absent des listes). */
+  telephone?: string | null
 }
 
 export interface OffreMarketplace {
