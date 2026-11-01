@@ -5,6 +5,7 @@ import { connection } from 'next/server'
 import { OuvrirKati } from '@/components/assistant/OuvrirKati'
 import { IconPhone, IconPin } from '@/components/brand/Icons'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { CONTACT_MARKETPLACE, lienTelephone } from '@/constants/contact-marketplace'
 import { dialable } from '@/constants/site'
 import { lirePointsVenteOuVide } from '@/lib/catalogue-en-direct'
 
@@ -32,8 +33,8 @@ export const metadata: Metadata = {
  *   sont lus a chaque visite et tolerants : sans point publie, la section
  *   disparait au lieu d'annoncer des numeros « qui n'ont pas pu etre charges ».
  *
- * Aucun courriel, aucun numero n'est ecrit en dur : les mentions legales de la
- * plateforme laissent encore ces coordonnees « à compléter ».
+ * - les coordonnees de KatiMarket elle-meme (`constants/contact-marketplace`) :
+ *   ses deux numeros et son adresse a Akwa, Douala.
  */
 export default async function ContactPage() {
   await connection()
@@ -88,6 +89,29 @@ export default async function ContactPage() {
           </div>
         </section>
       </div>
+
+      <section className="shell mt-band" aria-labelledby="joindre-katimarket">
+        <h2 id="joindre-katimarket" className="t-label mb-6 text-ink-3">Appeler KatiMarket</h2>
+        <div className="flex gap-4">
+          <IconPin className="mt-1 shrink-0 text-[1.25rem] text-ink-3" />
+          <span>
+            <span className="block text-body font-semibold">{CONTACT_MARKETPLACE.adresse}</span>
+            <ul className="mt-1">
+              {CONTACT_MARKETPLACE.telephones.map((numero) => (
+                <li key={numero}>
+                  <a
+                    href={lienTelephone(numero)}
+                    className="flex min-h-11 items-center gap-3 text-body transition-colors duration-[var(--t-fast)] hover:text-secondary sm:min-h-0"
+                  >
+                    <IconPhone className="shrink-0 text-[1.125rem] text-ink-3" />
+                    <span className="t-num">{numero}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </span>
+        </div>
+      </section>
 
       {pointsVente.length > 0 ? (
         <section className="shell mt-band">
