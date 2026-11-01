@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
 import { PREMIERS_PRODUITS } from '@/app/api/rayon-produits/route'
@@ -62,6 +63,17 @@ import { MarketplaceHome } from '@/components/marketplace/MarketplaceHome'
  * returns and computes to the same 96 it always did, so no screen from sm up
  * moves.
  */
+/**
+ * LA VERIFICATION GOOGLE SEARCH CONSOLE, SUR LA PAGE D'ACCUEIL SEULEMENT.
+ *
+ * Google lit la balise a la racine du domaine et la relit de temps en temps :
+ * la retirer fait perdre la propriete dans Search Console. Le reste des
+ * metadonnees (titre, description) vient de `layout.tsx` et n'est pas touche.
+ */
+export const metadata: Metadata = {
+  verification: { google: 'FOC6xZRFwUiEwKsgc2OTxNGPqkD8_c0Or4FvbJNOvJY' },
+}
+
 export default avecPanneCatalogue(async function HomePage() {
   return <MarketplaceHome />
   /* L'ancienne vitrine NowTech est conservée temporairement sous ce point de
