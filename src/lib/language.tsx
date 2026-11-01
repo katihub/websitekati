@@ -34,6 +34,7 @@ const COPY = {
   sellerSpace: { fr: 'Espace vendeur', en: 'Seller workspace' },
   sellerHelp: { fr: 'Centre d’aide vendeurs', en: 'Seller help center' },
   sellerContract: { fr: 'Contrat avec les vendeurs', en: 'Seller agreement' },
+  ourServices: { fr: 'Nos services', en: 'Our services' },
   helpInfo: { fr: 'Aide & informations', en: 'Help & information' },
   orderTracking: { fr: 'Suivi de commande', en: 'Track an order' },
   contact: { fr: 'Nous contacter', en: 'Contact us' },

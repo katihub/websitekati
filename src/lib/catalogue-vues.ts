@@ -8,7 +8,6 @@ import type {
   Accueil,
   BrandEntry,
   BrandTile,
-  CarteProduit,
   CategorieNav,
   CounterPick,
   DepartmentNav,
@@ -336,19 +335,4 @@ export function colonnesRecentes(accueil: Accueil): RecentColumn[] {
     newestAt: colonne.produits[0]?.ajouteLe ?? null,
     products: colonne.produits,
   }))
-}
-
-/**
- * Le catalogue de l'atelier : les prestations d'abord, puis le prix croissant.
- *
- * Le terme du fournisseur range aussi du materiel jamais reclasse ; ce tri fait
- * passer le travail devant. A prix egal, le plus recent d'abord, comme le
- * faisait la liste d'origine : sans ce dernier critere l'ordre de deux lignes a
- * 45 000 FCFA dependrait de la date de creation que le backend retient.
- */
-export function trierServices(cartes: readonly CarteProduit[]): CarteProduit[] {
-  const prestation = (nom: string) => /^(service|installation|maintenance|douane|energie)/i.test(nom)
-  return [...cartes].sort(
-    (a, b) => Number(prestation(b.nom)) - Number(prestation(a.nom)) || a.prix - b.prix || b.id - a.id,
-  )
 }

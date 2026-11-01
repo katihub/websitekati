@@ -141,3 +141,31 @@ export async function lireOffresMarketplace(params: {
     return vide
   }
 }
+
+/**
+ * LES REGLAGES PUBLICS DES SERVICES KATIMARKET, pour la page « Nos services » :
+ * le taux de l'assurance de la commande et le programme KATI, tels que la
+ * direction les regle. Chacun est nul si le backend ne repond pas : la page
+ * garde alors ses phrases, sans chiffre, plutot que d'en inventer un.
+ */
+export interface ConditionsServices {
+  assurance: { active: boolean; tauxBps: number } | null
+  kati: { gainClientBps: number; commissionParrainBps: number; parrainageDureeMois: number; liberationApresLivraisonJours: number } | null
+}
+
+async function lireReglage<T>(chemin: string): Promise<T | null> {
+  try {
+    const reponse = await fetch(`${BASE}/v1${chemin}`, { headers: entetesLectureCommune(), next: { revalidate: 300 } })
+    return reponse.ok ? await reponse.json() as T : null
+  } catch {
+    return null
+  }
+}
+
+export async function lireConditionsServices(): Promise<ConditionsServices> {
+  const [services, kati] = await Promise.all([
+    lireReglage<{ assurance: ConditionsServices['assurance'] }>('/marketplace/services-commande'),
+    lireReglage<NonNullable<ConditionsServices['kati']>>('/marketplace/kati/politique'),
+  ])
+  return { assurance: services?.assurance ?? null, kati }
+}
