@@ -38,15 +38,34 @@ export function libelleMois(mois: number): string {
   return `${mois} mois`
 }
 
+/**
+ * L'arbre est relu jusqu'a trois fois, a 1 puis 3 secondes d'intervalle : sur
+ * un reseau mobile, ou derriere l'adresse partagee d'un operateur que le quota
+ * du backend freine un instant, un seul echec suffisait a bloquer l'inscription
+ * d'un marchand. Apres le troisieme, `reessayer` relance a la demande.
+ */
+const ATTENTES_MS = [1000, 3000]
+
 export function useCategoriesMarketplace() {
   const [categories, setCategories] = useState<CategorieMarketplace[] | null>(null)
   const [erreur, setErreur] = useState('')
+  const [essai, setEssai] = useState(0)
   useEffect(() => {
     let actif = true
-    api<CategorieMarketplace[]>('/marketplace/categories', { anonyme: true })
-      .then((arbre) => { if (actif) setCategories(arbre) })
-      .catch(() => { if (actif) setErreur('Les catégories ne peuvent pas être chargées. Réessayez dans un instant.') })
-    return () => { actif = false }
-  }, [])
-  return { categories, erreur }
+    let minuterie: ReturnType<typeof setTimeout> | undefined
+    const lire = (tentative: number) => {
+      api<CategorieMarketplace[]>('/marketplace/categories', { anonyme: true })
+        .then((arbre) => { if (actif) { setCategories(arbre); setErreur('') } })
+        .catch(() => {
+          if (!actif) return
+          const attente = ATTENTES_MS[tentative]
+          if (attente === undefined) setErreur('Les catégories ne peuvent pas être chargées. Réessayez dans un instant.')
+          else minuterie = setTimeout(() => lire(tentative + 1), attente)
+        })
+    }
+    lire(0)
+    return () => { actif = false; clearTimeout(minuterie) }
+  }, [essai])
+  const reessayer = () => { setErreur(''); setEssai((n) => n + 1) }
+  return { categories, erreur, reessayer }
 }
