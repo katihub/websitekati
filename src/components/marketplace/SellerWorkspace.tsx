@@ -27,6 +27,7 @@ import { useMarketplaceLanguage } from '@/lib/language'
 const chargementOnglet = () => <p className={styles.dashboardEmpty}>Chargement de cette rubrique…</p>
 const EditeurFicheProduit = dynamic(() => import('./vendeur/EditeurFicheProduit').then(module => module.EditeurFicheProduit), { loading: chargementOnglet })
 const AdministrationProduits = dynamic(() => import('./vendeur/AdministrationProduits').then(module => module.AdministrationProduits), { loading: chargementOnglet })
+const MessagerieKati = dynamic(() => import('./vendeur/MessagerieKati').then(module => module.MessagerieKati), { loading: chargementOnglet })
 const DevisBoutique = dynamic(() => import('./vendeur/DevisBoutique').then(module => module.DevisBoutique), { loading: chargementOnglet })
 const LivraisonsBoutique = dynamic(() => import('./vendeur/LivraisonsBoutique').then(module => module.LivraisonsBoutique), { loading: chargementOnglet })
 
@@ -142,7 +143,7 @@ type ShopDispute = { id: string; reference: string; statut: string; objet: strin
 
 type Listing<T> = { total: number; elements: T[] }
 type Section = 'documents' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'finance' | 'reviews' | 'customers' | 'members' | 'disputes'
-type Panel = 'overview' | 'verification' | 'products' | 'offers' | 'quotes' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members' | 'disputes'
+type Panel = 'overview' | 'verification' | 'products' | 'offers' | 'quotes' | 'messages' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members' | 'disputes'
 type Access = 'allowed' | 'denied' | 'error'
 const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed', disputes: 'allowed' }
 const initialLoaded: Record<Section, boolean> = { documents: false, products: false, offers: false, orders: false, deliveries: false, payments: false, finance: false, reviews: false, customers: false, members: false, disputes: false }
@@ -382,6 +383,7 @@ export function SellerWorkspace() {
             ['products', 'package', en ? 'Products' : 'Produits'],
             ['offers', 'tag', en ? 'Offers' : 'Offres'],
             ['quotes', 'clock', en ? 'Quotes' : 'Devis'],
+            ['messages', 'headphones', en ? 'KATI messages' : 'Messagerie KATI'],
           ] as const).map(([value, icon, label]) => (
             <button key={value} className={panel === value ? styles.activeNav : ''} onClick={() => openPanel(value)}>
               <ShopIcon name={icon} />{label}
@@ -407,7 +409,7 @@ export function SellerWorkspace() {
         {error ? <div className={styles.error} role="alert">{error}<button onClick={() => void load()}>{en ? 'Try again' : 'Réessayer'}</button></div> : null}
         {space ? <>
           <header className={styles.pageHead}>
-            <div><h1>{panel === 'overview' ? `${en ? 'Hello' : 'Bonjour'}, ${space.nom}` : en ? ({verification: 'Shop verification', products: 'Seller catalogue', offers: 'Shop offers', quotes: 'Quotes', orders: 'Shop orders', deliveries: 'Shop deliveries', disputes: 'Disputes & returns', payments: 'Finance & payouts', reviews: 'Customer reviews', customers: 'Customers', members: 'Shop team', settings: 'Shop settings'}[panel] ?? 'Seller overview') : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Catalogue vendeur' : panel === 'offers' ? 'Offres de la boutique' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? (en ? 'Here is what is happening in your shop.' : 'Voici ce qui se passe dans votre boutique.') : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
+            <div><h1>{panel === 'overview' ? `${en ? 'Hello' : 'Bonjour'}, ${space.nom}` : en ? ({verification: 'Shop verification', products: 'Seller catalogue', offers: 'Shop offers', quotes: 'Quotes', messages: 'KATI messages', orders: 'Shop orders', deliveries: 'Shop deliveries', disputes: 'Disputes & returns', payments: 'Finance & payouts', reviews: 'Customer reviews', customers: 'Customers', members: 'Shop team', settings: 'Shop settings'}[panel] ?? 'Seller overview') : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Catalogue vendeur' : panel === 'offers' ? 'Offres de la boutique' : panel === 'quotes' ? 'Demandes de devis' : panel === 'messages' ? 'Messagerie KATI' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? (en ? 'Here is what is happening in your shop.' : 'Voici ce qui se passe dans votre boutique.') : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
             <div className={styles.headTools}><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{en ? ({brouillon:'Draft', soumis:'Submitted', en_verification:'Under review', approuve:'Verified shop', modification_demandee:'Changes requested', refuse:'Application rejected'}[space.vendeur.statutVerification] ?? space.vendeur.statutVerification) : STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> {en ? 'View my shop' : 'Voir ma boutique'}</Link></div>
           </header>
           <BandeauContrat key={space.id} shopId={space.id} />
@@ -420,6 +422,7 @@ export function SellerWorkspace() {
           {panel === 'verification' ? !loaded.documents ? <SectionLoading /> : access.documents === 'allowed' ? <VerificationPanel shopId={space.id} documents={documents} onRefresh={() => refreshSections(['documents'])} /> : <SectionUnavailable access={access.documents} /> : null}
           {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.products} /> : null}
           {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
+          {panel === 'messages' ? <MessagerieKati shopId={space.id} /> : null}
           {panel === 'offers' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.offers} /> : null}
           {panel === 'orders' ? !loaded.orders ? <SectionLoading /> : access.orders === 'allowed' ? <OrdersPanel shopId={space.id} listing={orders} onRefresh={() => refreshSections(['orders'])} /> : <SectionUnavailable access={access.orders} /> : null}
           {panel === 'deliveries' ? !loaded.deliveries ? <SectionLoading /> : access.deliveries === 'allowed' ? <LivraisonsBoutique shopId={space.id} /> : <SectionUnavailable access={access.deliveries} /> : null}
