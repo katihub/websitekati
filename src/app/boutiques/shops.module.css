@@ -46,3 +46,26 @@
 @media(max-width:1000px){.loadingGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.loadingPage{width:min(100% - 28px,1320px)}.loadingGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
 @media(prefers-reduced-motion:reduce){.card[data-prete=false] .cover,.card[data-prete=false] .thumbnail,.card[data-prete=false] .logo,.loadingHeading,.loadingBanniere,.loadingCover,.loadingLine{animation:none}}
+
+/* Cinq boutiques par ligne, avec des cartes plus compactes sur grand ecran. */
+.grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.cover{height:74px}
+.cover .logo{width:48px;height:48px}
+.body{padding:8px}
+.body small{font-size:.54rem}
+.body h2{min-height:1.2em;margin:3px 0;font-size:.84rem;line-height:1.2}
+.body p{height:1.3em;min-height:1.3em;font-size:.66rem;line-height:1.3}
+.body .location{height:1.35em;min-height:1.35em;margin-top:4px;font-size:.62rem;line-height:1.35}
+.location span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thumbnails{height:42px;gap:3px;margin-top:4px;padding:2px 0}
+.thumbnail{width:38px;height:38px}
+.thumbnailPlaceholder{display:grid;place-items:center;border-style:dashed;color:#8fa5c4}
+.thumbnailPlaceholder svg{width:17px;height:17px}
+.noThumbnails{height:38px}
+.body b{min-height:22px;margin-top:4px;padding-top:3px;font-size:.66rem}
+.loadingGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.loadingCover{height:74px}
+.loadingText{gap:7px;padding:9px}
+.zoneBarre{min-height:24px;margin-top:12px}
+@media(max-width:1000px){.grid,.loadingGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.grid,.loadingGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.cover{height:68px}.body{padding:7px}}
