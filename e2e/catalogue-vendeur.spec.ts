@@ -71,6 +71,24 @@ test('le marchand ajoute une photo, écrit son référencement et soumet la fich
   })
 })
 
+test('le marchand peut revenir à la liste après avoir ouvert une fiche produit', async ({ page }) => {
+  api = (await espaceVendeur(page, []))
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [offre])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu$`), {
+      produit: { id: PRODUIT, nom: produit.nom, slug: produit.slug, metaTitre: null, metaDescription: null },
+      images: [], revisionOuverte: null, revisions: [],
+    })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: 'Fiche et photos' }).click()
+  await expect(page.getByRole('heading', { name: 'Samsung Galaxy A15' })).toBeVisible()
+  await page.getByRole('button', { name: 'Retour aux produits' }).click()
+  await expect(page.getByRole('heading', { name: 'Produits' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Fiche et photos' })).toBeVisible()
+})
+
 test('le marchand crée une variante avec son prix, puis change le prix d’une offre', async ({ page }) => {
   api = (await espaceVendeur(page, []))
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])

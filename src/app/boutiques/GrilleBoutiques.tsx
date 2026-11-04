@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { ShopIcon } from '@/components/marketplace/ShopIcon'
 import { BarreChargement } from '@/components/ui/BarreChargement'
@@ -24,6 +24,7 @@ const LOT = 5
 /** Une image lente n'arrete pas la suite : l'optimiseur peut y passer plusieurs secondes. */
 const ATTENTE_LOT_MS = 4000
 const NOMBRE_APERCUS = 5
+const normaliserRecherche = (valeur: string) => valeur.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr').trim()
 
 const imagesDe = (carte: CarteBoutique) => [carte.banniereUrl, carte.logoUrl, ...carte.miniatures].filter((url): url is string => Boolean(url))
 
@@ -105,12 +106,35 @@ export function GrilleBoutiques({ boutiques }: { boutiques: CarteBoutique[] }) {
   const [autorisees, setAutorisees] = useState(LOT)
   const [terminees, setTerminees] = useState<ReadonlySet<string>>(() => new Set())
   const [delaiEcoulePour, setDelaiEcoulePour] = useState(0)
+  const [recherche, setRecherche] = useState('')
+  const [villeChoisie, setVilleChoisie] = useState('')
   const grille = useRef<HTMLDivElement>(null)
-  const total = boutiques.length
+  const villes = useMemo(() => [...new Set(boutiques.flatMap((boutique) =>
+    boutique.villes.split('·').map((ville) => ville.trim()).filter((ville) => ville && !ville.toLocaleLowerCase('fr').startsWith('livraison selon')),
+  ))].sort((a, b) => a.localeCompare(b, 'fr')), [boutiques])
+  const listeVisible = useMemo(() => {
+    const terme = normaliserRecherche(recherche)
+    return boutiques.filter((boutique) => {
+      const correspondRecherche = !terme || normaliserRecherche(`${boutique.nom} ${boutique.villes}`).includes(terme)
+      const correspondVille = !villeChoisie || boutique.villes.split('·').some((ville) => normaliserRecherche(ville) === normaliserRecherche(villeChoisie))
+      return correspondRecherche && correspondVille
+    })
+  }, [boutiques, recherche, villeChoisie])
+  const total = listeVisible.length
   const estPrete = (carte: CarteBoutique) => imagesDe(carte).every((url) => terminees.has(url))
-  const pretes = boutiques.filter(estPrete).length
-  const enCours = !boutiques.slice(0, autorisees).every(estPrete)
+  const pretes = listeVisible.filter(estPrete).length
+  const enCours = total > 0 && !listeVisible.slice(0, autorisees).every(estPrete)
   const lotLibere = !enCours || delaiEcoulePour === autorisees
+  const filtrerRecherche = (valeur: string) => {
+    setRecherche(valeur)
+    setAutorisees(LOT)
+    setDelaiEcoulePour(0)
+  }
+  const filtrerVille = (valeur: string) => {
+    setVilleChoisie(valeur)
+    setAutorisees(LOT)
+    setDelaiEcoulePour(0)
+  }
 
   useEffect(() => {
     if (!enCours || delaiEcoulePour === autorisees) return
@@ -134,10 +158,24 @@ export function GrilleBoutiques({ boutiques }: { boutiques: CarteBoutique[] }) {
     <div className={styles.zoneBarre}>
       {enCours ? <BarreChargement libelle="Chargement des boutiques" valeur={pretes} total={total} /> : null}
     </div>
-    <div className={styles.grid} ref={grille}>
-      {boutiques.map((carte, index) => (
+    <div className={styles.filters}>
+      <label className={styles.search}>
+        <ShopIcon name="search" />
+        <input aria-label="Rechercher une boutique ou une ville" type="search" value={recherche} onChange={(event) => filtrerRecherche(event.target.value)} placeholder="Rechercher une boutique ou une ville" />
+      </label>
+      <label className={styles.cityFilter}>
+        <ShopIcon name="pin" />
+        <select aria-label="Filtrer par ville" value={villeChoisie} onChange={(event) => filtrerVille(event.target.value)}>
+          <option value="">Toutes les villes</option>
+          {villes.map((ville) => <option key={ville} value={ville}>{ville}</option>)}
+        </select>
+      </label>
+      <p className={styles.resultCount} aria-live="polite">{total} boutique{total > 1 ? 's' : ''}</p>
+    </div>
+    {listeVisible.length ? <div className={styles.grid} ref={grille}>
+      {listeVisible.map((carte, index) => (
         <Carte key={carte.id} carte={carte} index={index} images={index < autorisees} prete={estPrete(carte)} onImage={marquer} />
       ))}
-    </div>
+    </div> : <div className={styles.noResults} role="status"><ShopIcon name="search" /><strong>Aucune boutique trouvée</strong><span>Essayez un autre nom ou choisissez une autre ville.</span><button type="button" onClick={() => { setRecherche(''); setVilleChoisie('') }}>Effacer les filtres</button></div>}
   </>
 }

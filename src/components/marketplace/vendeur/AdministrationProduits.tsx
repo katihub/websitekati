@@ -122,12 +122,12 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
 const TAILLE_PAGE_PRODUITS = 25
 const apercusEnCache = new Map<string, Promise<string | null>>()
 
-function chargerApercu(boutiqueId: string, produitId: string): Promise<string | null> {
+function chargerApercu(boutiqueId: string, produitId: string, signal: AbortSignal): Promise<string | null> {
   const cle = `${boutiqueId}:${produitId}`
   const cache = apercusEnCache.get(cle)
   if (cache) return cache
-  const chargement = api<{ images: ImageFiche[] }>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu`)
-    .then(({ images }) => images
+  const chargement = api<{ images?: ImageFiche[] }>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu`, { signal })
+    .then(({ images }) => (images ?? [])
       .filter((image) => image.statut === 'publiee')
       .sort((a, b) => a.ordre - b.ordre)[0]?.url ?? null)
     .catch((cause: unknown) => {
@@ -135,6 +135,9 @@ function chargerApercu(boutiqueId: string, produitId: string): Promise<string | 
       throw cause
     })
   apercusEnCache.set(cle, chargement)
+  signal.addEventListener('abort', () => {
+    if (apercusEnCache.get(cle) === chargement) apercusEnCache.delete(cle)
+  }, { once: true })
   return chargement
 }
 
@@ -146,17 +149,18 @@ function ApercuProduit({ boutiqueId, produit }: { boutiqueId: string; produit: P
 
   useEffect(() => {
     let actif = true
+    const controleur = new AbortController()
     const charger = () => {
       if (demande.current) return
       demande.current = true
-      void chargerApercu(boutiqueId, produit.id)
+      void chargerApercu(boutiqueId, produit.id, controleur.signal)
         .then((image) => { if (actif) setUrl(image) })
-        .catch(() => { if (actif) setErreur(true) })
+        .catch(() => { if (actif && !controleur.signal.aborted) setErreur(true) })
     }
     const cible = element.current
     if (!cible || !('IntersectionObserver' in window)) {
       charger()
-      return () => { actif = false }
+      return () => { actif = false; controleur.abort() }
     }
     const observateur = new IntersectionObserver(([entree]) => {
       if (entree?.isIntersecting) {
@@ -165,7 +169,7 @@ function ApercuProduit({ boutiqueId, produit }: { boutiqueId: string; produit: P
       }
     }, { rootMargin: '180px' })
     observateur.observe(cible)
-    return () => { actif = false; observateur.disconnect() }
+    return () => { actif = false; observateur.disconnect(); controleur.abort() }
   }, [boutiqueId, produit.id])
 
   return <span ref={element} className={styles.productThumb} aria-label={url ? `Photo de ${produit.nom}` : erreur ? `Aperçu indisponible pour ${produit.nom}` : `Chargement de l’aperçu de ${produit.nom}`} title={erreur ? 'Aperçu momentanément indisponible' : undefined}>

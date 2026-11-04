@@ -60,9 +60,9 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
   const [message, setMessage] = useState<{ type: 'succes' | 'erreur'; texte: string } | null>(null)
   const fichiers = useRef<HTMLInputElement>(null)
 
-  const charger = useCallback(async () => {
+  const charger = useCallback(async (signal?: AbortSignal) => {
     try {
-      const prochain = await api<ContenuFiche>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu`)
+      const prochain = await api<ContenuFiche>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu`, { signal })
       setContenu(prochain)
       setGalerie(galerieInitiale(prochain.images))
       setMetaTitre(prochain.produit.metaTitre ?? '')
@@ -71,16 +71,25 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
       setFicheTechnique(prochain.produit.ficheTechnique ?? '')
       setPdf(prochain.produit.ficheTechniquePdfCle && prochain.produit.ficheTechniquePdfUrl ? { cle: prochain.produit.ficheTechniquePdfCle, url: prochain.produit.ficheTechniquePdfUrl } : null)
     } catch (cause) {
-      setMessage({ type: 'erreur', texte: erreur(cause) })
+      if (!signal?.aborted) setMessage({ type: 'erreur', texte: erreur(cause) })
     } finally {
-      setChargement(false)
+      if (!signal?.aborted) setChargement(false)
     }
   }, [boutiqueId, produitId])
 
   useEffect(() => {
-    const minuterie = window.setTimeout(() => void charger(), 0)
-    return () => window.clearTimeout(minuterie)
-  }, [charger])
+    const controleur = new AbortController()
+    const minuterie = window.setTimeout(() => void charger(controleur.signal), 0)
+    const fermerSurEchap = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onFermer()
+    }
+    window.addEventListener('keydown', fermerSurEchap)
+    return () => {
+      window.clearTimeout(minuterie)
+      window.removeEventListener('keydown', fermerSurEchap)
+      controleur.abort()
+    }
+  }, [charger, onFermer])
 
   async function deposer(liste: FileList | null) {
     if (!liste?.length || !contenu) return
@@ -160,7 +169,10 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
     }
   }
 
-  if (chargement) return <p role="status" className="p-6 text-small">Chargement de la fiche…</p>
+  if (chargement) return <section className="grid gap-4 p-6" aria-labelledby="fiche-chargement-titre">
+    <button type="button" onClick={onFermer} className="min-h-11 justify-self-start rounded-control border border-rule px-4 text-small font-semibold">← Retour aux produits</button>
+    <p id="fiche-chargement-titre" role="status" className="text-small">Chargement de la fiche…</p>
+  </section>
   if (!contenu) return <div className="p-6"><p role="alert" className="text-small text-warn">{message?.texte ?? 'Fiche introuvable.'}</p><button type="button" onClick={onFermer} className="mt-4 min-h-11 rounded-control border border-rule px-4 text-small font-semibold">Retour</button></div>
 
   const parId = new Map(contenu.images.map((i) => [i.id, i]))
