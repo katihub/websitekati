@@ -97,8 +97,21 @@ export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
 export async function lireBoutiqueMarketplace(slug: string): Promise<BoutiquePubliqueMarketplace | null> {
   try {
     const reponse = await fetch(`${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`, { headers: entetesLectureCommune(), next: { revalidate: 60 } })
-    if (!reponse.ok) return null
-    return await reponse.json()
+    if (reponse.ok) return await reponse.json() as BoutiquePubliqueMarketplace
+
+    const [accueil, liste] = await Promise.all([
+      lireAccueilMarketplace(),
+      lireOffresMarketplace({ boutique: slug, taille: 24 }),
+    ])
+    const boutique = accueil.boutiques.find((item) => item.slug === slug)
+    if (!boutique || liste.indisponible) return null
+
+    return {
+      ...boutique,
+      offres: liste.offres.map(({ boutique: _boutique, ...offre }) => offre),
+      pagination: liste.pagination,
+      facettes: liste.facettes,
+    }
   } catch {
     return null
   }

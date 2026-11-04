@@ -28,6 +28,46 @@
 .lienBarre{border:0;background:none;padding:0;color:inherit;font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:1050px){.actions button.actionLien span{display:none}.actionsAttente{width:110px}}
 @media(max-width:700px){.salutation{display:none}}
+.brandHome{display:flex;flex:none;align-items:center;gap:12px}
+.homeLink{display:grid;width:38px;height:38px;flex:none;place-items:center;border:1px solid #ffb56e;border-radius:50%;background:#fff7ef;color:#061f4f}
+.homeLink svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.supportContacts{display:inline-flex;flex:none;align-items:center;gap:12px}
+.supportWhatsApp{display:inline-flex;flex:none;align-items:center;gap:6px;color:#fff!important;font-size:.68rem}
+.supportWhatsApp svg{width:18px;height:18px;fill:none;stroke:#42d879;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.topbarLinksWaiting{display:block;width:174px;height:26px;flex:none}
+.topbarAction{display:inline-flex;flex:none;align-items:center;gap:5px;color:#fff!important;font-size:.67rem}
+.topbarAction svg{width:16px;height:16px}
+.topbar button.topbarAction{border:0;background:none;padding:0;font:inherit;cursor:pointer}
+.topbarAction:hover{text-decoration:underline;text-underline-offset:3px}
+.navInner{position:relative;overflow:visible!important}
+.navScroll{display:flex;min-width:0;flex:1;align-items:center;gap:29px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.navScroll::-webkit-scrollbar{display:none}
+.nav .allCategories{display:none}
+.navLink{display:inline-flex;align-items:center;gap:6px}
+.navIcon{display:inline-grid;width:17px;height:17px;flex:none;place-items:center;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mobileCategories{position:relative;display:block;flex:none}
+.mobileCategoriesButton{display:flex;min-height:42px;align-items:center;gap:7px;border:0;background:#fff;color:#061f4f;font:inherit;font-size:.72rem;font-weight:800;white-space:nowrap;cursor:pointer}
+.mobileCategoriesButton>svg:first-child,.mobileMegaCategoryIcon,.mobileMegaTitle>span:last-child svg,.mobileMegaAll>svg,.mobileMegaMenu>header>button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mobileCategoriesButton[aria-expanded=true]>svg:last-child{transform:rotate(180deg)}
+.mobileMegaCategoryIcon{flex:none}
+.footerLink{display:inline-flex;align-items:center;gap:8px}
+.footerLink>svg,.footerGrid h2>svg,.footerGrid>div:first-child>p>svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.footerLink>svg{color:#9fb9dc}
+.footerGrid h2{display:flex;align-items:center;gap:8px}
+.footerGrid h2>svg{width:17px;height:17px;color:#ff9a2c}
+@media(max-width:1050px){.navScroll{gap:22px}}
+@media(max-width:700px){
+  .topbar .topbarInner{min-height:38px;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;padding-block:4px}
+  .topbar .supportContacts{order:0;flex:1 0 100%;justify-content:center;gap:clamp(8px,4vw,18px)}
+  .topbar .supportWhatsApp{height:30px;gap:4px;font-size:.6rem}
+  .topbar .supportWhatsApp svg{width:17px;height:17px}
+  .topbar .topbarAction{order:2}
+  .topbar .topbarAction>span{display:inline}
+  .topbar .languageSwitcher{order:1}
+  .topbar .languageSwitcher>span{display:none}
+  .navScroll{gap:14px}
+  .footerLink>svg{width:17px;height:17px}
+}
 
 /* Navigation des rayons : la barre garde son defilement, tandis que le bouton
    mobile ouvre un panneau complet hors de cette zone de scroll. */

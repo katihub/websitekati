@@ -71,6 +71,7 @@
 @media(max-width:1200px){.categorySubmenu{width:min(390px,calc(100vw - 270px))}}
 @media(max-width:850px){.categorySubmenu{display:none}}
 @media(prefers-reduced-motion:reduce){.categorySubmenu,.categorySubmenuGrid a{transition:none}}
+.categoryLink>svg{width:18px;height:18px;justify-self:center;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
 /* EXPLOREZ NOS RAYONS : la liste des rayons, les sous-categories en onglets, et huit offres. */
 .rayons{margin-top:44px}
