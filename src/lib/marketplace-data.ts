@@ -46,7 +46,11 @@ export interface OffreMarketplace {
 
 // L’API boutique fournit son identité une seule fois, pas dans chaque offre.
 export type OffreBoutiqueMarketplace = Omit<OffreMarketplace, 'boutique'>
-export type BoutiquePubliqueMarketplace = BoutiqueMarketplace & { offres: OffreBoutiqueMarketplace[] }
+export type BoutiquePubliqueMarketplace = BoutiqueMarketplace & {
+  offres: OffreBoutiqueMarketplace[]
+  pagination?: ListeOffresMarketplace['pagination']
+  facettes?: ListeOffresMarketplace['facettes']
+}
 
 export interface AccueilMarketplace {
   boutiques: BoutiqueMarketplace[]

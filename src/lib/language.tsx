@@ -116,7 +116,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored === 'fr' || stored === 'en') setLocaleState(stored)
+    if (stored !== 'fr' && stored !== 'en') return
+
+    let active = true
+    window.queueMicrotask(() => {
+      if (active) setLocaleState(stored)
+    })
+    return () => { active = false }
   }, [])
 
   useEffect(() => {

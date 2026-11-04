@@ -67,29 +67,36 @@ export function CentreAssistance() {
   const [erreurFormulaire, setErreurFormulaire] = useState('')
   const [confirmation, setConfirmation] = useState('')
 
-  const charger = useCallback(async (signal?: AbortSignal) => {
+  const charger = useCallback(async (signal?: AbortSignal): Promise<Etat | null> => {
     if (!apiDisponible) {
-      setEtat({ phase: 'erreur', message: 'Le service d’assistance n’est pas configuré.' })
-      return
+      return { phase: 'erreur', message: 'Le service d’assistance n’est pas configuré.' }
     }
     try {
       const [contextes, tickets] = await Promise.all([
         api<Contexte[]>('/marketplace/demandes-client/contextes', { signal }),
         api<Ticket[]>('/marketplace/demandes-client', { signal }),
       ])
-      if (!signal?.aborted) setEtat({ phase: 'pret', contextes, tickets })
+      if (signal?.aborted) return null
+      return { phase: 'pret', contextes, tickets }
     } catch (cause) {
-      if (signal?.aborted) return
-      if (cause instanceof ErreurApi && cause.code === 401) setEtat({ phase: 'connexion' })
-      else setEtat({ phase: 'erreur', message: cause instanceof Error ? cause.message : 'L’assistance est momentanément indisponible.' })
+      if (signal?.aborted) return null
+      if (cause instanceof ErreurApi && cause.code === 401) return { phase: 'connexion' }
+      return { phase: 'erreur', message: cause instanceof Error ? cause.message : 'L’assistance est momentanément indisponible.' }
     }
   }, [])
 
   useEffect(() => {
     const controleur = new AbortController()
-    void charger(controleur.signal)
+    void charger(controleur.signal).then((prochainEtat) => {
+      if (prochainEtat) setEtat(prochainEtat)
+    })
     return () => controleur.abort()
   }, [charger])
+
+  async function recharger() {
+    const prochainEtat = await charger()
+    if (prochainEtat) setEtat(prochainEtat)
+  }
 
   const commande = useMemo(() => etat.phase === 'pret' ? etat.contextes.find((item) => item.id === commandeId) : undefined, [commandeId, etat])
   const sousCommande = useMemo(() => commande?.sousCommandes.find((item) => item.id === sousCommandeId), [commande, sousCommandeId])
@@ -123,7 +130,7 @@ export function CentreAssistance() {
       setFormulaireOuvert(false)
       setCommandeId('')
       setSousCommandeId('')
-      await charger()
+      await recharger()
     } catch (cause) {
       setErreurFormulaire(cause instanceof Error ? cause.message : 'Le ticket n’a pas pu être ouvert.')
     } finally {
@@ -141,7 +148,7 @@ export function CentreAssistance() {
       await api(`/marketplace/demandes-client/${ticket.id}/messages`, { methode: 'POST', corps: { contenu } })
       formulaire.reset()
       setConfirmation(`Votre réponse au ticket ${ticket.reference} a été envoyée.`)
-      await charger()
+      await recharger()
     } catch (cause) {
       setErreurFormulaire(cause instanceof Error ? cause.message : 'Votre réponse n’a pas pu être envoyée.')
     }

@@ -47,19 +47,22 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   const ici = useIci()
   const lines = cart.lines.filter(line => selectedKeys === null || selectedKeys.includes(cartLineKey(line)))
   const { checked, loading, error: serviceError, refresh } = useCheckedCart(lines)
-  const [accessories, setAccessories] = useState<OffreMarketplace[]>([])
   const accessoryCategories = [...new Set(checked.map(item => item.categorieId).filter((id): id is string => Boolean(id)))].join(',')
   const accessorySlugs = [...new Set(lines.map(line => line.slug))].join(',')
+  const accessoryQuery = buildAccessoryRecommendationQuery(accessoryCategories ? accessoryCategories.split(',') : [], accessorySlugs ? accessorySlugs.split(',') : [])
+  const [accessoryResult, setAccessoryResult] = useState<{ query: string; offers: OffreMarketplace[] } | null>(null)
+  const accessories = !loading && !serviceError && accessoryResult?.query === accessoryQuery
+    ? accessoryResult.offers
+    : []
   useEffect(() => {
-    const query = buildAccessoryRecommendationQuery(accessoryCategories ? accessoryCategories.split(',') : [], accessorySlugs ? accessorySlugs.split(',') : [])
-    if (!query || loading || serviceError) { setAccessories([]); return }
+    if (!accessoryQuery || loading || serviceError) return
     let active = true
-    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/v1/marketplace/accessoires${query}`, { headers: { Accept: 'application/json' } })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/v1/marketplace/accessoires${accessoryQuery}`, { headers: { Accept: 'application/json' } })
       .then(response => response.ok ? response.json() as Promise<OffreMarketplace[]> : [])
-      .then(result => { if (active) setAccessories(result.slice(0, 4)) })
-      .catch(() => { if (active) setAccessories([]) })
+      .then(result => { if (active) setAccessoryResult({ query: accessoryQuery, offers: result.slice(0, 4) }) })
+      .catch(() => { if (active) setAccessoryResult({ query: accessoryQuery, offers: [] }) })
     return () => { active = false }
-  }, [accessoryCategories, accessorySlugs, loading, serviceError])
+  }, [accessoryQuery, loading, serviceError])
   const groups = groupDeliveries(checked)
   const total = checkedTotal(checked)
   const count = lines.reduce((sum, line) => sum + line.qty, 0)
