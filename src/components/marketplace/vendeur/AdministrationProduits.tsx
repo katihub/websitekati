@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- les aperçus utilisent des URL blob locales avant tout téléversement */
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import Image from 'next/image'
 
 import { api, enteteAutorisation } from '@/lib/api'
 import { lireSuggestionProduit, type MerchantProductDraft, type MerchantProductSuggestion } from '@/lib/merchant-product-ai'
@@ -20,6 +21,7 @@ type Produit = {
   categorieDetail?: CategorieProduit
   statut: string
   creeLe: string
+  images?: ImageFiche[]
 }
 
 type Revision = {
@@ -113,20 +115,95 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
     {notice ? <p role="status" className={styles.feedback}>{notice}</p> : null}
     {mode === 'ajout' ? <AjoutProduit boutiqueId={boutiqueId} nomBoutique={nomBoutique} canPublish={canPublish} onAnnuler={() => setMode('liste')} onCree={async () => { await onRefresh(); setNotice('Produit envoyé à la modération. Vous pouvez suivre son statut dans la liste.'); setMode('liste') }} /> : null}
     {mode === 'lot' ? <ModificationLot boutiqueId={boutiqueId} offres={offres} onRetour={() => setMode('liste')} onRefresh={onRefresh} /> : null}
-    {mode === 'liste' ? <ListeProduits produits={produits} offres={offres} onFiche={setFiche} onAjouter={() => setMode('ajout')} onLot={() => setMode('lot')} /> : null}
+    {mode === 'liste' ? <ListeProduits boutiqueId={boutiqueId} produits={produits} offres={offres} onFiche={setFiche} onAjouter={() => setMode('ajout')} onLot={() => setMode('lot')} /> : null}
   </section>
 }
 
-function ListeProduits({ produits, offres, onFiche, onAjouter, onLot }: { produits: Produit[]; offres: Offre[]; onFiche: (id: string) => void; onAjouter: () => void; onLot: () => void }) {
+const TAILLE_PAGE_PRODUITS = 25
+const apercusEnCache = new Map<string, Promise<string | null>>()
+
+function chargerApercu(boutiqueId: string, produitId: string): Promise<string | null> {
+  const cle = `${boutiqueId}:${produitId}`
+  const cache = apercusEnCache.get(cle)
+  if (cache) return cache
+  const chargement = api<{ images: ImageFiche[] }>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu`)
+    .then(({ images }) => images
+      .filter((image) => image.statut === 'publiee')
+      .sort((a, b) => a.ordre - b.ordre)[0]?.url ?? null)
+    .catch((cause: unknown) => {
+      apercusEnCache.delete(cle)
+      throw cause
+    })
+  apercusEnCache.set(cle, chargement)
+  return chargement
+}
+
+function ApercuProduit({ boutiqueId, produit }: { boutiqueId: string; produit: Produit }) {
+  const element = useRef<HTMLSpanElement>(null)
+  const demande = useRef(false)
+  const [url, setUrl] = useState<string | null>(null)
+  const [erreur, setErreur] = useState(false)
+
+  useEffect(() => {
+    let actif = true
+    const charger = () => {
+      if (demande.current) return
+      demande.current = true
+      void chargerApercu(boutiqueId, produit.id)
+        .then((image) => { if (actif) setUrl(image) })
+        .catch(() => { if (actif) setErreur(true) })
+    }
+    const cible = element.current
+    if (!cible || !('IntersectionObserver' in window)) {
+      charger()
+      return () => { actif = false }
+    }
+    const observateur = new IntersectionObserver(([entree]) => {
+      if (entree?.isIntersecting) {
+        observateur.disconnect()
+        charger()
+      }
+    }, { rootMargin: '180px' })
+    observateur.observe(cible)
+    return () => { actif = false; observateur.disconnect() }
+  }, [boutiqueId, produit.id])
+
+  return <span ref={element} className={styles.productThumb} aria-label={url ? `Photo de ${produit.nom}` : erreur ? `Aperçu indisponible pour ${produit.nom}` : `Chargement de l’aperçu de ${produit.nom}`} title={erreur ? 'Aperçu momentanément indisponible' : undefined}>
+    {url ? <Image src={url} alt="" width={56} height={56} sizes="56px" /> : <span aria-hidden="true">{erreur ? '!' : '□'}</span>}
+  </span>
+}
+
+function ListeProduits({ boutiqueId, produits, offres, onFiche, onAjouter, onLot }: { boutiqueId: string; produits: Produit[]; offres: Offre[]; onFiche: (id: string) => void; onAjouter: () => void; onLot: () => void }) {
   const [recherche, setRecherche] = useState('')
-  const filtres = produits.filter((produit) => `${produit.nom} ${produit.marque ?? ''} ${produit.categorie ?? ''}`.toLowerCase().includes(recherche.toLowerCase()))
+  const [statut, setStatut] = useState('tous')
+  const [page, setPage] = useState(1)
+  const offresParProduit = useMemo(() => {
+    const index = new Map<string, Offre[]>()
+    offres.forEach((offre) => index.set(offre.produit.id, [...(index.get(offre.produit.id) ?? []), offre]))
+    return index
+  }, [offres])
+  const filtres = useMemo(() => {
+    const query = recherche.trim().toLocaleLowerCase('fr')
+    return produits.filter((produit) =>
+      (statut === 'tous' || produit.statut === statut)
+      && (!query || `${produit.nom} ${produit.marque ?? ''} ${produit.categorie ?? ''}`.toLocaleLowerCase('fr').includes(query)),
+    )
+  }, [produits, recherche, statut])
+  const totalPages = Math.max(1, Math.ceil(filtres.length / TAILLE_PAGE_PRODUITS))
+  const visibles = filtres.slice((page - 1) * TAILLE_PAGE_PRODUITS, page * TAILLE_PAGE_PRODUITS)
   return <>
-    <div className={styles.toolbar}><label className={styles.search}><span aria-hidden>⌕</span><input aria-label="Rechercher un produit" value={recherche} onChange={(event) => setRecherche(event.target.value)} placeholder="Rechercher un produit, une marque…" /></label><button type="button" onClick={onLot} disabled={!offres.length}>Modifier 10 ou 20 offres</button></div>
-    {filtres.length ? <div className={styles.listWrap}><table className={styles.productTable}><thead><tr><th>Produit</th><th>Catégorie</th><th>Statut</th><th>Offres</th><th>Action</th></tr></thead><tbody>{filtres.map((produit) => {
-      const liees = offres.filter((offre) => offre.produit.id === produit.id)
+    <div className={styles.toolbar}><label className={styles.search}><span aria-hidden>⌕</span><input aria-label="Rechercher un produit" value={recherche} onChange={(event) => { setRecherche(event.target.value); setPage(1) }} placeholder="Rechercher un produit, une marque…" /></label><label className={styles.statusFilter}>Statut<select aria-label="Filtrer par statut" value={statut} onChange={(event) => { setStatut(event.target.value); setPage(1) }}><option value="tous">Tous les statuts</option>{[...new Set(produits.map((produit) => produit.statut))].map((value) => <option key={value} value={value}>{STATUTS[value] ?? value}</option>)}</select></label><button type="button" onClick={onLot} disabled={!offres.length}>Modifier prix, disponibilité et stock</button></div>
+    {filtres.length ? <>
+      <p className={styles.listSummary}>{filtres.length} produit(s) · page {page} sur {totalPages}</p>
+      <div className={styles.listWrap}><table className={styles.productTable}><thead><tr><th>Produit</th><th>Catégorie</th><th>Statut</th><th>Offres / stock</th><th>Action</th></tr></thead><tbody>{visibles.map((produit) => {
+      const liees = offresParProduit.get(produit.id) ?? []
       const prix = liees.map((offre) => offre.prixFcfa ?? offre.revisions[0]?.prixFcfa).filter((value): value is number => typeof value === 'number').sort((a, b) => a - b)[0]
-      return <tr key={produit.id}><td><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span></td><td><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}</td><td>{EDITABLE.includes(produit.statut) ? <button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>Fiche et photos</button> : '—'}</td></tr>
-    })}</tbody></table></div> : <div className={styles.empty}><span aria-hidden>□</span><h3>{recherche ? 'Aucun résultat' : 'Votre catalogue est vide'}</h3><p>{recherche ? 'Essayez un autre nom ou une autre marque.' : 'Créez votre première fiche avec un aperçu client en direct.'}</p>{!recherche ? <button type="button" className={styles.primary} onClick={onAjouter}>Ajouter un produit</button> : null}</div>}
+      const disponibles = liees.reduce((total, offre) => total + Math.max(0, (offre.stock?.quantite ?? 0) - (offre.stock?.quantiteReservee ?? 0)), 0)
+      const stockLabel = liees.length ? liees.some((offre) => !offre.stock) ? 'Stock non renseigné' : `${disponibles} disponible(s)` : null
+      return <tr key={produit.id}><td><div className={styles.productIdentity}><ApercuProduit boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small></div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span></td><td><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</td><td>{EDITABLE.includes(produit.statut) ? <button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>Fiche et photos</button> : '—'}</td></tr>
+    })}</tbody></table></div>
+      <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" aria-label="Page précédente" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>←</button><button type="button" aria-label="Page suivante" disabled={page === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>→</button></div></div>
+    </> : <div className={styles.empty}><span aria-hidden>□</span><h3>{recherche || statut !== 'tous' ? 'Aucun résultat' : 'Votre catalogue est vide'}</h3><p>{recherche || statut !== 'tous' ? 'Modifiez la recherche ou le statut sélectionné.' : 'Créez votre première fiche avec un aperçu client en direct.'}</p>{!recherche && statut === 'tous' ? <button type="button" className={styles.primary} onClick={onAjouter}>Ajouter un produit</button> : null}</div>}
   </>
 }
 
@@ -359,7 +436,8 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
     <div className={styles.bulkInfo}><div><strong>Modification en lot</strong><p>Le stock est appliqué immédiatement. Prix, minimum et délai restent en validation jusqu’à la décision KatiMarket.</p></div><span>{filtrees.length} offre(s)</span></div>
     <div className={styles.bulkScroll}><table className={styles.bulkTable}><thead><tr><th>Produit / offre</th><th>Prix FCFA</th><th>Prix de référence</th><th>Stock</th><th>Minimum</th><th>Délai (3 j max.)</th><th>État</th></tr></thead><tbody>{visibles.map((offre) => {
       const valeur = brouillons[offre.id] ?? valeursOffre(offre); const modifiee = !identique(valeur, valeursOffre(offre)); const erreur = erreurLigne(offre)
-      return <tr key={offre.id} data-modified={modifiee || undefined} data-error={Boolean(erreur) || undefined}><td><strong>{offre.produit.nom}</strong><small>{offre.referenceVendeur}{offre.libelleVariante ? ` · ${offre.libelleVariante}` : ''}</small></td><td><input aria-label={`Prix de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prix} onChange={(e) => changer(offre, 'prix', e.target.value)} /></td><td><input aria-label={`Prix de référence de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prixReference} onChange={(e) => changer(offre, 'prixReference', e.target.value)} /></td><td><input aria-label={`Stock de ${offre.produit.nom}`} inputMode="numeric" value={valeur.stock} onChange={(e) => changer(offre, 'stock', e.target.value)} /></td><td><input aria-label={`Minimum de ${offre.produit.nom}`} inputMode="numeric" value={valeur.minimum} onChange={(e) => changer(offre, 'minimum', e.target.value)} /></td><td><input aria-label={`Délai de ${offre.produit.nom}`} type="number" min="0" max="3" inputMode="numeric" value={valeur.delai} onChange={(e) => changer(offre, 'delai', e.target.value)} /></td><td>{erreur ? <span className={styles.rowError} title={erreur}>À corriger</span> : REVISIONS_OUVERTES.includes(offre.revisions[0]?.statut ?? '') ? <span className={styles.pending}>En validation</span> : <span className={styles.ready}>{modifiee ? 'Modifié' : 'Prêt'}</span>}</td></tr>
+      const disponible = Number(valeur.stock) - (offre.stock?.quantiteReservee ?? 0)
+      return <tr key={offre.id} data-modified={modifiee || undefined} data-error={Boolean(erreur) || undefined}><td><strong>{offre.produit.nom}</strong><small>{offre.referenceVendeur}{offre.libelleVariante ? ` · ${offre.libelleVariante}` : ''}</small></td><td><input aria-label={`Prix de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prix} onChange={(e) => changer(offre, 'prix', e.target.value)} /></td><td><input aria-label={`Prix de référence de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prixReference} onChange={(e) => changer(offre, 'prixReference', e.target.value)} /></td><td><input aria-label={`Stock de ${offre.produit.nom}`} inputMode="numeric" value={valeur.stock} onChange={(e) => changer(offre, 'stock', e.target.value)} /><small className={styles.availability} data-available={disponible > 0}>{disponible > 0 ? `${disponible} disponible(s)` : 'Indisponible'}</small></td><td><input aria-label={`Minimum de ${offre.produit.nom}`} inputMode="numeric" value={valeur.minimum} onChange={(e) => changer(offre, 'minimum', e.target.value)} /></td><td><input aria-label={`Délai de ${offre.produit.nom}`} type="number" min="0" max="3" inputMode="numeric" value={valeur.delai} onChange={(e) => changer(offre, 'delai', e.target.value)} /></td><td>{erreur ? <span className={styles.rowError} title={erreur}>À corriger</span> : REVISIONS_OUVERTES.includes(offre.revisions[0]?.statut ?? '') ? <span className={styles.pending}>En validation</span> : <span className={styles.ready}>{modifiee ? 'Modifié' : 'Prêt'}</span>}</td></tr>
     })}</tbody></table></div>
     <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>←</button><button type="button" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>→</button></div></div>
     {message ? <p className={styles.feedback} role="status">{message}</p> : null}

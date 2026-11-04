@@ -213,6 +213,7 @@ test('le marchand modifie prix, stock et minimum en lot depuis Produits', async 
   await page.getByRole('button', { name: 'Modification en lot' }).click()
   await page.getByLabel('Prix de Samsung Galaxy A15').fill('139000')
   await page.getByLabel('Stock de Samsung Galaxy A15').fill('9')
+  await expect(page.getByText('8 disponible(s)')).toBeVisible()
   await page.getByLabel('Minimum de Samsung Galaxy A15').fill('3')
   await expect(page.getByText('3 modification(s) non enregistrée(s)')).toBeVisible()
   if (process.env.CAPTURE_SELLER_PRODUCTS) await page.screenshot({ path: 'test-results/katihub-produits-lot.png', fullPage: true })

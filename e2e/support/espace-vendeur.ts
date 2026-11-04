@@ -14,6 +14,7 @@ export async function espaceVendeur(page: Page, litiges: unknown[]) {
     .quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${b}/documents$`), [])
     .quand('GET', new RegExp(`^/marketplace/boutiques/${b}/propositions-produits$`), [])
     .quand('GET', new RegExp(`^/marketplace/boutiques/${b}/offres$`), [])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${b}/produits/[^/]+/contenu$`), { images: [] })
     .quand('GET', /^\/marketplace\/categories$/, categories())
     .quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${b}/(commandes|livraisons|paiements|avis)`), vide)
     .quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${b}/clients`), { elements: [] })

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 
 import { ErreurApi, api } from '@/lib/api'
 
@@ -198,14 +199,13 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
           </label>
         </div>
         {galerie.length ? (
-          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Photos publiées, dans l’ordre">
+          <ol className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4" aria-label="Photos publiées, dans l’ordre">
             {galerie.map((element, index) => {
               const image = parId.get(element.imageId)
               if (!image) return null
               return (
                 <li key={element.imageId} className="grid gap-2 rounded-well border border-rule p-3" data-testid={`fiche-photo-${element.imageId}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- apercu d'une image deposee, pas encore servie par le CDN d'images */}
-                  <img src={image.url} alt={element.texteAlternatif || `Photo ${index + 1} de ${contenu.produit.nom}`} className="aspect-square w-full rounded-control bg-space object-contain" />
+                  <Image src={image.url} alt={element.texteAlternatif || `Photo ${index + 1} de ${contenu.produit.nom}`} width={320} height={320} sizes="(max-width: 640px) 160px, 220px" className="mx-auto aspect-square w-full max-w-[220px] rounded-control bg-space object-contain" />
                   <p className="text-micro text-ink-3">{index === 0 ? 'Image principale' : `Position ${index + 1}`}{image.statut === 'proposee' ? ' · nouvelle' : ''}</p>
                   <label className="text-micro font-semibold">Texte alternatif
                     <input value={element.texteAlternatif} maxLength={200} disabled={verrouille} placeholder="Ex. Vue de face, coloris noir"
@@ -227,8 +227,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
             <p className="text-micro text-ink-3">Photos déposées hors galerie : elles ne seront pas publiées.</p>
             <ul className="flex flex-wrap gap-2">{enAttente.map((image) => (
               <li key={image.id}><button type="button" disabled={verrouille || galerie.length >= IMAGES_MAX} onClick={() => setGalerie((a) => [...a, { imageId: image.id, texteAlternatif: image.texteAlternatif ?? '' }])} className="flex min-h-11 items-center gap-2 rounded-control border border-rule p-1 pr-3 text-micro font-semibold">
-                {/* eslint-disable-next-line @next/next/no-img-element -- vignette d'une image deposee */}
-                <img src={image.url} alt="" className="size-9 rounded object-cover" />Remettre dans la galerie
+                <Image src={image.url} alt="" width={36} height={36} sizes="36px" className="size-9 rounded object-cover" />Remettre dans la galerie
               </button></li>
             ))}</ul>
           </div>

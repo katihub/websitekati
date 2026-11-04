@@ -147,7 +147,7 @@ type Panel = 'overview' | 'verification' | 'products' | 'offers' | 'quotes' | 'm
 type Access = 'allowed' | 'denied' | 'error'
 const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed', disputes: 'allowed' }
 const initialLoaded: Record<Section, boolean> = { documents: false, products: false, offers: false, orders: false, deliveries: false, payments: false, finance: false, reviews: false, customers: false, members: false, disputes: false }
-const overviewSections: Section[] = ['documents', 'products', 'offers', 'orders', 'deliveries']
+const overviewSections: Section[] = ['documents', 'orders', 'deliveries']
 
 const DOCUMENT_LABELS: Record<string, string> = {
   identite: 'Pièce d’identité (CNI ou passeport)',
