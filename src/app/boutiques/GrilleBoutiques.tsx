@@ -23,7 +23,7 @@ export interface CarteBoutique {
 const LOT = 5
 /** Une image lente n'arrete pas la suite : l'optimiseur peut y passer plusieurs secondes. */
 const ATTENTE_LOT_MS = 4000
-const NOMBRE_APERCUS = 3
+const NOMBRE_APERCUS = 5
 
 const imagesDe = (carte: CarteBoutique) => [carte.banniereUrl, carte.logoUrl, ...carte.miniatures].filter((url): url is string => Boolean(url))
 
@@ -96,7 +96,8 @@ function Carte({ carte, index, images, prete, onImage }: { carte: CarteBoutique;
 /**
  * TOUTES LES CARTES SONT DANS LE HTML, SEULES LEURS IMAGES ATTENDENT. Le nom et le
  * lien de chaque boutique restent lisibles tout de suite et par les moteurs de
- * recherche. Une carte coute jusqu'a six images : un lot ne les demande que
+ * recherche. Une carte peut charger sa couverture, son logo et cinq aperçus :
+ * un lot ne les demande que
  * lorsque le precedent est termine et que le lot arrive pres de l'ecran, pour ne
  * pas faire payer au client les images qu'il ne verra jamais.
  */

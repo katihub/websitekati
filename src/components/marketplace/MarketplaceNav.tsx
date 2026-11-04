@@ -27,13 +27,13 @@ export function MarketplaceNav({ categories }: { categories: readonly CategorieA
         <ShopIcon name="grid" className={styles.navIcon} />{text('allCategories')}
       </Link>
       <MobileCategoriesMenu categories={categories} />
+      <Link href="/boutiques" className={styles.navLink}><ShopIcon name="bag" className={styles.navIcon} />{text('shops')}</Link>
       <div className={styles.navScroll}>
         {categoriesVisibles.map(categorie => (
           <Link key={categorie.id} href={`/categories/${categorie.slug}`} className={styles.navLink}>
             <ShopIcon name={iconeCategorieMarketplace(categorie.nom)} className={styles.navIcon} />{categorie.nom}
           </Link>
         ))}
-        <Link href="/boutiques" className={styles.navLink}><ShopIcon name="bag" className={styles.navIcon} />{text('shops')}</Link>
         <Link href="/promotions" className={styles.navLink}><ShopIcon name="tag" className={styles.navIcon} />{text('promotionsMenu')}</Link>
         <Link href="/soldes" className={styles.navLink}><ShopIcon name="tag" className={styles.navIcon} />{text('salesMenu')}</Link>
         <Link href="/devenir-vendeur" className={styles.navLink}><ShopIcon name="tag" className={styles.navIcon} />{text('sell')}</Link>

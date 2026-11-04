@@ -29,7 +29,7 @@ export default async function BoutiquesPage() {
       .filter((offre) => offre.boutique.slug === shop.slug)
       .flatMap((offre) => offre.produit.images ?? [])
       .map((image) => image.url))]
-      .slice(0, 3),
+      .slice(0, 5),
   }))
   return (
     <div className={styles.page}>
