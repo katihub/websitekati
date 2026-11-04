@@ -3,6 +3,14 @@ import type { Metadata } from 'next'
 import { lireBoutiqueMarketplace } from '@/lib/marketplace-data'
 import { ShopStorefront } from '@/components/marketplace/ShopStorefront'
 
+/**
+ * Une liste vide fait de chaque boutique une page statique, construite a sa premiere
+ * visite puis regeneree en arriere-plan, au lieu d'un rendu a chaque requete.
+ */
+export function generateStaticParams() {
+  return []
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const boutique = await lireBoutiqueMarketplace(slug)

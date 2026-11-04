@@ -176,7 +176,7 @@ export function NavigationProgress() {
       // so it draws over the green band and never over a panel the reader opened
       // on purpose. `route-bar` is in globals.css: a travelling segment, not a
       // filling one, and it holds still under prefers-reduced-motion.
-      className="route-bar fixed inset-x-0 top-0 z-50 block h-[3px]"
+      className="route-bar fixed inset-x-0 top-0 z-[60] block h-[5px]"
     >
       <span ref={fill} />
     </span>

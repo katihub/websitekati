@@ -1,6 +1,10 @@
 import 'server-only'
 
-import { entetesLectureCommune } from '@/lib/appel-backend'
+import { unstable_cache } from 'next/cache'
+import { cache } from 'react'
+
+import { entetesLectureCommune, entetesPourVisiteur } from '@/lib/appel-backend'
+import { TAILLE_LOT_BOUTIQUE } from '@/lib/shop-catalogue'
 
 export interface BoutiqueMarketplace {
   id: string
@@ -98,28 +102,46 @@ export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
   }
 }
 
-export async function lireBoutiqueMarketplace(slug: string): Promise<BoutiquePubliqueMarketplace | null> {
-  try {
-    const reponse = await fetch(`${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`, { headers: entetesLectureCommune(), next: { revalidate: 60 } })
-    if (reponse.ok) return await reponse.json() as BoutiquePubliqueMarketplace
+/**
+ * L'IDENTITE D'UNE BOUTIQUE, SANS SES OFFRES.
+ *
+ * `/marketplace/boutiques/:slug` renvoie TOUTES les offres et n'accepte aucune
+ * taille : 4 Mo pour les 3 393 produits de NowTech. Au-dela de 2 Mo, le cache de
+ * `fetch` refuse la reponse : chaque visite la relisait, et la page entiere
+ * partait dans le HTML (4,5 Mo, 15 a 45 s). Seule cette route donne le telephone
+ * de la boutique ; on la lit donc ici, et seule l'identite est gardee.
+ */
+const lireIdentiteBoutique = unstable_cache(async (slug: string): Promise<BoutiqueMarketplace | null> => {
+  const reponse = await fetch(`${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`, { headers: entetesLectureCommune(), cache: 'no-store' })
+  if (reponse.status === 404) return null
+  if (!reponse.ok) throw new Error(`le backend a répondu ${reponse.status}`)
+  const { offres: _offres, pagination: _pagination, facettes: _facettes, ...identite } = await reponse.json() as BoutiquePubliqueMarketplace
+  return identite
+}, ['boutique-identite'], { revalidate: 300, tags: ['catalogue'] })
 
-    const [accueil, liste] = await Promise.all([
-      lireAccueilMarketplace(),
-      lireOffresMarketplace({ boutique: slug, taille: 24 }),
-    ])
-    const boutique = accueil.boutiques.find((item) => item.slug === slug)
-    if (!boutique || liste.indisponible) return null
+/**
+ * La boutique et son PREMIER lot d'offres ; `useOffresBoutique` lit les suivants.
+ *
+ * UNE PANNE LEVE, ET SEULE UNE BOUTIQUE INCONNUE REND `null`. La page est gardee
+ * en cache : une regeneration qui leve laisse en place la derniere bonne copie,
+ * alors qu'un `null` publierait une page 404 pendant la panne.
+ */
+export const lireBoutiqueMarketplace = cache(async (slug: string): Promise<BoutiquePubliqueMarketplace | null> => {
+  const [identite, liste] = await Promise.all([
+    lireIdentiteBoutique(slug),
+    lireOffresMarketplace({ boutique: slug, taille: TAILLE_LOT_BOUTIQUE }),
+  ])
+  const boutique = identite ?? (await lireAccueilMarketplace()).boutiques.find((item) => item.slug === slug)
+  if (!boutique) return null
+  if (liste.indisponible) throw new Error(`les offres de la boutique ${slug} sont indisponibles`)
 
-    return {
-      ...boutique,
-      offres: liste.offres.map(({ boutique: _boutique, ...offre }) => offre),
-      pagination: liste.pagination,
-      facettes: liste.facettes,
-    }
-  } catch {
-    return null
+  return {
+    ...boutique,
+    offres: liste.offres.map(({ boutique: _boutique, ...offre }) => offre),
+    pagination: liste.pagination,
+    facettes: liste.facettes,
   }
-}
+})
 
 export async function lireOffresMarketplace(params: {
   marque?: string
@@ -132,7 +154,7 @@ export async function lireOffresMarketplace(params: {
   tri?: 'recent' | 'prix_asc' | 'prix_desc'
   page?: number
   taille?: number
-} = {}): Promise<ListeOffresMarketplace> {
+} = {}, visiteur?: string): Promise<ListeOffresMarketplace> {
   const query = new URLSearchParams()
   if (params.marque) query.set('marque', params.marque)
   if (params.prixMin !== undefined) query.set('prixMin', String(params.prixMin))
@@ -151,7 +173,7 @@ export async function lireOffresMarketplace(params: {
     filtres: { q: params.q ?? null, categorie: params.categorie ?? null, boutique: params.boutique ?? null, tri: params.tri ?? 'recent' },
   }
   try {
-    const reponse = await fetch(`${BASE}/v1/marketplace/offres?${query}`, { headers: entetesLectureCommune(), next: { revalidate: 30 } })
+    const reponse = await fetch(`${BASE}/v1/marketplace/offres?${query}`, { headers: visiteur === undefined ? entetesLectureCommune() : entetesPourVisiteur(visiteur), next: { revalidate: 30 } })
     if (!reponse.ok) return vide
     return await reponse.json() as ListeOffresMarketplace
   } catch {

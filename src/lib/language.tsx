@@ -14,6 +14,8 @@ const COPY = {
   createAccount: { fr: 'Créer un compte', en: 'Create account' },
   greeting: { fr: 'Bonjour', en: 'Hello' },
   signOut: { fr: 'Se déconnecter', en: 'Sign out' },
+  customerSignIn: { fr: 'Connexion client', en: 'Customer sign in' },
+  customerSignOut: { fr: 'Déconnexion client', en: 'Customer sign out' },
   myAccount: { fr: 'Mon compte', en: 'My account' },
   sellerAccount: { fr: 'Compte vendeur', en: 'Seller account' },
   myShop: { fr: 'Ma boutique', en: 'My shop' },

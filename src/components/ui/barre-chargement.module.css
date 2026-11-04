@@ -1,0 +1,9 @@
+.barre{display:grid;gap:6px;width:100%}
+.barre p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:#17366b;font-size:.72rem;font-weight:700}
+.barre b{color:#b64e00;font-variant-numeric:tabular-nums}
+.piste{position:relative;height:8px;overflow:hidden;border-radius:999px;background:#ffe7d1}
+.piste span{position:absolute;inset:0;display:block;border-radius:inherit;background:#ff7900}
+.mesure{transform-origin:0 50%;transition:transform .25s ease}
+.defile{width:40%;animation:defile 1.2s ease-in-out infinite}
+@keyframes defile{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+@media(prefers-reduced-motion:reduce){.mesure{transition:none}.defile{width:100%;animation:none;opacity:.6}}

@@ -14,3 +14,35 @@
 .body b{display:flex;min-height:38px;align-items:center;margin-top:auto;padding-top:12px}
 @media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
 @media(max-width:440px){.grid{grid-template-columns:1fr}}
+
+/* Toutes les cartes ont la meme hauteur : chaque bloc de texte a une hauteur fixe, quelle que soit sa longueur. */
+.grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px}
+@media(max-width:1000px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){.grid{grid-template-columns:minmax(0,1fr)}}
+.body p{height:3em;min-height:3em;-webkit-line-clamp:2}
+.verifiee{display:flex;align-items:center;gap:4px}
+.verifiee svg{width:12px;height:12px;flex:none}
+.body .location{display:flex;height:2.6em;min-height:2.6em;align-items:flex-start;gap:4px}
+.location svg{width:14px;height:14px;flex:none;color:#e96600}
+.location span{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.visiter{gap:6px}
+.visiter svg{width:15px;height:15px;flex:none}
+.zoneBarre{min-height:44px;margin-top:26px}
+/* Une image attendue scintille a sa place : la carte ne bouge pas quand elle arrive. */
+.card[data-prete=false] .cover,.card[data-prete=false] .thumbnail,.card[data-prete=false] .logo{background:linear-gradient(100deg,#edf2f8 30%,#f9fbfd 50%,#edf2f8 70%) 0 0/200% 100%;animation:scintille 1.3s linear infinite}
+@keyframes scintille{to{background-position:-200% 0}}
+/* Les squelettes des pages loading.tsx. */
+.loadingPage{width:min(100% - 40px,1320px);margin:0 auto;padding:32px 0 56px}
+.loadingHeading{width:min(100%,560px);height:64px;margin-top:26px;border-radius:10px}
+.loadingBanniere{display:block;height:180px;margin-top:22px;border-radius:12px}
+.loadingGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:26px}
+.loadingCard{overflow:hidden;border:1px solid #dce4ef;border-radius:12px;background:#fff}
+.loadingCover{display:block;height:126px}
+.loadingText{display:grid;gap:10px;padding:17px}
+.loadingLine{display:block;height:11px;border-radius:6px}
+.loadingLine:nth-child(even){width:70%}
+.loadingHeading,.loadingBanniere,.loadingCover,.loadingLine{background:linear-gradient(100deg,#edf2f8 30%,#f9fbfd 50%,#edf2f8 70%) 0 0/200% 100%;animation:scintille 1.3s linear infinite}
+@media(max-width:1000px){.loadingGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.loadingPage{width:min(100% - 28px,1320px)}.loadingGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
+@media(prefers-reduced-motion:reduce){.card[data-prete=false] .cover,.card[data-prete=false] .thumbnail,.card[data-prete=false] .logo,.loadingHeading,.loadingBanniere,.loadingCover,.loadingLine{animation:none}}

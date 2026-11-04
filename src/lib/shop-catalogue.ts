@@ -1,5 +1,8 @@
 import type { OffreBoutiqueMarketplace } from './marketplace-data'
 
+/** Le nombre de produits d'une boutique lus d'un coup, au rendu comme au defilement. */
+export const TAILLE_LOT_BOUTIQUE = 24
+
 export type ShopSort = 'recent' | 'prix_asc' | 'prix_desc'
 export function hasShopDiscount(offer: OffreBoutiqueMarketplace): boolean {
   return offer.prixFcfa !== null && offer.prixReferenceFcfa !== null && offer.prixReferenceFcfa > offer.prixFcfa

@@ -8,6 +8,7 @@ import { api, ErreurApi } from '@/lib/api'
 import { useSession } from '@/lib/session'
 import styles from './marketplace-shell-v2.module.css'
 import { useMarketplaceLanguage } from '@/lib/language'
+import { ShopIcon, type ShopIconName } from './ShopIcon'
 
 /**
  * CE QUE L'EN-TETE PROPOSE SELON QUI EST LA.
@@ -39,6 +40,7 @@ function Icon({ children }: { children: ReactNode }) {
 
 const ICONE_PERSONNE = <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
 const ICONE_BOUTIQUE = <path d="M3 9.5 4.5 4h15L21 9.5M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M4.5 12.5V20h15v-7.5M9.5 20v-4.5h5V20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+const ICONE_SORTIE = <path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
 const ICONE_COLIS = <path d="M21 8 12 3 3 8v8l9 5 9-5V8ZM3 8l9 5 9-5M12 13v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
 
 /** Le prenom affichable tire de l'adresse e-mail : « awa.ngono@… » donne « Awa ». */
@@ -75,20 +77,20 @@ function MenuCompte({ profil, courriel, onDeconnexion }: { profil: Profil | null
     document.addEventListener('keydown', fermer)
     return () => { document.removeEventListener('mousedown', fermer); document.removeEventListener('keydown', fermer) }
   }, [ouvert])
-  const lien = (href: string, libelle: string) => <Link href={href} role="menuitem" onClick={() => setOuvert(false)}>{libelle}</Link>
+  const lien = (href: string, icone: ShopIconName, libelle: string) => <Link href={href} role="menuitem" onClick={() => setOuvert(false)}><ShopIcon name={icone} />{libelle}</Link>
   return <div className={styles.menuCompte} ref={conteneur}>
     <button type="button" className={styles.actionLien} aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined} aria-label={text('myAccount')} onClick={() => setOuvert(!ouvert)} data-testid="menu-compte">
       <Icon>{ICONE_PERSONNE}</Icon><span>{text('myAccount')}</span>
     </button>
     {ouvert ? <div id={id} role="menu" className={styles.menuCompteListe}>
       <p>{courriel ?? 'Connecté'}</p>
-      {profil === 'marchand' ? lien('/espace-vendeur', text('sellerSpace')) : null}
-      {lien('/compte/commandes', text('myOrders'))}
-      {lien('/compte/devis', text('myQuotes'))}
-      {lien('/compte/paiements-plusieurs-fois', text('myInstallments'))}
-      {lien('/compte/kati', text('myPoints'))}
-      {lien('/compte/favoris', text('myFavorites'))}
-      <button type="button" role="menuitem" onClick={() => { setOuvert(false); void onDeconnexion() }}>{text('signOut')}</button>
+      {profil === 'marchand' ? lien('/espace-vendeur', 'grid', text('sellerSpace')) : null}
+      {lien('/compte/commandes', 'package', text('myOrders'))}
+      {lien('/compte/devis', 'receipt', text('myQuotes'))}
+      {lien('/compte/paiements-plusieurs-fois', 'wallet', text('myInstallments'))}
+      {lien('/compte/kati', 'star', text('myPoints'))}
+      {lien('/compte/favoris', 'heart', text('myFavorites'))}
+      <button type="button" role="menuitem" onClick={() => { setOuvert(false); void onDeconnexion() }}><Icon>{ICONE_SORTIE}</Icon>{text('signOut')}</button>
     </div> : null}
   </div>
 }
@@ -136,17 +138,17 @@ export function ActionsCompte() {
   </>
 }
 
-/** Les liens de la barre du haut : se connecter, ou saluer le client connecte. */
+/** Le lien de la barre du haut : un seul, qui connecte ou deconnecte le client. */
 export function LiensBarreHaut() {
   const { text } = useMarketplaceLanguage()
   const { session, chargement, courriel, deconnecter } = useSession()
   const router = useRouter()
   const hydrate = useHydrate()
-  if (!hydrate || chargement) return null
-  if (!session) return <><Link href="/connexion">{text('signIn')}</Link><Link href="/inscription">{text('createAccount')}</Link></>
+  if (!hydrate || chargement) return <span className={styles.topbarLinksWaiting} aria-hidden="true" />
+  if (!session) return <Link href="/connexion" className={styles.topbarAction} data-testid="connexion-client"><Icon>{ICONE_PERSONNE}</Icon><span>{text('customerSignIn')}</span></Link>
   const prenom = prenomDe(courriel)
   return <>
     <span className={styles.salutation}>{text('greeting')}{prenom ? `, ${prenom}` : ''}</span>
-    <button type="button" className={styles.lienBarre} onClick={() => void deconnecter().then(() => router.refresh())}>{text('signOut')}</button>
+    <button type="button" className={styles.topbarAction} onClick={() => void deconnecter().then(() => router.refresh())} data-testid="deconnexion-client"><Icon>{ICONE_SORTIE}</Icon><span>{text('customerSignOut')}</span></button>
   </>
 }
