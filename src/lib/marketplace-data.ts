@@ -100,12 +100,10 @@ export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
 
 export async function lireBoutiqueMarketplace(slug: string): Promise<BoutiquePubliqueMarketplace | null> {
   try {
-    const [accueil, liste] = await Promise.all([
-      lireAccueilMarketplace(),
-      lireOffresMarketplace({ boutique: slug, taille: 24 }),
-    ])
+    const accueil = await lireAccueilMarketplace()
     const boutique = accueil.boutiques.find((item) => item.slug === slug)
     if (boutique) {
+      const liste = await lireOffresMarketplace({ boutique: slug, taille: 24 })
       if (!liste.indisponible) {
         return {
           ...boutique,

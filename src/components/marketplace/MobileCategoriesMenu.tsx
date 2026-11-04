@@ -49,7 +49,7 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
         className={styles.mobileCategoriesButton}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen((currentlyOpen) => !currentlyOpen)}
       >
         <span aria-hidden="true">▦</span>
         Toutes les catégories
@@ -84,6 +84,15 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
                     {categorie.sousCategories.map((sousCategorie) => (
                       <li key={sousCategorie.id}>
                         <Link href={`/categories/${sousCategorie.slug}`}>{sousCategorie.nom}</Link>
+                        {sousCategorie.sousCategories.length ? (
+                          <ul>
+                            {sousCategorie.sousCategories.map((sousSousCategorie) => (
+                              <li key={sousSousCategorie.id}>
+                                <Link href={`/categories/${sousSousCategorie.slug}`}>{sousSousCategorie.nom}</Link>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </li>
                     ))}
                   </ul>

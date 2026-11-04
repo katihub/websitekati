@@ -1,10 +1,11 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
+import homeLoading from '@/app/home-loading.module.css'
 import { MarketplaceText } from '@/lib/language'
 import { getBanners, type PublishedBanner } from '@/lib/banners'
 import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
-import { interleaveCategoryProducts } from '@/lib/mixed-category-products'
+import { isMarketplaceOfferInStock, selectHomepageProductOffers } from '@/lib/mixed-category-products'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
 import { MarketplaceCategoryMenu } from './MarketplaceCategoryMenu'
 import { DerniersArrivages } from './DerniersArrivages'
@@ -158,6 +159,54 @@ function SectionHead({ title, href, label = <MarketplaceText id="viewAll" /> }: 
   return <header className={styles.sectionHead}><h2>{title}</h2><Link href={href}>{label}<span>→</span></Link></header>
 }
 
+async function HomeProductSections({ rayons, premier }: { rayons: RayonAccueil[]; premier: RayonAccueil | undefined }) {
+  const rayonsAvecOffres = rayons.filter((rayon) => rayon.nombre > 0)
+  const groupesComplets: CategoryProductGroup[] = await Promise.all(rayonsAvecOffres.map(async (rayon) => ({
+    nom: rayon.nom,
+    slug: rayon.slug,
+    offres: (await lireOffresMarketplace({ categorieSlug: rayon.slug, taille: 20 })).offres,
+  })))
+  const groupesCategories = groupesComplets.map((groupe) => ({ ...groupe, offres: groupe.offres.filter(isMarketplaceOfferInStock).slice(0, 12) }))
+  const offresPremier = groupesCategories.find((groupe) => groupe.slug === premier?.slug)?.offres.slice(0, 8) ?? []
+  const best = selectHomepageProductOffers(groupesComplets, 20)
+  const bestProductSlugs = new Set(best.map((offre) => offre.produit.slug))
+  const mixedCategoryProducts = selectHomepageProductOffers(groupesComplets, 18, bestProductSlugs, 'recent')
+
+  return <>
+    <section className={`${styles.shell} ${styles.section}`}>
+      <SectionHead title={<MarketplaceText id="bestSellersTitle" />} href="/catalogue" />
+      {best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}><MarketplaceText id="offersSoon" /></p>}
+    </section>
+    {mixedCategoryProducts.length ? <section className={`${styles.shell} ${styles.section}`} data-testid="mixed-category-products">
+      <SectionHead title={<MarketplaceText id="mixedCategoriesTitle" />} href="/catalogue" label={<MarketplaceText id="viewAllCategories" />} />
+      <p className={styles.sectionIntro}><MarketplaceText id="mixedCategoriesText" /></p>
+      <ProductCarouselAccueil offres={mixedCategoryProducts} label="Produits de différentes catégories" showCategory />
+    </section> : null}
+    <MarketplaceAvantages />
+    {groupesCategories.some((groupe) => groupe.offres.length) ? <CategoryProductShowcase groupes={groupesCategories.filter((groupe) => groupe.offres.length)} /> : null}
+    {premier ? <RayonsAccueil rayons={rayons} initial={{ slug: premier.slug, offres: offresPremier }} /> : null}
+  </>
+}
+
+function HomeProductsLoading() {
+  return <section className={`${styles.shell} ${styles.section} ${styles.productsLoading}`} role="status" aria-label="Chargement des produits de l’accueil">
+    <span className={styles.productsLoadingBar} aria-hidden="true" />
+    <span className={styles.productsLoadingTitle} aria-hidden="true" />
+    <div>{Array.from({ length: 5 }, (_, index) => <i key={index} aria-hidden="true" />)}</div>
+    <span className={styles.productsLoadingText}>Chargement des offres en stock par catégorie…</span>
+  </section>
+}
+
+export function MarketplaceHomeLoading() {
+  return <main className={homeLoading.page} role="status" aria-live="polite">
+    <span className={homeLoading.progress} aria-hidden="true" />
+    <span className={homeLoading.message}>Chargement progressif de l’accueil et des offres disponibles…</span>
+    <section className={homeLoading.hero} aria-hidden="true"><i /><div><b /><b /><b /></div></section>
+    <section className={homeLoading.section} aria-hidden="true"><i />{Array.from({ length: 5 }, (_, index) => <b key={index} />)}</section>
+    <section className={homeLoading.section} aria-hidden="true"><i />{Array.from({ length: 5 }, (_, index) => <b key={index} />)}</section>
+  </main>
+}
+
 export async function MarketplaceHome() {
   const [{ boutiques, offres }, bannieres, categories, comptes] = await Promise.all([
     lireAccueilMarketplace(), getBanners(), lireCategoriesMarketplace(), lireOffresMarketplace({ taille: 1 }),
@@ -168,22 +217,6 @@ export async function MarketplaceHome() {
     .map((c) => ({ nom: c.nom, slug: c.slug, nombre: nombres.get(c.nom) ?? 0, sousCategories: c.sousCategories.map((s) => ({ nom: s.nom, slug: s.slug })) }))
     .sort((a, b) => b.nombre - a.nombre || a.nom.localeCompare(b.nom, 'fr'))
   const premier = rayons.find((r) => r.nombre > 0) ?? rayons[0]
-  const categoriesCarrousel = rayons.filter((rayon) => rayon.nombre > 0)
-  const groupesComplets: CategoryProductGroup[] = await Promise.all(categoriesCarrousel.map(async (rayon) => ({
-    nom: rayon.nom,
-    slug: rayon.slug,
-    offres: (await lireOffresMarketplace({ categorieSlug: rayon.slug, taille: 20 })).offres,
-  })))
-  const groupesCategories = groupesComplets.map((groupe) => ({ ...groupe, offres: groupe.offres.slice(0, 12) }))
-  const offresPremier = groupesCategories.find((groupe) => groupe.slug === premier?.slug)?.offres.slice(0, 8)
-    ?? (premier ? (await lireOffresMarketplace({ categorieSlug: premier.slug, taille: 8 })).offres : [])
-  const selectionVariee = interleaveCategoryProducts(groupesComplets, Math.max(20, groupesComplets.length))
-  const selectionIds = new Set(selectionVariee.map((offre) => offre.id))
-  const best = [
-    ...selectionVariee,
-    ...offres.filter((offre) => !selectionIds.has(offre.id)),
-  ].slice(0, Math.max(20, groupesComplets.length))
-  const mixedCategoryProducts = interleaveCategoryProducts(groupesComplets, Math.max(18, groupesComplets.length))
   const fresh = [...offres].reverse().slice(0, 6)
   // Les promotions du panel restent prioritaires. Tant qu'aucune n'est
   // publiée, cette sélection KatiMarket évite de recréer un grand vide sous les
@@ -212,11 +245,9 @@ export async function MarketplaceHome() {
       </aside>
     </div>
 
-    <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="bestSellersTitle" />} href="/catalogue" />{best.length ? <ProductCarouselAccueil offres={best} /> : <p className={styles.empty}><MarketplaceText id="offersSoon" /></p>}</section>
-    {mixedCategoryProducts.length ? <section className={`${styles.shell} ${styles.section}`} data-testid="mixed-category-products"><SectionHead title={<MarketplaceText id="mixedCategoriesTitle" />} href="/catalogue" label={<MarketplaceText id="viewAllCategories" />} /><p className={styles.sectionIntro}><MarketplaceText id="mixedCategoriesText" /></p><ProductCarouselAccueil offres={mixedCategoryProducts} label="Produits de différentes catégories" showCategory /></section> : null}
-    <MarketplaceAvantages />
-    {groupesCategories.some((groupe) => groupe.offres.length) ? <CategoryProductShowcase groupes={groupesCategories.filter((groupe) => groupe.offres.length)} /> : null}
-    {rayons.length ? <RayonsAccueil rayons={rayons} initial={{ slug: premier!.slug, offres: offresPremier }} /> : null}
+    <Suspense fallback={<HomeProductsLoading />}>
+      <HomeProductSections rayons={rayons} premier={premier} />
+    </Suspense>
     <MarquesAccueil marques={comptes.facettes?.marques ?? []} totalOffres={comptes.pagination.total} />
     <DerniersArrivages />
     <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="popularCategories" />} href="/catalogue" label={<MarketplaceText id="viewAllCategories" />} /><div className={styles.categoryRail}>{POPULAR.map(([icon, name]) => <Link href={`/recherche?q=${encodeURIComponent(name)}`} key={name}><span>{icon}</span><b>{name}</b></Link>)}</div></section>

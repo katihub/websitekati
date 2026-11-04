@@ -12,6 +12,8 @@ const COPY = {
   sell: { fr: 'Vendre sur KatiMarket', en: 'Sell on KatiMarket' },
   signIn: { fr: 'Se connecter', en: 'Sign in' },
   createAccount: { fr: 'Créer un compte', en: 'Create account' },
+  clientConnect: { fr: 'Connexion Client', en: 'Client sign in' },
+  clientDisconnect: { fr: 'Déconnexion Client', en: 'Client sign out' },
   greeting: { fr: 'Bonjour', en: 'Hello' },
   signOut: { fr: 'Se déconnecter', en: 'Sign out' },
   myAccount: { fr: 'Mon compte', en: 'My account' },

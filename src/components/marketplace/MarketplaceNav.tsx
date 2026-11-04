@@ -16,7 +16,7 @@ export function MarketplaceNav({ categories }: { categories: readonly CategorieA
       </Link>
       <MobileCategoriesMenu categories={categories} />
       <div className={styles.navScroll}>
-        {categories.slice(0, 6).map(categorie => (
+        {categories.map(categorie => (
           <Link key={categorie.id} href={`/categories/${categorie.slug}`} className={styles.navLink}>
             <span className={styles.navIcon} aria-hidden="true">{CATEGORY_ICON[categorie.nom] ?? '📦'}</span>{categorie.nom}
           </Link>
