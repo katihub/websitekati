@@ -14,11 +14,16 @@ export function PromotionsMarketplace({
   offresInitiales,
   pageInitiale,
   indisponible,
+  rubrique = 'promotions',
 }: {
   offresInitiales: OffreMarketplace[]
   pageInitiale: number | null
   indisponible: boolean
+  rubrique?: 'promotions' | 'soldes'
 }) {
+  const titre = rubrique === 'soldes' ? 'Soldes' : 'Promotions'
+  const offreLabel = rubrique === 'soldes' ? 'en solde' : 'en promotion'
+  const titreAction = rubrique === 'soldes' ? 'soldes' : 'promotions'
   const [offres, setOffres] = useState(offresInitiales)
   const [pageSuivante, setPageSuivante] = useState(pageInitiale)
   const [chargement, setChargement] = useState(false)
@@ -34,13 +39,13 @@ export function PromotionsMarketplace({
       if (!reponse.ok) {
         const resultat = await reponse.json() as { erreur?: string }
         if (reponse.status === 502) setCatalogueIndisponible(true)
-        throw new Error(resultat.erreur ?? 'Les promotions suivantes sont momentanément indisponibles.')
+        throw new Error(resultat.erreur ?? `Les ${titreAction} suivants sont momentanément indisponibles.`)
       }
       const lot = await reponse.json() as LotPromotions
       setOffres((actuelles) => [...actuelles, ...lot.offres])
       setPageSuivante(lot.pageSuivante)
     } catch (cause) {
-      setErreur(cause instanceof Error ? cause.message : 'Les promotions suivantes n’ont pas pu être chargées.')
+      setErreur(cause instanceof Error ? cause.message : `Les ${titreAction} suivantes n’ont pas pu être chargées.`)
     } finally {
       setChargement(false)
     }
@@ -50,13 +55,13 @@ export function PromotionsMarketplace({
     <main className={styles.page}>
       <div className={styles.shell}>
         <nav className={styles.breadcrumb} aria-label="Fil d’Ariane">
-          <Link href="/">Accueil</Link><span>›</span><span aria-current="page">Promotions</span>
+          <Link href="/">Accueil</Link><span>›</span><span aria-current="page">{titre}</span>
         </nav>
         <header className={styles.hero}>
           <ShopIcon name="tag" />
           <div>
             <p className={styles.eyebrow}>Les offres des boutiques</p>
-            <h1>Promotions</h1>
+            <h1>{titre}</h1>
             <p>Profitez des prix réduits proposés par les boutiques KatiMarket.</p>
           </div>
         </header>
@@ -69,15 +74,15 @@ export function PromotionsMarketplace({
           </section>
         ) : offres.length ? (
           <>
-            <p className={styles.count}>{offres.length} offre{offres.length > 1 ? 's' : ''} en promotion</p>
-            <section className={styles.grid} aria-label="Offres en promotion">
+            <p className={styles.count}>{offres.length} offre{offres.length > 1 ? 's' : ''} {offreLabel}</p>
+            <section className={styles.grid} aria-label={`Offres ${offreLabel}`}>
               {offres.map((offre) => <CatalogueProductCard key={offre.id} offer={offre} />)}
             </section>
           </>
         ) : (
           <section className={styles.empty}>
             <ShopIcon name="tag" />
-            <h2>Aucune promotion trouvée pour le moment</h2>
+            <h2>Aucune offre {rubrique === 'soldes' ? 'en solde' : 'en promotion'} trouvée pour le moment</h2>
             <p>Continuez à parcourir les offres des boutiques pour vérifier les suivantes.</p>
           </section>
         )}
@@ -85,7 +90,7 @@ export function PromotionsMarketplace({
         {erreur ? <p className={styles.error} role="alert">{erreur}</p> : null}
         {pageSuivante !== null ? (
           <button className={styles.more} type="button" onClick={() => void chargerSuite()} disabled={chargement}>
-            {chargement ? 'Recherche des promotions…' : offres.length ? 'Voir plus de promotions' : 'Chercher les promotions suivantes'}
+            {chargement ? `Recherche des ${titreAction}…` : offres.length ? `Voir plus de ${titreAction}` : `Chercher les ${titreAction} suivantes`}
           </button>
         ) : !catalogueIndisponible && offres.length ? (
           <p className={styles.end}>Vous avez vu toutes les promotions disponibles.</p>

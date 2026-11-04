@@ -10,6 +10,7 @@ const COPY = {
   allCategories: { fr: 'Toutes les catégories', en: 'All categories' },
   shops: { fr: 'Boutiques', en: 'Shops' },
   promotionsMenu: { fr: 'Promotions', en: 'Promotions' },
+  salesMenu: { fr: 'Soldes', en: 'Sales' },
   sell: { fr: 'Vendre sur KatiMarket', en: 'Sell on KatiMarket' },
   signIn: { fr: 'Se connecter', en: 'Sign in' },
   createAccount: { fr: 'Créer un compte', en: 'Create account' },
