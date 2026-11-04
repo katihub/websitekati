@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 
 import type { CategorieArbre } from '@/lib/marketplace-data'
 import styles from './marketplace-shell-v2.module.css'
-import { CATEGORY_ICON } from './ProductCardAccueil'
+import { iconeCategorieMarketplace, ShopIcon } from './ShopIcon'
 
 export function MobileCategoriesMenu({ categories }: { categories: readonly CategorieArbre[] }) {
   const [open, setOpen] = useState(false)
@@ -51,7 +51,7 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
         aria-controls={panelId}
         onClick={() => setOpen((currentlyOpen) => !currentlyOpen)}
       >
-        <span aria-hidden="true">▦</span>
+        <ShopIcon name="grid" />
         Toutes les catégories
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </button>
@@ -70,14 +70,14 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
               <strong>Explorez les catégories</strong>
               <p>Trouvez rapidement le rayon qui vous intéresse.</p>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Fermer le menu des catégories">×</button>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Fermer le menu des catégories"><ShopIcon name="close" /></button>
           </header>
           <div className={styles.mobileMegaGrid}>
             {categories.map((categorie) => (
               <section key={categorie.id} className={styles.mobileMegaCategory}>
                 <Link href={`/categories/${categorie.slug}`} className={styles.mobileMegaTitle}>
-                  <span className={styles.mobileMegaCategoryIcon} aria-hidden="true">{CATEGORY_ICON[categorie.nom] ?? '📦'}</span>
-                  {categorie.nom}<span aria-hidden="true">→</span>
+                  <ShopIcon name={iconeCategorieMarketplace(categorie.nom)} className={styles.mobileMegaCategoryIcon} />
+                  {categorie.nom}<span aria-hidden="true"><ShopIcon name="arrow" /></span>
                 </Link>
                 {categorie.sousCategories.length ? (
                   <ul>
@@ -102,7 +102,7 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
               </section>
             ))}
           </div>
-          <Link href="/categories" className={styles.mobileMegaAll}>Voir la page de toutes les catégories <span aria-hidden="true">→</span></Link>
+          <Link href="/categories" className={styles.mobileMegaAll}>Voir la page de toutes les catégories <ShopIcon name="arrow" /></Link>
         </section>
       ) : null}
     </div>

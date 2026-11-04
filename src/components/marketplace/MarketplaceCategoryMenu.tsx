@@ -1,20 +1,21 @@
 import Link from 'next/link'
 
 import type { RayonAccueil } from './RayonsAccueil'
+import { iconeCategorieMarketplace, ShopIcon } from './ShopIcon'
 import styles from './marketplace-home-v2.module.css'
 
 const ENTREES = [
-  ['▯', 'Électronique'],
-  ['♙', 'Mode & Style'],
-  ['⌂', 'Maison & Décoration'],
-  ['✿', 'Beauté & Santé'],
-  ['◉', 'Sports & Loisirs'],
-  ['▱', 'Auto & Moto'],
-  ['♧', 'Jardinage'],
-  ['♙', 'Enfants & Jouets'],
-  ['⌁', 'Alimentation'],
-  ['▦', 'High-Tech'],
-  ['⌕', 'Bricolage & Outillage'],
+  'Électronique',
+  'Mode & Style',
+  'Maison & Décoration',
+  'Beauté & Santé',
+  'Sports & Loisirs',
+  'Auto & Moto',
+  'Jardinage',
+  'Enfants & Jouets',
+  'Alimentation',
+  'High-Tech',
+  'Bricolage & Outillage',
 ] as const
 
 const normaliser = (valeur: string) => valeur
@@ -35,13 +36,13 @@ export function MarketplaceCategoryMenu({ rayons }: { rayons: RayonAccueil[] }) 
   return <aside className={styles.categoryMenu} aria-label="Catégories de produits">
     <h2><span aria-hidden="true">☰</span>Toutes les catégories</h2>
     <ul className={styles.categoryList}>
-      {ENTREES.map(([icone, libelle]) => {
+      {ENTREES.map((libelle) => {
         const rayon = trouverRayon(rayons, libelle)
         const href = rayon ? `/categories/${rayon.slug}` : `/recherche?q=${encodeURIComponent(libelle)}`
         const sousCategories = rayon?.sousCategories ?? []
         return <li className={styles.categoryItem} key={libelle}>
           <Link className={styles.categoryLink} href={href} aria-haspopup={sousCategories.length ? 'true' : undefined}>
-            <span aria-hidden="true">{icone}</span>
+            <ShopIcon name={iconeCategorieMarketplace(libelle)} />
             <span>{rayon?.nom ?? libelle}</span>
             <b aria-hidden="true">›</b>
           </Link>
@@ -60,7 +61,7 @@ export function MarketplaceCategoryMenu({ rayons }: { rayons: RayonAccueil[] }) 
         </li>
       })}
       <li className={styles.categoryItem}>
-        <Link className={styles.categoryLink} href="/categories"><span aria-hidden="true">▦</span><span>Plus de catégories</span><b aria-hidden="true">›</b></Link>
+        <Link className={styles.categoryLink} href="/categories"><ShopIcon name="grid" /><span>Plus de catégories</span><b aria-hidden="true">›</b></Link>
       </li>
     </ul>
   </aside>

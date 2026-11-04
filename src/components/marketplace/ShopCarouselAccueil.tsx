@@ -63,7 +63,7 @@ export function ShopCarouselAccueil({ boutiques }: { boutiques: readonly Boutiqu
     >
       <div className={styles.shopTrack}>
         {boutiques.map((boutique) => <div className={styles.shopSlide} data-shop-carousel-card key={boutique.id}>
-          <Link href={`/boutiques/${boutique.slug}`} className={styles.shopCard} aria-label={`Découvrir ${boutique.nom}`}>
+          <Link href={`/boutiques/${boutique.slug}`} className={styles.shopCard} aria-label={`Découvrir ${boutique.nom}`} prefetch={false}>
             {boutique.banniereUrl ? <Image src={boutique.banniereUrl} alt="" fill sizes="220px" className={styles.shopBanner} /> : null}
             <i className={styles.shopWatermark} aria-hidden="true">{initiales(boutique.nom)}</i>
             <div className={styles.shopIdentity}>

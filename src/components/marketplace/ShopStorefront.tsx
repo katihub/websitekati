@@ -55,7 +55,7 @@ function StoreProductCard({ offer, shop, compact = false }: { offer: OffreBoutiq
   }
   return <article className={`${styles.productCard} ${compact ? styles.compactCard : ''}`} data-shop-offer={offer.id}>
     <Link className={styles.productVisual} href={href} aria-label={`Voir ${offer.produit.nom}`}>
-      {illustration ? <Image src={illustration} alt={visuel?.alt ?? offer.produit.nom} fill sizes={compact ? '80px' : '(max-width: 600px) 45vw, 240px'} /> : <div className={styles.cataloguePlaceholder}><ShopIcon name={categoryIcon(offer.produit.categorie ?? '')}/><span>{offer.produit.marque ?? offer.produit.categorie ?? 'Produit'}</span></div>}
+      {illustration ? <Image src={illustration} alt={visuel?.alt ?? offer.produit.nom} fill sizes={compact ? '80px' : '(max-width: 600px) 45vw, 240px'} loading="lazy" /> : <div className={styles.cataloguePlaceholder}><ShopIcon name={categoryIcon(offer.produit.categorie ?? '')}/><span>{offer.produit.marque ?? offer.produit.categorie ?? 'Produit'}</span></div>}
       {discount ? <b className={styles.discount}>−{discount}%</b> : null}
       {!compact ? <small>{illustration ? 'Visuel illustratif' : 'Photo à venir'}</small> : null}
     </Link>
@@ -124,7 +124,7 @@ export function ShopStorefront({ shop }: { shop: BoutiquePubliqueMarketplace }) 
   return <main className={styles.page} data-shop-storefront={shop.slug}>
     <section className={styles.cover} aria-labelledby="shop-title"><Image src={shop.banniereUrl || (tech ? '/marketplace-shop-tech-cover.png' : '/marketplace-vendeur-cameroun.png')} alt="" fill priority sizes="100vw" className={styles.coverImage}/><div className={styles.coverInner}>
       {shop.logoUrl
-        ? <div className={`${styles.storeLogo} ${styles.storeLogoImage}`}><Image src={shop.logoUrl} alt={`Logo de ${shop.nom}`} fill sizes="108px"/></div>
+        ? <div className={`${styles.storeLogo} ${styles.storeLogoImage}`}><Image src={shop.logoUrl} alt={`Logo de ${shop.nom}`} fill sizes="108px" loading="lazy"/></div>
         : <div className={styles.storeLogo} aria-hidden="true"><ShopIcon name={tech ? 'laptop' : 'bag'}/><strong>{initials(shop.nom)}</strong></div>}
       <div className={styles.identity}><div className={styles.storeName}><h1 id="shop-title">{shop.nom}</h1><span><ShopIcon name="bag"/>Boutique sur KatiMarket</span></div><div className={styles.storeMeta}><span><ShopIcon name="pin"/>{shop.ville || shop.villesLivraison[0] || 'Cameroun'}</span><span><ShopIcon name="package"/>{nombreOffres} produit{nombreOffres > 1 ? 's' : ''}</span>{shop.telephone ? <a href={`tel:${shop.telephone.replace(/[^\d+]/g, '')}`} className={styles.storePhone}>{shop.telephone}</a> : null}</div><div className={styles.storeActions}><button aria-pressed={saved} title="Enregistrée dans ce navigateur" onClick={toggleSaved}><ShopIcon name={saved ? 'check' : 'bookmark'}/>{saved ? 'Boutique enregistrée' : 'Enregistrer la boutique'}</button><button onClick={() => navigate('À propos')}><ShopIcon name="info"/>À propos de la boutique</button></div></div>
       <p className={styles.coverSlogan}>{tech ? <>Vos envies high-tech,<br/><strong>à portée de main.</strong></> : <>De belles découvertes,<br/><strong>tout près de vous.</strong></>}</p>

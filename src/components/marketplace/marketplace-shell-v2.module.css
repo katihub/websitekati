@@ -5,6 +5,7 @@
 /* The editable announcement ticker replaces the former hard-coded message spans. */
 .topbar .topbarInner{gap:18px;min-height:42px}
 .topbar .topbarInner em{flex:none;margin-left:auto}
+.supportContacts{display:inline-flex;flex:none;align-items:center;gap:12px}
 .supportWhatsApp{display:inline-flex;flex:none;align-items:center;gap:6px;color:#fff!important;font-size:.68rem}
 .supportWhatsApp svg{width:18px;height:18px;fill:none;stroke:#42d879;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .serviceNotice{display:inline-flex;flex:none;align-items:center;gap:6px;color:#fff;font-size:.68rem;white-space:nowrap}
@@ -20,7 +21,7 @@
 .topbar .languageSwitcher button[aria-pressed=true]{background:#ff7900;color:#fff}
 .topbar .languageSwitcher button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media(max-width:1050px){.topbar .topbarInner em{display:none}.topbarLinksWaiting{width:90px}}
-@media(max-width:700px){.topbar .topbarInner{min-height:38px;justify-content:space-between;gap:8px}.topbar .topbarInner em,.topbar .serviceNotice,.topbar .topbarLinksWaiting,.topbar .ticker{display:none}.topbar .topbarInner>a.supportWhatsApp{display:inline-flex}.topbar .topbarAction>span{display:none}.supportWhatsApp{width:auto;height:30px;justify-content:center}.supportWhatsApp svg{width:20px;height:20px}.topbar .languageSwitcher>span{display:none}}
+@media(max-width:700px){.topbar .topbarInner{min-height:38px;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;padding-block:4px}.topbar .topbarInner em,.topbar .serviceNotice,.topbar .topbarLinksWaiting,.topbar .ticker{display:none}.topbar .supportContacts{order:0;flex:1 0 100%;justify-content:center;gap:clamp(8px,4vw,18px)}.topbar .supportWhatsApp{width:auto;height:30px;justify-content:center;gap:4px;font-size:.6rem}.topbar .supportWhatsApp svg{width:17px;height:17px}.topbar .topbarAction{order:2}.topbar .topbarAction>span{display:inline}.topbar .languageSwitcher{order:1}.topbar .languageSwitcher>span{display:none}}
 .languageSwitcher{display:inline-flex;flex:none;align-items:center;gap:2px;border:1px solid #ffffff55;border-radius:999px;padding:2px}
 .logoMark img{transform:scale(1.48);transform-origin:50% 0}
 .footerGrid{grid-template-columns:1.4fr repeat(4,minmax(0,1fr));gap:38px}.legal nav{display:flex;flex-wrap:wrap;gap:8px 14px}.legal nav a{font-size:inherit}.legal nav a+a:before{content:'|';color:#7d90b0;margin-right:14px}@media(max-width:1050px){.footerGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}.footerGrid>div:first-child{grid-column:1/-1}}@media(max-width:700px){.footerGrid{grid-template-columns:1fr}.footerGrid>div:first-child{grid-column:auto}.legal nav{gap:8px 10px}.legal nav a+a:before{margin-right:10px}}
@@ -123,3 +124,15 @@
 .legal nav .footerLink{font-size:inherit}
 @media(max-width:700px){.logoMark{width:45px;height:45px}}
 @media(max-width:1050px){.logoText{display:flex}.logoText strong{font-size:1.05rem}.logoText small{display:none}}
+
+.homeLink{width:38px;height:38px;border-color:#ffb56e;background:#fff7ef}
+.homeLink svg{width:19px;height:19px}
+.homeLink:hover,.homeLink:focus-visible{background:#fff0df}
+.navLink>.navIcon{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mobileCategoriesButton>svg:first-child{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mobileMegaCategoryIcon{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mobileMegaTitle>span:last-child svg,.mobileMegaAll>svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mobileMegaMenu>header>button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.footerLink>svg,.footerGrid h2>svg,.footerGrid>div:first-child>p>svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.footerLink>svg{color:#9fb9dc}
+.footerGrid h2>svg{width:17px;height:17px;color:#ff9a2c}

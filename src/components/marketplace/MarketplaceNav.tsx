@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMarketplaceLanguage } from '@/lib/language'
 import type { CategorieArbre } from '@/lib/marketplace-data'
 import { MobileCategoriesMenu } from './MobileCategoriesMenu'
-import { CATEGORY_ICON } from './ProductCardAccueil'
+import { iconeCategorieMarketplace, ShopIcon } from './ShopIcon'
 import styles from './marketplace-shell-v2.module.css'
 
 export function MarketplaceNav({ categories }: { categories: readonly CategorieArbre[] }) {
@@ -12,17 +12,17 @@ export function MarketplaceNav({ categories }: { categories: readonly CategorieA
   return <nav className={styles.nav} aria-label={text('allCategories')} data-marketplace-nav>
     <div className={`${styles.shell} ${styles.navInner}`}>
       <Link href="/categories" className={`${styles.allCategories} ${styles.navLink}`}>
-        <span className={styles.navIcon} aria-hidden="true">▦</span>{text('allCategories')}
+        <ShopIcon name="grid" className={styles.navIcon} />{text('allCategories')}
       </Link>
       <MobileCategoriesMenu categories={categories} />
       <div className={styles.navScroll}>
         {categories.map(categorie => (
           <Link key={categorie.id} href={`/categories/${categorie.slug}`} className={styles.navLink}>
-            <span className={styles.navIcon} aria-hidden="true">{CATEGORY_ICON[categorie.nom] ?? '📦'}</span>{categorie.nom}
+            <ShopIcon name={iconeCategorieMarketplace(categorie.nom)} className={styles.navIcon} />{categorie.nom}
           </Link>
         ))}
-        <Link href="/boutiques" className={styles.navLink}><span className={styles.navIcon} aria-hidden="true">🏬</span>{text('shops')}</Link>
-        <Link href="/devenir-vendeur" className={styles.navLink}><span className={styles.navIcon} aria-hidden="true">🏷️</span>{text('sell')}</Link>
+        <Link href="/boutiques" className={styles.navLink}><ShopIcon name="bag" className={styles.navIcon} />{text('shops')}</Link>
+        <Link href="/devenir-vendeur" className={styles.navLink}><ShopIcon name="tag" className={styles.navIcon} />{text('sell')}</Link>
       </div>
     </div>
   </nav>
