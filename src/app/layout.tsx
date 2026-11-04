@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { Suspense } from 'react'
 import localFont from 'next/font/local'
 
@@ -54,6 +55,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
      reponses sans second appel. */
   return (
     <html lang="fr" className={`${inter.variable} ${roboto.variable}`}>
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-VRKCEPMT7C"
+          strategy="beforeInteractive"
+        />
+        <Script id="google-analytics" strategy="beforeInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-VRKCEPMT7C');`}
+        </Script>
+      </head>
       {/* `data-habillage` dit si le menu des rayons a pu etre lu. Le travailleur
           de service le lit avant de garder /hors-ligne : une copie sans rayons,
           prise pendant une panne, resterait sur le telephone du client. */}
