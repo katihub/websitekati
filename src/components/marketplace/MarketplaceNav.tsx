@@ -7,21 +7,8 @@ import { MobileCategoriesMenu } from './MobileCategoriesMenu'
 import { iconeCategorieMarketplace, ShopIcon } from './ShopIcon'
 import styles from './marketplace-shell-v2.module.css'
 
-const ORDRE_RAYONS_MENU = [
-  'informatique',
-  'electronique',
-  'electromenager',
-  'maison-et-energie',
-  'mode-style',
-  'agroalimentaire',
-] as const
-
 export function MarketplaceNav({ categories }: { categories: readonly CategorieArbre[] }) {
   const { text } = useMarketplaceLanguage()
-  const categoriesVisibles = ORDRE_RAYONS_MENU.flatMap((slug) => {
-    const categorie = categories.find((item) => item.slug === slug)
-    return categorie ? [categorie] : []
-  })
   return <nav className={styles.nav} aria-label={text('allCategories')} data-marketplace-nav>
     <div className={`${styles.shell} ${styles.navInner}`}>
       <Link href="/categories" className={`${styles.allCategories} ${styles.navLink}`}>
@@ -29,7 +16,7 @@ export function MarketplaceNav({ categories }: { categories: readonly CategorieA
       </Link>
       <MobileCategoriesMenu categories={categories} />
       <div className={styles.navScroll}>
-        {categoriesVisibles.map(categorie => (
+        {categories.map(categorie => (
           <Link key={categorie.id} href={`/categories/${categorie.slug}`} className={styles.navLink}>
             <ShopIcon name={iconeCategorieMarketplace(categorie.nom)} className={styles.navIcon} />{categorie.nom}
           </Link>

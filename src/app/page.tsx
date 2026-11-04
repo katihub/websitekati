@@ -75,6 +75,7 @@ export const metadata: Metadata = {
 }
 
 export default avecPanneCatalogue(async function HomePage() {
+  await connection()
   return <MarketplaceHome />
   /* L'ancienne vitrine NowTech est conservée temporairement sous ce point de
      coupure pendant la migration de ses pages profondes. Elle n'est plus
