@@ -7,7 +7,7 @@ import type { CategorieArbre } from '@/lib/marketplace-data'
 import styles from './marketplace-shell-v2.module.css'
 import { iconeCategorieMarketplace, ShopIcon } from './ShopIcon'
 
-export function MobileCategoriesMenu({ categories }: { categories: readonly CategorieArbre[] }) {
+export function MobileCategoriesMenu({ categories, className }: { categories: readonly CategorieArbre[]; className?: string }) {
   const [open, setOpen] = useState(false)
   const container = useRef<HTMLDivElement>(null)
   const panelId = useId()
@@ -33,7 +33,7 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
   return (
     <div
       ref={container}
-      className={styles.mobileCategories}
+      className={[styles.mobileCategories, className].filter(Boolean).join(' ')}
       onPointerEnter={(event) => {
         if (event.pointerType === 'mouse') setOpen(true)
       }}

@@ -1,0 +1,3 @@
+.navOrder.navOrder .allCategories{display:inline-flex}
+.navOrder.navOrder .mobileCategories{display:none}
+@media(max-width:700px){.navOrder.navOrder .allCategories{display:none}.navOrder.navOrder .mobileCategories{display:block}}

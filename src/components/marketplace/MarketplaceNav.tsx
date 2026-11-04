@@ -6,6 +6,7 @@ import type { CategorieArbre } from '@/lib/marketplace-data'
 import { MobileCategoriesMenu } from './MobileCategoriesMenu'
 import { iconeCategorieMarketplace, ShopIcon } from './ShopIcon'
 import styles from './marketplace-shell-v2.module.css'
+import orderStyles from './marketplace-nav-order.module.css'
 
 const CATEGORIES_MENU_PRINCIPAL = [
   'informatique',
@@ -21,12 +22,12 @@ export function MarketplaceNav({ categories }: { categories: readonly CategorieA
     const categorie = categories.find((item) => item.slug === slug)
     return categorie ? [categorie] : []
   })
-  return <nav className={styles.nav} aria-label={text('allCategories')} data-marketplace-nav>
+  return <nav className={`${styles.nav} ${orderStyles.navOrder}`} aria-label={text('allCategories')} data-marketplace-nav>
     <div className={`${styles.shell} ${styles.navInner}`}>
-      <Link href="/categories" className={`${styles.allCategories} ${styles.navLink}`}>
+      <Link href="/categories" className={`${styles.allCategories} ${styles.navLink} ${orderStyles.allCategories}`}>
         <ShopIcon name="grid" className={styles.navIcon} />{text('allCategories')}
       </Link>
-      <MobileCategoriesMenu categories={categories} />
+      <MobileCategoriesMenu categories={categories} className={orderStyles.mobileCategories} />
       <Link href="/boutiques" className={styles.navLink}><ShopIcon name="bag" className={styles.navIcon} />{text('shops')}</Link>
       <div className={styles.navScroll}>
         {categoriesVisibles.map(categorie => (
