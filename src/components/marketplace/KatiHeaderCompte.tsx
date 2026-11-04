@@ -41,6 +41,12 @@ const ICONE_PERSONNE = <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0
 const ICONE_BOUTIQUE = <path d="M3 9.5 4.5 4h15L21 9.5M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M4.5 12.5V20h15v-7.5M9.5 20v-4.5h5V20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
 const ICONE_COLIS = <path d="M21 8 12 3 3 8v8l9 5 9-5V8ZM3 8l9 5 9-5M12 13v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
 
+/** Le prenom affichable tire de l'adresse e-mail : « awa.ngono@… » donne « Awa ». */
+function prenomDe(courriel: string | null) {
+  const debut = (courriel ?? '').split('@')[0]?.split(/[._-]/)[0] ?? ''
+  return debut ? debut.charAt(0).toUpperCase() + debut.slice(1) : ''
+}
+
 /** Client ou marchand : lu une fois par session, et retenu le temps de la visite. */
 function useProfil(userId: string | null): Profil | null {
   const [profils, setProfils] = useState<Record<string, Profil>>({})
@@ -133,21 +139,14 @@ export function ActionsCompte() {
 /** Les liens de la barre du haut : se connecter, ou saluer le client connecte. */
 export function LiensBarreHaut() {
   const { text } = useMarketplaceLanguage()
-  const { session, chargement, deconnecter } = useSession()
+  const { session, chargement, courriel, deconnecter } = useSession()
   const router = useRouter()
   const hydrate = useHydrate()
-  if (!hydrate || chargement) return <span className={styles.topbarLinksWaiting} aria-hidden="true" />
-  if (!session) return <Link href="/connexion" className={styles.topbarAction} aria-label={text('clientConnect')}>
-    <Icon><path d="M10 17l5-5-5-5M15 12H3m9-7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></Icon>
-    <span>{text('clientConnect')}</span>
-  </Link>
-  return <button
-    type="button"
-    className={`${styles.lienBarre} ${styles.topbarAction}`}
-    aria-label={text('clientDisconnect')}
-    onClick={() => void deconnecter().then(() => router.refresh())}
-  >
-    <Icon><path d="M10 17l5-5-5-5M15 12H3m9-7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></Icon>
-    <span>{text('clientDisconnect')}</span>
-  </button>
+  if (!hydrate || chargement) return null
+  if (!session) return <><Link href="/connexion">{text('signIn')}</Link><Link href="/inscription">{text('createAccount')}</Link></>
+  const prenom = prenomDe(courriel)
+  return <>
+    <span className={styles.salutation}>{text('greeting')}{prenom ? `, ${prenom}` : ''}</span>
+    <button type="button" className={styles.lienBarre} onClick={() => void deconnecter().then(() => router.refresh())}>{text('signOut')}</button>
+  </>
 }

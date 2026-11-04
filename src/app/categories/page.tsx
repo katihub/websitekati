@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 
 import { CategoriesProducts } from '@/components/marketplace/CategoriesProducts'
@@ -43,20 +42,6 @@ function selection(offres: readonly OffreMarketplace[]) {
     .slice(0, LIMITE_SELECTION)
 }
 
-function illustrationCategorie(categorie: { nom: string; slug: string }, offres: readonly OffreMarketplace[]) {
-  const normaliser = (valeur: string) => valeur.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr')
-  const nom = normaliser(categorie.nom)
-  const offre = offres.find((item) => {
-    if (!item.produit.images?.length) return false
-    const ref = item.produit.categorieRef
-    return ref?.slug === categorie.slug
-      || ref?.parent?.slug === categorie.slug
-      || normaliser(ref?.nom ?? item.produit.categorie ?? '').includes(nom)
-      || normaliser(ref?.parent?.nom ?? '').includes(nom)
-  })
-  return offre?.produit.images?.[0]
-}
-
 export default async function CategoriesPage() {
   const [categories, accueil] = await Promise.all([
     lireCategoriesMarketplace(),
@@ -89,55 +74,40 @@ export default async function CategoriesPage() {
 
         {categories.length ? (
           <ul className={styles.categories} data-testid="categories">
-            {categories.map((categorie) => {
-              const illustration = illustrationCategorie(categorie, accueil.offres)
-              return (
-                <li key={categorie.id} className={styles.categoryCard}>
-                  <div className={styles.categoryVisual}>
-                    {illustration ? (
-                      <Image
-                        src={illustration.url}
-                        alt={illustration.texteAlternatif ?? ''}
-                        fill
-                        sizes="(max-width: 760px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className={styles.categoryImage}
-                      />
-                    ) : null}
-                    <span className={styles.categoryVisualLabel}>Explorez le rayon</span>
+            {categories.map((categorie) => (
+              <li key={categorie.id} className={styles.categoryCard}>
+                <div className={styles.categoryHead}>
+                  <span className={styles.categoryIcon} aria-hidden="true">
+                    <CategoryIcon name={categorie.nom} />
+                  </span>
+                  <div>
+                    <h2><Link href={`/categories/${categorie.slug}`}>{categorie.nom}</Link></h2>
+                    <p className={categorie.garantie.mois ? styles.warranty : styles.warrantyMuted}>
+                      <ShieldIcon />
+                      {categorie.garantie.mois
+                        ? `Garantie minimale : ${categorie.garantie.libelle}`
+                        : 'Sans garantie minimale imposée'}
+                    </p>
                   </div>
-                  <div className={styles.categoryHead}>
-                    <span className={styles.categoryIcon} aria-hidden="true">
-                      <CategoryIcon name={categorie.nom} />
-                    </span>
-                    <div>
-                      <h2><Link href={`/categories/${categorie.slug}`}>{categorie.nom}</Link></h2>
-                      <p className={categorie.garantie.mois ? styles.warranty : styles.warrantyMuted}>
-                        <ShieldIcon />
-                        {categorie.garantie.mois
-                          ? `Garantie minimale : ${categorie.garantie.libelle}`
-                          : 'Sans garantie minimale imposée'}
-                      </p>
-                    </div>
-                  </div>
+                </div>
 
-                  {categorie.sousCategories.length ? (
-                    <ul className={styles.subcategories}>
-                      {categorie.sousCategories.map((sous) => (
-                        <li key={sous.id}>
-                          <Link href={`/categories/${sous.slug}`}><span>{sous.nom}</span><ArrowIcon /></Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className={styles.noSubcategory}>Tous les produits de ce rayon sont réunis ici.</p>
-                  )}
+                {categorie.sousCategories.length ? (
+                  <ul className={styles.subcategories}>
+                    {categorie.sousCategories.map((sous) => (
+                      <li key={sous.id}>
+                        <Link href={`/categories/${sous.slug}`}><span>{sous.nom}</span><ArrowIcon /></Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.noSubcategory}>Tous les produits de ce rayon sont réunis ici.</p>
+                )}
 
-                  <Link href={`/categories/${categorie.slug}`} className={styles.categoryCta}>
-                    Voir tout le rayon <ArrowIcon />
-                  </Link>
-                </li>
-              )
-            })}
+                <Link href={`/categories/${categorie.slug}`} className={styles.categoryCta}>
+                  Voir tout le rayon <ArrowIcon />
+                </Link>
+              </li>
+            ))}
           </ul>
         ) : (
           <p className={styles.empty}>

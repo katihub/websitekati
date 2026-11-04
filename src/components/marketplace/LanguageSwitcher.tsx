@@ -8,8 +8,7 @@ const locales: MarketplaceLocale[] = ['fr', 'en']
 export function LanguageSwitcher() {
   const { locale, setLocale, text } = useMarketplaceLanguage()
 
-  return <div className={`${styles.languageSwitcher} ${styles.topbarLanguage}`} role="group" aria-label={text('language')} data-testid="language-switcher">
-    <span aria-hidden="true">🌐</span>
+  return <div className={styles.languageSwitcher} role="group" aria-label={text('language')} data-testid="language-switcher">
     {locales.map(option => <button key={option} type="button" lang={option} aria-pressed={locale === option} onClick={() => setLocale(option)}>
       {option.toUpperCase()}
     </button>)}
@@ -18,5 +17,5 @@ export function LanguageSwitcher() {
 
 export function TrustSlogan() {
   const { text } = useMarketplaceLanguage()
-  return <em><span aria-hidden="true">🛡️</span>{text('trust')}</em>
+  return <em>{text('trust')}</em>
 }

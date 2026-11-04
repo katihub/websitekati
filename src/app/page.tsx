@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
-import { Suspense } from 'react'
 
 import { PREMIERS_PRODUITS } from '@/app/api/rayon-produits/route'
 import { BannerStage } from '@/components/home/BannerStage'
@@ -29,7 +28,7 @@ import {
 import { pickupLine, shopPhone } from '@/lib/comptoirs'
 import { formatAmount, formatCount } from '@/lib/format'
 import { avecPanneCatalogue } from '@/lib/panne-catalogue'
-import { MarketplaceHome, MarketplaceHomeLoading } from '@/components/marketplace/MarketplaceHome'
+import { MarketplaceHome } from '@/components/marketplace/MarketplaceHome'
 
 /**
  * The homepage.
@@ -48,9 +47,10 @@ import { MarketplaceHome, MarketplaceHomeLoading } from '@/components/marketplac
  * interrupt that twice, at the two points where a reader has seen enough to
  * start asking how any of it would reach them.
  *
- * The marketplace shelves use available offers and distinct products across
- * their deepest published categories. The catalog has no order history, so
- * "best sellers" are prioritized by priced offers and discounts, not sales data.
+ * WHAT IS NOT HERE. No star ratings, because the catalog holds no reviews. No
+ * "best seller" shelf, because the export carries no order history. No
+ * countdown, because nothing here is genuinely expiring. Every list on this page
+ * is a query a customer could run themselves, and each one says which.
  *
  * THE BAND BETWEEN SECTIONS IS 64 PIXELS ON A PHONE AND THE TOKEN'S OWN VALUE
  * FROM sm UP. `--s-band` is clamp(6rem, 8.5vw, 10rem), and 8.5vw of a 360
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
 }
 
 export default avecPanneCatalogue(async function HomePage() {
-  return <Suspense fallback={<MarketplaceHomeLoading />}><MarketplaceHome /></Suspense>
+  return <MarketplaceHome />
   /* L'ancienne vitrine NowTech est conservée temporairement sous ce point de
      coupure pendant la migration de ses pages profondes. Elle n'est plus
      exécutée : la racine appartient désormais à la marketplace KatiMarket. */

@@ -46,11 +46,7 @@ export interface OffreMarketplace {
 
 // L’API boutique fournit son identité une seule fois, pas dans chaque offre.
 export type OffreBoutiqueMarketplace = Omit<OffreMarketplace, 'boutique'>
-export type BoutiquePubliqueMarketplace = BoutiqueMarketplace & {
-  offres: OffreBoutiqueMarketplace[]
-  pagination?: ListeOffresMarketplace['pagination']
-  facettes?: ListeOffresMarketplace['facettes']
-}
+export type BoutiquePubliqueMarketplace = BoutiqueMarketplace & { offres: OffreBoutiqueMarketplace[] }
 
 export interface AccueilMarketplace {
   boutiques: BoutiqueMarketplace[]
@@ -100,20 +96,6 @@ export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
 
 export async function lireBoutiqueMarketplace(slug: string): Promise<BoutiquePubliqueMarketplace | null> {
   try {
-    const accueil = await lireAccueilMarketplace()
-    const boutique = accueil.boutiques.find((item) => item.slug === slug)
-    if (boutique) {
-      const liste = await lireOffresMarketplace({ boutique: slug, taille: 24 })
-      if (!liste.indisponible) {
-        return {
-          ...boutique,
-          offres: liste.offres.map(({ boutique: _boutique, ...offre }) => offre),
-          pagination: liste.pagination,
-          facettes: liste.facettes,
-        }
-      }
-    }
-
     const reponse = await fetch(`${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`, { headers: entetesLectureCommune(), next: { revalidate: 60 } })
     if (!reponse.ok) return null
     return await reponse.json()

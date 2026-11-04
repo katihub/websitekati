@@ -5,7 +5,6 @@ import { useEffect, useId, useRef, useState } from 'react'
 
 import type { CategorieArbre } from '@/lib/marketplace-data'
 import styles from './marketplace-shell-v2.module.css'
-import { CATEGORY_ICON } from './ProductCardAccueil'
 
 export function MobileCategoriesMenu({ categories }: { categories: readonly CategorieArbre[] }) {
   const [open, setOpen] = useState(false)
@@ -49,7 +48,7 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
         className={styles.mobileCategoriesButton}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((currentlyOpen) => !currentlyOpen)}
+        onClick={() => setOpen(true)}
       >
         <span aria-hidden="true">▦</span>
         Toutes les catégories
@@ -76,7 +75,6 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
             {categories.map((categorie) => (
               <section key={categorie.id} className={styles.mobileMegaCategory}>
                 <Link href={`/categories/${categorie.slug}`} className={styles.mobileMegaTitle}>
-                  <span className={styles.mobileMegaCategoryIcon} aria-hidden="true">{CATEGORY_ICON[categorie.nom] ?? '📦'}</span>
                   {categorie.nom}<span aria-hidden="true">→</span>
                 </Link>
                 {categorie.sousCategories.length ? (
@@ -84,15 +82,6 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
                     {categorie.sousCategories.map((sousCategorie) => (
                       <li key={sousCategorie.id}>
                         <Link href={`/categories/${sousCategorie.slug}`}>{sousCategorie.nom}</Link>
-                        {sousCategorie.sousCategories.length ? (
-                          <ul>
-                            {sousCategorie.sousCategories.map((sousSousCategorie) => (
-                              <li key={sousSousCategorie.id}>
-                                <Link href={`/categories/${sousSousCategorie.slug}`}>{sousSousCategorie.nom}</Link>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
                       </li>
                     ))}
                   </ul>

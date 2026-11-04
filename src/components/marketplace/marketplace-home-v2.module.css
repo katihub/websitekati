@@ -210,15 +210,3 @@
 @media(max-width:560px){.centerStage>.hero{min-height:clamp(240px,62vw,280px)}.centerStage>.hero .heroImage{object-position:67% center}.centerStage>.hero .heroCopy{inset:auto 0 0;width:100%;min-height:82%;justify-content:flex-end;padding:16px 20px 25px;background:linear-gradient(0deg,#061f4fff 8%,#061f4fe8 55%,#061f4f2e 100%)}.centerStage>.hero .heroEyebrow{margin-bottom:6px;padding:4px 8px;font-size:.4rem}.centerStage>.hero .heroCopy h1{max-width:300px;font-size:clamp(1.25rem,5.8vw,1.48rem);line-height:1.02}.centerStage>.hero .heroCopy p{max-width:310px;margin:6px 0 9px;font-size:.63rem;line-height:1.35}.centerStage>.hero .heroCopy>a{min-height:34px;padding:8px 12px;font-size:.64rem}.centerStage>.hero .heroArrow{top:22%;width:31px;height:31px}.centerStage>.hero .heroArrow svg{width:17px}.centerStage>.hero .heroDots{bottom:7px;gap:5px}.centerStage>.hero .heroDots button{width:7px;height:7px}}
 /* Le logo et la banniere d'une boutique (31 octobre 2026) : la banniere reste discrete derriere le texte. */
 .shopAvatarLogo{position:relative;overflow:hidden;background:#fff;border:1px solid #e0e6ef}.shopAvatarLogo img{object-fit:contain;padding:3px}.shopBanner{z-index:-2;object-fit:cover;opacity:.16}
-
-.productsLoading{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:#fff;padding:18px}
-.productsLoadingBar{position:absolute;inset:0 auto auto 0;height:3px;width:36%;background:var(--orange);animation:productsProgress 1.4s ease-in-out infinite}
-.productsLoadingTitle{display:block;width:min(240px,55%);height:22px;border-radius:5px;background:#e8edf4}
-.productsLoading>div{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px}
-.productsLoading>div i{display:block;min-height:210px;border-radius:8px;background:linear-gradient(100deg,#edf2f8 25%,#f8fafd 45%,#edf2f8 65%);background-size:250% 100%;animation:productsShimmer 1.4s linear infinite}
-.productsLoadingText{display:block;margin-top:12px;color:var(--muted);font-size:.68rem}
-@keyframes productsProgress{from{transform:translateX(-110%)}to{transform:translateX(310%)}}
-@keyframes productsShimmer{to{background-position:-150% 0}}
-@media(max-width:850px){.productsLoading>div{grid-template-columns:repeat(3,minmax(0,1fr))}.productsLoading>div i:nth-child(n+4){display:none}}
-@media(max-width:560px){.productsLoading{padding:14px}.productsLoading>div{grid-template-columns:repeat(2,minmax(0,1fr))}.productsLoading>div i:nth-child(n+3){display:none}.productsLoading>div i{min-height:175px}}
-@media(prefers-reduced-motion:reduce){.productsLoadingBar,.productsLoading>div i{animation:none}}

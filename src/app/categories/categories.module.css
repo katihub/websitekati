@@ -96,10 +96,10 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #fff;
+  padding: 20px;
   box-shadow: 0 8px 28px rgb(7 29 76 / .035);
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
@@ -110,47 +110,12 @@
   transform: translateY(-3px);
 }
 
-.categoryVisual {
-  position: relative;
-  display: flex;
-  min-height: 148px;
-  align-items: flex-end;
-  overflow: hidden;
-  background: linear-gradient(125deg, #061f4f, #174b7d 68%, #ff7900);
-  padding: 15px 18px;
-}
-
-.categoryVisual::after {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgb(6 31 79 / .76), rgb(6 31 79 / .08));
-  content: '';
-}
-
-.categoryImage { object-fit: cover; transition: transform .3s ease; }
-.categoryCard:hover .categoryImage { transform: scale(1.04); }
-
-.categoryVisualLabel {
-  position: relative;
-  z-index: 1;
-  border: 1px solid rgb(255 255 255 / .4);
-  border-radius: 999px;
-  background: rgb(6 31 79 / .35);
-  padding: 6px 10px;
-  color: #fff;
-  font-size: .64rem;
-  font-weight: 800;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-
 .categoryHead {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
   min-height: 66px;
-  padding: 17px 18px 0;
 }
 
 .categoryIcon {
@@ -209,7 +174,7 @@
 }
 
 .subcategories {
-  margin: 18px 18px 0;
+  margin: 18px 0 0;
   padding: 13px 0;
   border-block: 1px solid #e7ecf3;
   list-style: none;
@@ -231,7 +196,7 @@
 
 .noSubcategory {
   min-height: 83px;
-  margin: 18px 18px 0;
+  margin: 18px 0 0;
   padding: 24px 0;
   border-block: 1px solid #e7ecf3;
   color: var(--muted);
@@ -245,7 +210,7 @@
   align-items: center;
   gap: 9px;
   align-self: flex-start;
-  margin: auto 18px 16px;
+  margin-top: auto;
   padding-top: 13px;
   color: #c45500;
   font-size: .69rem;
@@ -369,12 +334,8 @@
   .shell,
   .discoveryShell { width: min(100% - 22px, 1480px); }
   .intro p { font-size: .8rem; line-height: 1.55; }
-  .categoryVisual { min-height: 126px; padding: 12px 14px; }
+  .categoryCard { padding: 16px; }
   .categoryHead { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; }
-  .categoryHead { padding: 14px 14px 0; }
-  .subcategories,
-  .noSubcategory { margin-inline: 14px; }
-  .categoryCta { margin-inline: 14px; margin-bottom: 14px; }
   .categoryIcon { width: 52px; height: 52px; }
   .categoryIcon svg { width: 27px; height: 27px; }
   .categoryHead h2 { font-size: .95rem; }
@@ -388,7 +349,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .categoryCard,
-  .categoryImage,
   .categoryCta svg,
   .subcategories a,
   .tabs button::after { transition: none; }
