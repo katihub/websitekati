@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 
 import type { CategorieArbre } from '@/lib/marketplace-data'
 import styles from './marketplace-shell-v2.module.css'
+import { CATEGORY_ICON } from './ProductCardAccueil'
 
 export function MobileCategoriesMenu({ categories }: { categories: readonly CategorieArbre[] }) {
   const [open, setOpen] = useState(false)
@@ -75,6 +76,7 @@ export function MobileCategoriesMenu({ categories }: { categories: readonly Cate
             {categories.map((categorie) => (
               <section key={categorie.id} className={styles.mobileMegaCategory}>
                 <Link href={`/categories/${categorie.slug}`} className={styles.mobileMegaTitle}>
+                  <span className={styles.mobileMegaCategoryIcon} aria-hidden="true">{CATEGORY_ICON[categorie.nom] ?? '📦'}</span>
                   {categorie.nom}<span aria-hidden="true">→</span>
                 </Link>
                 {categorie.sousCategories.length ? (

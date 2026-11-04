@@ -168,16 +168,22 @@ export async function MarketplaceHome() {
     .map((c) => ({ nom: c.nom, slug: c.slug, nombre: nombres.get(c.nom) ?? 0, sousCategories: c.sousCategories.map((s) => ({ nom: s.nom, slug: s.slug })) }))
     .sort((a, b) => b.nombre - a.nombre || a.nom.localeCompare(b.nom, 'fr'))
   const premier = rayons.find((r) => r.nombre > 0) ?? rayons[0]
-  const categoriesCarrousel = rayons.filter((rayon) => rayon.nombre > 0).slice(0, 5)
-  const groupesCategories: CategoryProductGroup[] = await Promise.all(categoriesCarrousel.map(async (rayon) => ({
+  const categoriesCarrousel = rayons.filter((rayon) => rayon.nombre > 0)
+  const groupesComplets: CategoryProductGroup[] = await Promise.all(categoriesCarrousel.map(async (rayon) => ({
     nom: rayon.nom,
     slug: rayon.slug,
-    offres: (await lireOffresMarketplace({ categorieSlug: rayon.slug, taille: 12 })).offres,
+    offres: (await lireOffresMarketplace({ categorieSlug: rayon.slug, taille: 20 })).offres,
   })))
+  const groupesCategories = groupesComplets.map((groupe) => ({ ...groupe, offres: groupe.offres.slice(0, 12) }))
   const offresPremier = groupesCategories.find((groupe) => groupe.slug === premier?.slug)?.offres.slice(0, 8)
     ?? (premier ? (await lireOffresMarketplace({ categorieSlug: premier.slug, taille: 8 })).offres : [])
-  const best = offres.slice(0, 20)
-  const mixedCategoryProducts = interleaveCategoryProducts(groupesCategories, 18)
+  const selectionVariee = interleaveCategoryProducts(groupesComplets, Math.max(20, groupesComplets.length))
+  const selectionIds = new Set(selectionVariee.map((offre) => offre.id))
+  const best = [
+    ...selectionVariee,
+    ...offres.filter((offre) => !selectionIds.has(offre.id)),
+  ].slice(0, Math.max(20, groupesComplets.length))
+  const mixedCategoryProducts = interleaveCategoryProducts(groupesComplets, Math.max(18, groupesComplets.length))
   const fresh = [...offres].reverse().slice(0, 6)
   // Les promotions du panel restent prioritaires. Tant qu'aucune n'est
   // publiée, cette sélection KatiMarket évite de recréer un grand vide sous les

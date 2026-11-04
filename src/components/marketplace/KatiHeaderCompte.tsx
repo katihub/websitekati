@@ -142,11 +142,14 @@ export function LiensBarreHaut() {
   const { session, chargement, courriel, deconnecter } = useSession()
   const router = useRouter()
   const hydrate = useHydrate()
-  if (!hydrate || chargement) return null
-  if (!session) return <><Link href="/connexion">{text('signIn')}</Link><Link href="/inscription">{text('createAccount')}</Link></>
+  if (!hydrate || chargement) return <span className={styles.topbarLinksWaiting} aria-hidden="true" />
+  if (!session) return <>
+    <Link href="/connexion" className={styles.topbarAction} aria-label={text('signIn')}><Icon><path d="M10 17l5-5-5-5M15 12H3m9-7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></Icon><span>{text('signIn')}</span></Link>
+    <Link href="/inscription" className={styles.topbarAction} aria-label={text('createAccount')}><Icon><path d="M15 20v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1m7-9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10-3v6m-3-3h6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></Icon><span>{text('createAccount')}</span></Link>
+  </>
   const prenom = prenomDe(courriel)
   return <>
-    <span className={styles.salutation}>{text('greeting')}{prenom ? `, ${prenom}` : ''}</span>
-    <button type="button" className={styles.lienBarre} onClick={() => void deconnecter().then(() => router.refresh())}>{text('signOut')}</button>
+    <span className={`${styles.salutation} ${styles.topbarAction}`}><Icon>{ICONE_PERSONNE}</Icon>{text('greeting')}{prenom ? `, ${prenom}` : ''}</span>
+    <button type="button" className={`${styles.lienBarre} ${styles.topbarAction}`} onClick={() => void deconnecter().then(() => router.refresh())}><Icon><path d="M10 17l5-5-5-5M15 12H3m9-7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></Icon>{text('signOut')}</button>
   </>
 }
