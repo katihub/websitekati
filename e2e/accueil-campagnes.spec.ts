@@ -26,7 +26,7 @@ test('le carrousel principal reste compact et navigable', async ({ page }, testI
   expect(errors).toEqual([])
 })
 
-test('six campagnes sur deux lignes de trois défilent automatiquement sur la page d’accueil', async ({ page }, testInfo) => {
+test('les campagnes défilent automatiquement sur une ligne de trois sur la page d’accueil', async ({ page }, testInfo) => {
   const errors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
@@ -50,8 +50,8 @@ test('six campagnes sur deux lignes de trois défilent automatiquement sur la pa
   const pages = rail.getByTestId('promo-page')
   await expect(pages).toHaveCount(4)
   const premieresCartes = pages.first().locator('a')
-  await expect(premieresCartes).toHaveCount(6)
-  await expect(pages.nth(1).locator('a')).toHaveCount(6)
+  await expect(premieresCartes).toHaveCount(3)
+  await expect(pages.nth(1).locator('a')).toHaveCount(3)
   const imagesParVue = await pages.evaluateAll((vues) => vues.map((vue) =>
     [...vue.querySelectorAll('img')].map((image) => {
       const source = new URL((image as HTMLImageElement).src)
@@ -65,11 +65,7 @@ test('six campagnes sur deux lignes de trois défilent automatiquement sur la pa
     return { x, y, width }
   }))
   const lignes = [...new Set(cartes.map((carte) => Math.round(carte.y)))]
-  expect(lignes).toHaveLength(2)
-  expect(lignes.map((y) => cartes.filter((carte) => Math.round(carte.y) === y))).toEqual([
-    expect.arrayContaining([expect.any(Object), expect.any(Object), expect.any(Object)]),
-    expect.arrayContaining([expect.any(Object), expect.any(Object), expect.any(Object)]),
-  ])
+  expect(lignes).toHaveLength(1)
   expect(cartes.every((carte) => carte.width > largeur * 0.3 && carte.width < largeur * 0.35)).toBe(true)
   await expect(page.getByRole('heading', { level: 1, name: /Tout ce dont vous avez besoin/i })).toBeVisible()
   const categories = page.getByRole('complementary', { name: 'Catégories de produits' })
