@@ -148,3 +148,21 @@
 .logoFooter{align-items:flex-start}
 @media(max-width:700px){.logoMark{width:45px;height:45px}}
 @media(max-width:1050px){.logoText{display:flex}.logoText strong{font-size:1.05rem}.logoText small{display:none}}
+
+/* En-tete mobile : logo, icones et panier tiennent sur la ligne. La grille
+   ne laisse plus son contenu la pousser au-dela de l'ecran (le panier etait
+   coupe a droite), les icones se resserrent, et sous 380 px seul le logo rond
+   reste, sans le texte KATIMARKET. */
+@media(max-width:700px){
+  .mainbar{grid-template-columns:minmax(0,auto) minmax(0,1fr)}
+  .mainbar .brandHome{gap:8px;min-width:0}
+  .mainbar .logoMark{width:46px;height:46px}
+  .mainbar .actions{gap:2px;min-width:0}
+  .mainbar .actions .actionLien{padding:6px}
+}
+/* Le cadre de la recherche laisse deborder ses suggestions (overflow visible) :
+   le bouton orange porte donc lui-meme l'arrondi du cadre. */
+.search>button[type=submit]{border-radius:0 9px 9px 0}
+@media(max-width:380px){
+  .mainbar .logoText{display:none}
+}
