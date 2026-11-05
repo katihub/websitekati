@@ -66,6 +66,9 @@ export async function simulerApi(page: Page): Promise<ApiSimulee> {
     { methode: 'GET', motif: /^\/marketplace\/localites$/, gestionnaire: () => LOCALITES },
     // Le bandeau du contrat vendeur : rien a lire par defaut, un test le declenche.
     { methode: 'GET', motif: /^\/contenus\/boutiques\/[^/]+\/contrat-vendeur$/, gestionnaire: () => ({ aLire: false, version: null }) },
+    // La cloche du client et de l'espace vendeur : rien de nouveau par defaut, un test en remplit.
+    { methode: 'GET', motif: /^\/notifications-app\/(client|boutiques\/[^/]+)\/compteur$/, gestionnaire: () => ({ nonLues: 0 }) },
+    { methode: 'GET', motif: /^\/notifications-app\/(client|boutiques\/[^/]+)(\?.*)?$/, gestionnaire: () => ({ elements: [], nonLues: 0, suivant: null }) },
   ]
   const appels: Appel[] = []
   const nonPrevues: string[] = []

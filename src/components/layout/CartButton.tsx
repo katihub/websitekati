@@ -19,7 +19,7 @@ import Link from 'next/link'
 export function CartButton({ href }: { href?: string }) {
   const { count, open } = useCart()
 
-  if (href) return <Link href={href} className="press flex min-h-11 items-center gap-2.5 rounded-control px-3 py-2 text-small font-semibold" aria-label={`Panier, ${count} article${count > 1 ? 's' : ''}`}><span className="relative"><IconBasket className="text-[1.5rem]"/><span className="absolute -top-2 -right-2 min-w-5 rounded-full bg-[#ff7900] px-1 text-center text-[.7rem] text-white">{count}</span></span><span>Panier</span></Link>
+  if (href) return <Link href={href} className="press flex min-h-11 items-center gap-2.5 rounded-control px-3 py-2 text-small font-semibold max-[700px]:px-2" aria-label={`Panier, ${count} article${count > 1 ? 's' : ''}`}><span className="relative"><IconBasket className="text-[1.5rem]"/><span className="absolute -top-2 -right-2 min-w-5 rounded-full bg-[#ff7900] px-1 text-center text-[.7rem] text-white">{count}</span></span><span className="max-[700px]:hidden">Panier</span></Link>
   return (
     <button
       type="button"

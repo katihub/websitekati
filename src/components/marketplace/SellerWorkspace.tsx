@@ -23,6 +23,8 @@ import { PlansBoutique } from './vendeur/PlansBoutique'
 import { BandeauContrat } from './vendeur/BandeauContrat'
 import { VisuelsBoutique } from './vendeur/VisuelsBoutique'
 import { useMarketplaceLanguage } from '@/lib/language'
+import { boiteBoutique, rubriqueDe } from '@/lib/notifications'
+import { ClocheNotifications } from '@/components/notifications/ClocheNotifications'
 
 const chargementOnglet = () => <p className={styles.dashboardEmpty}>Chargement de cette rubrique…</p>
 const EditeurFicheProduit = dynamic(() => import('./vendeur/EditeurFicheProduit').then(module => module.EditeurFicheProduit), { loading: chargementOnglet })
@@ -144,6 +146,8 @@ type ShopDispute = { id: string; reference: string; statut: string; objet: strin
 type Listing<T> = { total: number; elements: T[] }
 type Section = 'documents' | 'products' | 'offers' | 'orders' | 'deliveries' | 'payments' | 'finance' | 'reviews' | 'customers' | 'members' | 'disputes'
 type Panel = 'overview' | 'verification' | 'products' | 'offers' | 'quotes' | 'messages' | 'orders' | 'deliveries' | 'payments' | 'reviews' | 'customers' | 'settings' | 'members' | 'disputes'
+const PANELS: readonly Panel[] = ['overview', 'verification', 'products', 'offers', 'quotes', 'messages', 'orders', 'deliveries', 'payments', 'reviews', 'customers', 'settings', 'members', 'disputes']
+const estPanel = (valeur: string | null): valeur is Panel => PANELS.includes(valeur as Panel)
 type Access = 'allowed' | 'denied' | 'error'
 const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed', disputes: 'allowed' }
 const initialLoaded: Record<Section, boolean> = { documents: false, products: false, offers: false, orders: false, deliveries: false, payments: false, finance: false, reviews: false, customers: false, members: false, disputes: false }
@@ -410,7 +414,7 @@ export function SellerWorkspace() {
         {space ? <>
           <header className={styles.pageHead}>
             <div><h1>{panel === 'overview' ? `${en ? 'Hello' : 'Bonjour'}, ${space.nom}` : en ? ({verification: 'Shop verification', products: 'Seller catalogue', offers: 'Shop offers', quotes: 'Quotes', messages: 'KATI messages', orders: 'Shop orders', deliveries: 'Shop deliveries', disputes: 'Disputes & returns', payments: 'Finance & payouts', reviews: 'Customer reviews', customers: 'Customers', members: 'Shop team', settings: 'Shop settings'}[panel] ?? 'Seller overview') : panel === 'verification' ? 'Vérification de votre boutique' : panel === 'products' ? 'Catalogue vendeur' : panel === 'offers' ? 'Offres de la boutique' : panel === 'quotes' ? 'Demandes de devis' : panel === 'messages' ? 'Messagerie KATI' : panel === 'orders' ? 'Commandes de la boutique' : panel === 'deliveries' ? 'Livraisons de la boutique' : panel === 'disputes' ? 'Litiges et retours' : panel === 'payments' ? 'Finances et retraits' : panel === 'reviews' ? 'Avis clients' : panel === 'customers' ? 'Clients' : panel === 'members' ? 'Équipe de la boutique' : 'Paramètres de la boutique'}</h1><p>{panel === 'overview' ? (en ? 'Here is what is happening in your shop.' : 'Voici ce qui se passe dans votre boutique.') : `${space.nom} · ${space.vendeur.nomLegal}`}</p></div>
-            <div className={styles.headTools}><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{en ? ({brouillon:'Draft', soumis:'Submitted', en_verification:'Under review', approuve:'Verified shop', modification_demandee:'Changes requested', refuse:'Application rejected'}[space.vendeur.statutVerification] ?? space.vendeur.statutVerification) : STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> {en ? 'View my shop' : 'Voir ma boutique'}</Link></div>
+            <div className={styles.headTools}><ClocheNotifications key={space.id} boite={boiteBoutique(space.id)} onOuvrir={(lien) => { const rubrique = rubriqueDe(lien); if (estPanel(rubrique)) openPanel(rubrique) }} /><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{en ? ({brouillon:'Draft', soumis:'Submitted', en_verification:'Under review', approuve:'Verified shop', modification_demandee:'Changes requested', refuse:'Application rejected'}[space.vendeur.statutVerification] ?? space.vendeur.statutVerification) : STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> {en ? 'View my shop' : 'Voir ma boutique'}</Link></div>
           </header>
           <BandeauContrat key={space.id} shopId={space.id} />
 
