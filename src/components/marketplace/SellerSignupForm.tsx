@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { useLocalites } from '@/lib/localites'
+import { quartiersDe, useLocalites } from '@/lib/localites'
 import { CHOIX_VENDEUR, LIBELLE_MODE, MODES_LIVRAISON, type DeliveryMode } from '@/lib/modes-livraison'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -16,17 +16,25 @@ type SavMode = 'kati_service' | 'boutique'
 type Values = {
   owner: string; email: string; phone: string; password: string; confirmation: string
   legal: string; type: 'personne_physique' | 'entreprise'; niu: string; rccm: string
+  birthDate: string; birthPlace: string; residenceCity: string; district: string; districtOther: boolean; sponsorName: string; sponsorPhone: string
   shop: string; description: string; cities: string[]; categories: string[]; modes: DeliveryMode[]; pickup: string; stock: 'suivi' | 'non_suivi'; sav: SavMode | ''
 }
 
 const steps = ['Vos coordonnées', 'Votre boutique', 'Votre activité', 'Vérification']
 const cities = ['Douala', 'Yaoundé', 'Bafoussam', 'Garoua', 'Bamenda', 'Maroua', 'Ngaoundéré', 'Bertoua', 'Ebolowa', 'Kribi']
+const AUTRE_QUARTIER = '__autre__'
+/** La date de naissance la plus recente acceptee : avoir 18 ans aujourd'hui. */
+const dateMajorite = (aujourdhui = new Date()) => {
+  const limite = new Date(aujourdhui)
+  limite.setFullYear(limite.getFullYear() - 18)
+  return limite.toISOString().slice(0, 10)
+}
+const dateLisible = (iso: string) => (iso ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`)) : '')
 const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 export function SellerSignupForm() {
   const [step, setStep] = useState(0)
-  const [values, setValues] = useState<Values>({ owner: '', email: '', phone: '', password: '', confirmation: '', legal: '', type: 'entreprise', niu: '', rccm: '', shop: '', description: '', cities: ['Douala'], categories: [], modes: ['katihub'], pickup: '', stock: 'suivi', sav: '' })
-  const [cni, setCni] = useState<File | null>(null)
+  const [values, setValues] = useState<Values>({ owner: '', email: '', phone: '', password: '', confirmation: '', legal: '', type: 'entreprise', niu: '', rccm: '', birthDate: '', birthPlace: '', residenceCity: '', district: '', districtOther: false, sponsorName: '', sponsorPhone: '', shop: '', description: '', cities: ['Douala'], categories: [], modes: ['katihub'], pickup: '', stock: 'suivi', sav: '' })
   const [villeLibre, setVilleLibre] = useState('')
   const [accepted, setAccepted] = useState(false)
   const [pending, setPending] = useState(false)
@@ -37,6 +45,7 @@ export function SellerSignupForm() {
   const slug = slugify(values.shop)
   const localites = useLocalites()
   const villes = [...new Set([...localites.map(l => l.ville), ...cities, ...values.cities])]
+  const quartiersResidence = quartiersDe(localites, values.residenceCity)
   const { categories: arbreCategories, erreur: erreurCategories, reessayer: relireCategories } = useCategoriesMarketplace()
   const categoriesDisponibles = (arbreCategories ?? []).flatMap((categorie: CategorieMarketplace) =>
     categorie.sousCategories.length ? categorie.sousCategories.map(sous => ({ id: sous.id, label: `${categorie.nom} · ${sous.nom}` })) : [{ id: categorie.id, label: categorie.nom }],
@@ -72,11 +81,15 @@ export function SellerSignupForm() {
       if (!values.sav) return 'Choisissez qui prendra en charge votre service après-vente.'
     }
     if (currentStep === 2) {
-      if (values.legal.trim().length < 2) return 'Indiquez le nom sous lequel vous exercez votre activité.'
-      if (!cni) return 'Joignez une photo ou un PDF de votre CNI.'
-      if (cni.size > 10 * 1024 * 1024) return 'Le fichier CNI ne doit pas depasser 10 Mio.'
-      if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(cni.type)) return 'Le fichier CNI doit etre une photo JPEG, PNG ou WebP, ou un PDF.'
-      if (values.type === 'entreprise' && (!values.niu.trim() || !values.rccm.trim())) return 'Pour une entreprise, le NIU et le RCCM sont nécessaires.'
+      if (values.type === 'entreprise') return values.legal.trim().length < 2 ? 'Indiquez la dénomination de votre entreprise.' : ''
+      if (values.legal.trim().length < 2) return 'Indiquez votre nom et votre prénom.'
+      if (!values.birthDate) return 'Indiquez votre date de naissance.'
+      if (values.birthDate > dateMajorite()) return 'Vous devez avoir au moins 18 ans pour vendre sur KatiMarket.'
+      if (values.birthPlace.trim().length < 2) return 'Indiquez votre lieu de naissance.'
+      if (!values.residenceCity) return 'Choisissez votre ville de résidence.'
+      if (values.district.trim().length < 2) return 'Indiquez votre quartier de résidence.'
+      const telephoneParrain = values.sponsorPhone.replace(/[\s().-]/g, '')
+      if (telephoneParrain && !/^\+?\d{8,15}$/.test(telephoneParrain)) return 'Le numéro du fournisseur ou parrain est invalide.'
     }
     if (currentStep === 3 && !accepted) return 'Veuillez accepter le contrat vendeur avant l’envoi.'
     return ''
@@ -115,11 +128,19 @@ export function SellerSignupForm() {
         const villePrincipale = values.cities[0]
         formulaire.append('type', values.type)
         formulaire.append('nomLegal', values.legal.trim())
-        if (values.niu.trim()) formulaire.append('niu', values.niu.trim())
-        if (values.rccm.trim()) formulaire.append('rccm', values.rccm.trim())
+        if (values.type === 'entreprise') {
+          if (values.niu.trim()) formulaire.append('niu', values.niu.trim())
+          if (values.rccm.trim()) formulaire.append('rccm', values.rccm.trim())
+        } else {
+          formulaire.append('dateNaissance', values.birthDate)
+          formulaire.append('lieuNaissance', values.birthPlace.trim())
+          formulaire.append('villeResidence', values.residenceCity)
+          formulaire.append('quartierResidence', values.district.trim())
+          if (values.sponsorName.trim()) formulaire.append('parrainNom', values.sponsorName.trim())
+          if (values.sponsorPhone.trim()) formulaire.append('parrainTelephone', values.sponsorPhone.replace(/[\s().-]/g, ''))
+        }
         formulaire.append('boutique', JSON.stringify({ nom: values.shop.trim(), slug, description: values.description.trim(), gestionSav: values.sav, modesLivraison: MODES_LIVRAISON.filter(mode => values.modes.includes(mode)), villesLivraison: values.cities, ville: villePrincipale, ...(values.categories.length ? { categoriesVente: values.categories } : {}), suiviStock: values.stock === 'suivi', ...(values.modes.includes('retrait') ? { adresseRetrait: values.pickup.trim() } : {}) }))
         formulaire.append('proprietaire', JSON.stringify({ courriel: values.email.trim().toLowerCase(), nom: values.owner.trim(), telephone: values.phone.replace(/[\s().-]/g, '') }))
-        formulaire.append('cni', cni!, cni!.name)
         saved = await api<Receipt>('/vendeurs/inscription', {
           methode: 'POST', anonyme: true,
           corps: formulaire,
@@ -188,11 +209,26 @@ export function SellerSignupForm() {
         {step === 2 ? <>
           <div className={styles.sectionHead}><h2 id="signup-form-title">Sous quel nom vendez-vous ?</h2><p>Ces renseignements nous aident à vérifier votre activité.</p></div>
           <fieldset className={styles.sellerType}><legend>Votre situation <b>*</b></legend><label><input type="radio" name="seller-type" value="entreprise" checked={values.type === 'entreprise'} onChange={set('type')} /><span><strong>Je représente une entreprise</strong><small>Société ou organisation enregistrée</small></span></label><label><input type="radio" name="seller-type" value="personne_physique" checked={values.type === 'personne_physique'} onChange={set('type')} /><span><strong>Je vends en mon nom</strong><small>Activité individuelle</small></span></label></fieldset>
-          <div className={styles.fields}><label className={styles.wide}>{values.type === 'entreprise' ? 'Dénomination de l’entreprise' : 'Nom légal du vendeur'} <b>*</b><input value={values.legal} onChange={set('legal')} placeholder={values.type === 'entreprise' ? 'Nom figurant sur vos documents' : 'Votre nom et prénom officiels'} /></label><label className={styles.wide}>Carte nationale d’identité (CNI) <b>*</b><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(event: ChangeEvent<HTMLInputElement>) => setCni(event.target.files?.[0] ?? null)} /><small>Photo ou PDF, 10 Mio maximum. Le document est transmis et conservé dans un espace privé.</small>{cni ? <small>Fichier sélectionné : {cni.name}</small> : null}</label>{values.type === 'entreprise' ? <><label>NIU <b>*</b><input value={values.niu} onChange={set('niu')} placeholder="Numéro d’identifiant unique" /></label><label>RCCM <b>*</b><input value={values.rccm} onChange={set('rccm')} placeholder="Registre du commerce" /></label></> : null}</div>
+          {values.type === 'entreprise' ? <div className={styles.fields}>
+            <label className={styles.wide}>Dénomination de l’entreprise <b>*</b><input value={values.legal} onChange={set('legal')} placeholder="Nom figurant sur vos documents" /></label>
+            <label>NIU (facultatif)<input value={values.niu} onChange={set('niu')} placeholder="Numéro d’identifiant unique" /></label>
+            <label>RCCM (facultatif)<input value={values.rccm} onChange={set('rccm')} placeholder="Registre du commerce" /></label>
+            <p className={`${styles.wide} ${styles.hint}`}>Vos justificatifs (CNI, NIU, RCCM) s’envoient plus tard depuis votre espace vendeur, qui vous rappelle ceux qui manquent.</p>
+          </div> : <div className={styles.fields}>
+            <label className={styles.wide}>Nom et prénom <b>*</b><input value={values.legal} onChange={set('legal')} autoComplete="name" placeholder="Vos nom et prénom officiels" data-testid="inscription-nom" /></label>
+            <label>Date de naissance <b>*</b><input type="date" value={values.birthDate} onChange={set('birthDate')} max={dateMajorite()} autoComplete="bday" data-testid="inscription-naissance" /><small>Vous devez avoir au moins 18 ans.</small></label>
+            <label>Lieu de naissance <b>*</b><input value={values.birthPlace} onChange={set('birthPlace')} maxLength={120} placeholder="Ex. Bafoussam" data-testid="inscription-lieu-naissance" /></label>
+            <label>Ville de résidence <b>*</b><select value={values.residenceCity} onChange={event => { setValues(current => ({ ...current, residenceCity: event.target.value, district: '' })); setError('') }} data-testid="inscription-ville-residence"><option value="" disabled>Choisissez…</option>{villes.map(city => <option key={city} value={city}>{city}</option>)}</select></label>
+            {quartiersResidence.length ? <label>Quartier de résidence <b>*</b><select value={values.districtOther ? AUTRE_QUARTIER : values.district} onChange={event => { const autre = event.target.value === AUTRE_QUARTIER; setValues(current => ({ ...current, districtOther: autre, district: autre ? '' : event.target.value })); setError('') }} data-testid="inscription-quartier"><option value="" disabled>Choisissez…</option>{quartiersResidence.map(q => <option key={q.id} value={q.nom}>{q.nom}</option>)}<option value={AUTRE_QUARTIER}>Autre quartier…</option></select></label> : null}
+            {!quartiersResidence.length || values.districtOther ? <label>{quartiersResidence.length ? 'Autre quartier' : 'Quartier de résidence'} <b>*</b><input value={values.district} onChange={set('district')} maxLength={80} placeholder="Ex. Akwa, Bonamoussadi…" data-testid="inscription-quartier-libre" /></label> : null}
+            <label>Nom d’un fournisseur ou parrain (facultatif)<input value={values.sponsorName} onChange={set('sponsorName')} maxLength={120} placeholder="Une personne qui vous connaît" /></label>
+            <label>Téléphone d’un fournisseur ou parrain (facultatif)<input type="tel" value={values.sponsorPhone} onChange={set('sponsorPhone')} placeholder="Ex. 6 77 00 11 22" /></label>
+            <p className={`${styles.wide} ${styles.hint}`}>Votre CNI s’envoie plus tard depuis votre espace vendeur, qui vous rappelle les documents qui manquent.</p>
+          </div>}
         </> : null}
         {step === 3 ? <>
           <div className={styles.sectionHead}><h2 id="signup-form-title">Tout est bon pour vous ?</h2><p>Relisez les informations avant d’envoyer votre candidature.</p></div>
-          <dl className={styles.review}><div><dt>Contact</dt><dd>{values.owner}<br />{values.email}<br />{values.phone}</dd><button type="button" onClick={() => setStep(0)}>Modifier</button></div><div><dt>Boutique</dt><dd>{values.shop} · {values.cities.join(', ')}<br />{values.categories.length ? <>{categoriesDisponibles.filter(c => values.categories.includes(c.id)).map(c => c.label).join(', ')}<br /></> : null}{values.description}<br />{values.modes.map(mode => LIBELLE_MODE[mode]).join(', ')} · {values.stock === 'suivi' ? 'stock suivi' : 'stock non suivi'}<br />SAV : {values.sav === 'kati_service' ? 'géré par Kati Service' : 'géré par la boutique'}</dd><button type="button" onClick={() => setStep(1)}>Modifier</button></div><div><dt>Activité</dt><dd>{values.legal}<br />{values.type === 'entreprise' ? `Entreprise · NIU ${values.niu} · RCCM ${values.rccm}` : 'Vendeur individuel'}<br />CNI : {cni?.name}</dd><button type="button" onClick={() => setStep(2)}>Modifier</button></div></dl>
+          <dl className={styles.review}><div><dt>Contact</dt><dd>{values.owner}<br />{values.email}<br />{values.phone}</dd><button type="button" onClick={() => setStep(0)}>Modifier</button></div><div><dt>Boutique</dt><dd>{values.shop} · {values.cities.join(', ')}<br />{values.categories.length ? <>{categoriesDisponibles.filter(c => values.categories.includes(c.id)).map(c => c.label).join(', ')}<br /></> : null}{values.description}<br />{values.modes.map(mode => LIBELLE_MODE[mode]).join(', ')} · {values.stock === 'suivi' ? 'stock suivi' : 'stock non suivi'}<br />SAV : {values.sav === 'kati_service' ? 'géré par Kati Service' : 'géré par la boutique'}</dd><button type="button" onClick={() => setStep(1)}>Modifier</button></div><div><dt>Activité</dt><dd>{values.legal}<br />{values.type === 'entreprise' ? `Entreprise${values.niu.trim() ? ` · NIU ${values.niu.trim()}` : ''}${values.rccm.trim() ? ` · RCCM ${values.rccm.trim()}` : ''}` : <>Vendeur individuel · né(e) le {dateLisible(values.birthDate)} à {values.birthPlace}<br />Réside à {values.residenceCity}, {values.district}{values.sponsorName.trim() || values.sponsorPhone.trim() ? <><br />Fournisseur ou parrain : {[values.sponsorName.trim(), values.sponsorPhone.trim()].filter(Boolean).join(' · ')}</> : null}</>}</dd><button type="button" onClick={() => setStep(2)}>Modifier</button></div></dl>
           <label className={styles.terms}><input type="checkbox" checked={accepted} onChange={event => { setAccepted(event.target.checked); setError('') }} /><span>J’accepte le <Link href="/contrat-vendeurs" target="_blank">contrat vendeur</Link> et j’ai pris connaissance de la <Link href="/politique-confidentialite" target="_blank">politique de confidentialité</Link>. <b>*</b></span></label>
         </> : null}
         {error ? <p className={styles.error} role="alert">{error}</p> : null}

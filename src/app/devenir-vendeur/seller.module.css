@@ -29,3 +29,5 @@
 .addCity button{border:1px solid #e8a66d;border-radius:8px;background:#fff7ef;color:#b94e00;padding:0 12px;font-weight:700;cursor:pointer}
 .fields input[type=file]{height:auto;min-height:46px;padding:10px}
 @media(max-width:600px){.choiceGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+/* La note sous l'etape « Votre activite » : les justificatifs viennent plus tard. */
+.hint{margin:0;border-radius:9px;background:#f4f7fb;padding:11px 13px;color:#4a5872;font-size:12px;font-weight:500;line-height:1.5}
