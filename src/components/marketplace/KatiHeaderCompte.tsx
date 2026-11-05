@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 
 import { api, ErreurApi } from '@/lib/api'
+import { BOITE_CLIENT, cheminInterne } from '@/lib/notifications'
+import { ClocheNotifications } from '@/components/notifications/ClocheNotifications'
 import { useSession } from '@/lib/session'
 import styles from './marketplace-shell-v2.module.css'
 import { useMarketplaceLanguage } from '@/lib/language'
@@ -88,6 +90,7 @@ function MenuCompte({ profil, courriel, onDeconnexion }: { profil: Profil | null
       {lien('/compte/commandes', 'package', text('myOrders'))}
       {lien('/compte/devis', 'receipt', text('myQuotes'))}
       {lien('/compte/paiements-plusieurs-fois', 'wallet', text('myInstallments'))}
+      {lien('/compte/notifications', 'message', text('myNotifications'))}
       {lien('/compte/kati', 'star', text('myPoints'))}
       {lien('/compte/favoris', 'heart', text('myFavorites'))}
       <button type="button" role="menuitem" onClick={() => { setOuvert(false); void onDeconnexion() }}><Icon>{ICONE_SORTIE}</Icon>{text('signOut')}</button>
@@ -130,10 +133,13 @@ export function ActionsCompte() {
       <Link href="/espace-vendeur" className={styles.actionLien} aria-label={text('sellerAccount')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('sellerAccount')}</span></Link>
     </>
   }
+  // Sur mobile, la cloche prend la place de ce raccourci : il reste dans le menu du compte.
   return <>
     {profil === 'marchand'
-      ? <Link href="/espace-vendeur" className={styles.actionLien} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
-      : <Link href="/compte/commandes" className={styles.actionLien} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
+      ? <Link href="/espace-vendeur" className={`${styles.actionLien} ${styles.horsMobile}`} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
+      : <Link href="/compte/commandes" className={`${styles.actionLien} ${styles.horsMobile}`} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
+    <ClocheNotifications boite={BOITE_CLIENT} classeBouton={styles.actionLien} toutVoir="/compte/notifications"
+      onOuvrir={(lien) => router.push(cheminInterne(lien) ?? '/compte/notifications')} />
     <MenuCompte profil={profil} courriel={courriel} onDeconnexion={deconnexion} />
   </>
 }

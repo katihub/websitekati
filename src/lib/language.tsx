@@ -27,6 +27,7 @@ const COPY = {
   myPoints: { fr: 'Mes KATI', en: 'My KATI' },
   myInstallments: { fr: 'Mes paiements en plusieurs fois', en: 'My installment plans' },
   myFavorites: { fr: 'Mes favoris', en: 'My favorites' },
+  myNotifications: { fr: 'Mes notifications', en: 'My notifications' },
   footerIntro: { fr: 'Votre marketplace de confiance au Cameroun. Des produits utiles, des vendeurs locaux vérifiés et une livraison suivie.', en: 'Your trusted marketplace in Cameroon. Useful products, verified local sellers, and tracked delivery.' },
   buy: { fr: 'Acheter sur KatiMarket', en: 'Shop on KatiMarket' },
   allProducts: { fr: 'Toutes les catégories', en: 'All categories' },

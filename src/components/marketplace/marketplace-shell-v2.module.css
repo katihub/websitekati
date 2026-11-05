@@ -159,6 +159,7 @@
   .mainbar .logoMark{width:46px;height:46px}
   .mainbar .actions{gap:2px;min-width:0}
   .mainbar .actions .actionLien{padding:6px}
+  .mainbar .actions .horsMobile{display:none}
 }
 /* Le cadre de la recherche laisse deborder ses suggestions (overflow visible) :
    le bouton orange porte donc lui-meme l'arrondi du cadre. */
