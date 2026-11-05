@@ -12,22 +12,21 @@ import styles from './marketplace-promos.module.css'
  *
  * Les images sont les bannieres de l'emplacement « promo », publiees par le
  * super admin dans le panel (Contenu > Bannieres), dans leur ordre.
- * Six blocs par vue (grille 3 x 2) ; defilement automatique, suspendu au survol,
+ * Trois blocs par vue, sur une seule ligne ; defilement automatique toutes les
+ * 3 secondes, suspendu au survol,
  * au focus et au toucher, et absent si le visiteur reduit les animations.
  */
 
-const INTERVALLE_MS = 5000
+const INTERVALLE_MS = 3000
 const PAR_LIGNE = 3
-const PAR_VUE = PAR_LIGNE * 2
+const PAR_VUE = PAR_LIGNE
 
 function grouperPromos(promos: PublishedBanner[]) {
   if (promos.length < PAR_VUE) return promos.length ? [promos] : []
 
-  /* Une vue avance d'une ligne, et non de six cartes : avec les six campagnes
-     de secours, les deux lignes permutent donc réellement au lieu de produire
-     une page unique immobile. Chaque vue contient toujours six campagnes
-     distinctes ; les répétitions ne se trouvent que hors écran, dans la vue
-     suivante nécessaire à la boucle du carrousel. */
+  /* Une vue est une ligne de trois campagnes. La derniere se complete en
+     reprenant le debut de la liste : chaque vue reste pleine, et la boucle du
+     carrousel ne montre jamais de case vide. */
   const nombreVues = Math.ceil(promos.length / PAR_LIGNE)
   return Array.from({ length: nombreVues }, (_, vue) =>
     Array.from({ length: PAR_VUE }, (_, rang) => promos[(vue * PAR_LIGNE + rang) % promos.length]!),

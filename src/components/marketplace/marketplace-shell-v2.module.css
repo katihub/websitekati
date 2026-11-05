@@ -46,7 +46,7 @@
 .nav .allCategories{display:none}
 .navLink{display:inline-flex;align-items:center;gap:6px}
 .navIcon{display:inline-grid;width:17px;height:17px;flex:none;place-items:center;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.mobileCategories{position:relative;display:block;flex:none}
+.mobileCategories{display:block;flex:none}
 .mobileCategoriesButton{display:flex;min-height:42px;align-items:center;gap:7px;border:0;background:#fff;color:#061f4f;font:inherit;font-size:.72rem;font-weight:800;white-space:nowrap;cursor:pointer}
 .mobileCategoriesButton>svg:first-child,.mobileMegaCategoryIcon,.mobileMegaTitle>span:last-child svg,.mobileMegaAll>svg,.mobileMegaMenu>header>button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .mobileCategoriesButton[aria-expanded=true]>svg:last-child{transform:rotate(180deg)}
