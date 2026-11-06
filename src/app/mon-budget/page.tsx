@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 type SearchParams = Record<string, string | string[] | undefined>
 type CategorieSelection = { nom: string; slug: string }
 
-const SUGGESTIONS_PAR_DEFAUT = [2_000, 5_000, 10_000, 20_000, 50_000, 100_000]
+const SUGGESTIONS_PAR_DEFAUT = [2_000, 5_000, 10_000, 15_000, 20_000, 30_000]
 
 function valeurs(params: SearchParams, cle: string): string[] {
   const valeur = params[cle]
@@ -65,7 +65,8 @@ function suggestionsBudget(offres: readonly OffreMarketplace[], minimum?: number
   if (!prix.length) return []
 
   const bas = arrondirBudget(prix[0]!)
-  const haut = Math.max(bas + 2_500, arrondirBudget(prix[prix.length - 1]!))
+  const prixBudgetModeste = prix[Math.floor((prix.length - 1) / 2)]!
+  const haut = Math.max(bas + 2_500, arrondirBudget(prixBudgetModeste))
   return Array.from({ length: 6 }, (_, index) =>
     Math.ceil((bas + (haut - bas) * index / 5) / 500) * 500,
   )

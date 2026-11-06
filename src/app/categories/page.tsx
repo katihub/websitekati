@@ -95,7 +95,11 @@ export default async function CategoriesPage() {
                   <ul className={styles.subcategories}>
                     {categorie.sousCategories.map((sous) => (
                       <li key={sous.id}>
-                        <Link href={`/categories/${sous.slug}`}><span>{sous.nom}</span><ArrowIcon /></Link>
+                        <Link href={`/categories/${sous.slug}`}>
+                          <span className={styles.subcategoryIcon} aria-hidden="true"><CategoryIcon name={sous.nom} /></span>
+                          <span>{sous.nom}</span>
+                          <ArrowIcon />
+                        </Link>
                       </li>
                     ))}
                   </ul>
