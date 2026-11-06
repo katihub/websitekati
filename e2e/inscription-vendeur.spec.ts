@@ -28,7 +28,8 @@ async function preparer(page: Page): Promise<ApiSimulee> {
 
   await page.getByLabel(/Nom de la boutique/).fill('Boutique test')
   await page.getByLabel('Yaoundé', { exact: true }).check()
-  await page.getByLabel('Mode · Vêtements', { exact: true }).check()
+  await page.getByLabel('Mode', { exact: true }).check()
+  await expect(page.getByLabel('Mode · Vêtements', { exact: true })).toHaveCount(0)
   await page.getByLabel(/Présentez votre boutique/).fill('Boutique de vêtements et accessoires de mode.')
   await page.getByRole('radio', { name: /Kati Service gère mon SAV/ }).check()
   await page.getByRole('button', { name: /Continuer/ }).click()
@@ -55,7 +56,7 @@ test('une entreprise s’inscrit sans CNI, sans NIU et sans RCCM', async ({ page
   const envoi = await envoyer(page, api)
   expect(envoi).toContain('Entreprise test SARL')
   expect(envoi).toContain('Yaoundé')
-  expect(envoi).toContain('00000000-0000-4000-8000-000000000402')
+  expect(envoi).toContain('00000000-0000-4000-8000-000000000401')
   expect(envoi).toContain('kati_service')
   expect(envoi).not.toContain('name="cni"')
   expect(envoi).not.toContain('name="niu"')

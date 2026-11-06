@@ -9,6 +9,8 @@ import { api, enteteAutorisation } from '@/lib/api'
 import { lireSuggestionProduit, type MerchantProductDraft, type MerchantProductSuggestion } from '@/lib/merchant-product-ai'
 import { cheminCategorie, useCategoriesMarketplace, type CategorieProduit } from './categories'
 import { EditeurFicheProduit, type ImageFiche } from './EditeurFicheProduit'
+import { AutresCategories } from './AutresCategories'
+import { FenetreCategories } from './FenetreCategories'
 import styles from './administration-produits.module.css'
 
 type Produit = {
@@ -18,6 +20,8 @@ type Produit = {
   description: string | null
   marque: string | null
   categorie: string | null
+  categorieId?: string | null
+  categoriesSupplementaires?: string[]
   categorieDetail?: CategorieProduit
   statut: string
   creeLe: string
@@ -101,6 +105,7 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
   const [mode, setMode] = useState<Mode>('liste')
   const [fiche, setFiche] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
+  const [rangement, setRangement] = useState<Produit | null>(null)
 
   if (fiche) return <EditeurFicheProduit key={fiche} boutiqueId={boutiqueId} produitId={fiche} onFermer={() => setFiche(null)} />
 
@@ -115,7 +120,9 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
     {notice ? <p role="status" className={styles.feedback}>{notice}</p> : null}
     {mode === 'ajout' ? <AjoutProduit boutiqueId={boutiqueId} nomBoutique={nomBoutique} canPublish={canPublish} onAnnuler={() => setMode('liste')} onCree={async () => { await onRefresh(); setNotice('Produit envoyé à la modération. Vous pouvez suivre son statut dans la liste.'); setMode('liste') }} /> : null}
     {mode === 'lot' ? <ModificationLot boutiqueId={boutiqueId} offres={offres} onRetour={() => setMode('liste')} onRefresh={onRefresh} /> : null}
-    {mode === 'liste' ? <ListeProduits boutiqueId={boutiqueId} produits={produits} offres={offres} onFiche={setFiche} onAjouter={() => setMode('ajout')} onLot={() => setMode('lot')} /> : null}
+    {mode === 'liste' ? <ListeProduits boutiqueId={boutiqueId} produits={produits} offres={offres} onFiche={setFiche} onCategories={setRangement} onAjouter={() => setMode('ajout')} onLot={() => setMode('lot')} /> : null}
+    {rangement ? <FenetreCategories key={rangement.id} boutiqueId={boutiqueId} produit={rangement} onFermer={() => setRangement(null)}
+      onEnregistre={async () => { await onRefresh(); setRangement(null); setNotice('Catégories enregistrées et publiées.') }} /> : null}
   </section>
 }
 
@@ -177,7 +184,7 @@ function ApercuProduit({ boutiqueId, produit }: { boutiqueId: string; produit: P
   </span>
 }
 
-function ListeProduits({ boutiqueId, produits, offres, onFiche, onAjouter, onLot }: { boutiqueId: string; produits: Produit[]; offres: Offre[]; onFiche: (id: string) => void; onAjouter: () => void; onLot: () => void }) {
+function ListeProduits({ boutiqueId, produits, offres, onFiche, onCategories, onAjouter, onLot }: { boutiqueId: string; produits: Produit[]; offres: Offre[]; onFiche: (id: string) => void; onCategories: (produit: Produit) => void; onAjouter: () => void; onLot: () => void }) {
   const [recherche, setRecherche] = useState('')
   const [statut, setStatut] = useState('tous')
   const [page, setPage] = useState(1)
@@ -204,7 +211,7 @@ function ListeProduits({ boutiqueId, produits, offres, onFiche, onAjouter, onLot
       const prix = liees.map((offre) => offre.prixFcfa ?? offre.revisions[0]?.prixFcfa).filter((value): value is number => typeof value === 'number').sort((a, b) => a - b)[0]
       const disponibles = liees.reduce((total, offre) => total + Math.max(0, (offre.stock?.quantite ?? 0) - (offre.stock?.quantiteReservee ?? 0)), 0)
       const stockLabel = liees.length ? liees.some((offre) => !offre.stock) ? 'Stock non renseigné' : `${disponibles} disponible(s)` : null
-      return <tr key={produit.id}><td><div className={styles.productIdentity}><ApercuProduit boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small></div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span></td><td><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</td><td>{EDITABLE.includes(produit.statut) ? <button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>Fiche et photos</button> : '—'}</td></tr>
+      return <tr key={produit.id}><td><div className={styles.productIdentity}><ApercuProduit boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small></div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span></td><td><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</td><td>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>Fiche et photos</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : '—'}</td></tr>
     })}</tbody></table></div>
       <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" aria-label="Page précédente" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>←</button><button type="button" aria-label="Page suivante" disabled={page === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>→</button></div></div>
     </> : <div className={styles.empty}><span aria-hidden>□</span><h3>{recherche || statut !== 'tous' ? 'Aucun résultat' : 'Votre catalogue est vide'}</h3><p>{recherche || statut !== 'tous' ? 'Modifiez la recherche ou le statut sélectionné.' : 'Créez votre première fiche avec un aperçu client en direct.'}</p>{!recherche && statut === 'tous' ? <button type="button" className={styles.primary} onClick={onAjouter}>Ajouter un produit</button> : null}</div>}
@@ -224,6 +231,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
   const [messageIa, setMessageIa] = useState('')
   const [suggestionIa, setSuggestionIa] = useState<MerchantProductSuggestion | null>(null)
   const [avantIa, setAvantIa] = useState<MerchantProductDraft | null>(null)
+  const [autres, setAutres] = useState<string[]>([])
   const { categories, erreur: erreurCategories } = useCategoriesMarketplace()
   const racine = categories?.find((categorie) => categorie.id === values.categorie)
   const sousCategorie = racine?.sousCategories.find((sous) => sous.id === values.sousCategorie)
@@ -311,6 +319,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
     try {
       const produit = await api<{ id: string }>(`/marketplace/boutiques/${boutiqueId}/propositions-produits`, { methode: 'POST', corps: {
         nom: values.nom.trim(), slug: slugify(values.nom), marque: values.marque.trim() || undefined, categorieId,
+        ...(autres.filter((id) => id !== categorieId).length ? { categoriesSupplementaires: autres.filter((id) => id !== categorieId) } : {}),
         description: values.description.trim() || undefined, descriptionCourte: values.descriptionCourte.trim() || undefined, ficheTechnique: values.ficheTechnique.trim() || undefined,
       } })
       const images: ImageFiche[] = []
@@ -356,7 +365,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
           {messageIa ? <p className={styles.aiStatus} role="status">{messageIa}</p> : null}
           {suggestionIa ? <div className={styles.aiReview} data-testid="assistant-produit-resultat"><div><strong>8 champs proposés et appliqués</strong><small>Photos, PDF, prix et stock restent sous votre contrôle.</small></div>{suggestionIa.pointsAValider.length ? <div className={styles.aiWarnings}><strong>À vérifier avant validation</strong><ul>{suggestionIa.pointsAValider.map((point) => <li key={point}>{point}</li>)}</ul></div> : <p className={styles.aiClean}>Aucun fait manquant signalé. Une relecture humaine reste requise.</p>}</div> : null}
         </section>
-        <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/150</em><input required minLength={2} maxLength={150} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '', accessoireCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value, accessoireCategorie: '' })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{sousCategorie?.sousCategories.length ? <label className={styles.full}>Catégorie d’accessoires <span>(facultatif)</span><select value={values.accessoireCategorie} onChange={(e) => setValues({ ...values, accessoireCategorie: e.target.value })}><option value="">Garder la sous-catégorie parente</option>{sousCategorie.sousCategories.map((accessoire) => <option key={accessoire.id} value={accessoire.id}>{accessoire.nom}</option>)}</select></label> : null}</div>{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
+        <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/150</em><input required minLength={2} maxLength={150} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '', accessoireCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value, accessoireCategorie: '' })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{sousCategorie?.sousCategories.length ? <label className={styles.full}>Catégorie d’accessoires <span>(facultatif)</span><select value={values.accessoireCategorie} onChange={(e) => setValues({ ...values, accessoireCategorie: e.target.value })}><option value="">Garder la sous-catégorie parente</option>{sousCategorie.sousCategories.map((accessoire) => <option key={accessoire.id} value={accessoire.id}>{accessoire.nom}</option>)}</select></label> : null}{categorieId ? <AutresCategories arbre={categories} principale={categorieId} valeur={autres} onChange={setAutres} className={styles.full} /> : null}</div>{categorieId ? <p className={styles.categoryRule}>Le produit apparaît aussi dans les autres catégories choisies ; la première garde les règles (garantie, variantes).</p> : null}{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
         <fieldset><legend><span>2</span>Médias</legend><p className={styles.help}>La première image devient le visuel principal · JPEG, PNG ou WebP · 5 Mio maximum.</p><label className={styles.dropzone}>＋ Ajouter des photos<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => choisirPhotos(e.currentTarget.files)} /></label>{photos.length ? <div className={styles.thumbnails}>{photos.map((photo, index) => <figure key={photo.url}><img src={photo.url} alt=""/><button type="button" onClick={() => retirerPhoto(index)} aria-label={`Retirer la photo ${index + 1}`}>×</button><figcaption>{index === 0 ? 'Principale' : index + 1}</figcaption></figure>)}</div> : null}</fieldset>
         <fieldset><legend><span>3</span>Contenu</legend><label>Description courte <em>{values.descriptionCourte.length}/300</em><textarea minLength={10} maxLength={300} rows={3} value={values.descriptionCourte} onChange={(e) => setValues({ ...values, descriptionCourte: e.target.value })} placeholder="La promesse essentielle du produit en trois lignes." /></label><label>Description détaillée<textarea rows={5} value={values.description} onChange={(e) => setValues({ ...values, description: e.target.value })} placeholder="Usage, bénéfices et éléments de différenciation…" /></label><label>Fiche technique<textarea rows={6} maxLength={20000} value={values.ficheTechnique} onChange={(e) => setValues({ ...values, ficheTechnique: e.target.value })} placeholder={'Écran : 16 pouces\nMémoire : 16 Go\nStockage : SSD 1 To'} /></label><label>Fiche technique PDF<input type="file" accept="application/pdf" onChange={(e) => setPdf(e.currentTarget.files?.[0] ?? null)} /></label></fieldset>
         <fieldset><legend><span>4</span>Référencement</legend><label>Meta title <em>{values.metaTitre.length}/70</em><input maxLength={70} value={values.metaTitre} onChange={(e) => setValues({ ...values, metaTitre: e.target.value })} placeholder={values.nom || 'Titre visible sur Google'} /></label><label>Meta description <em>{values.metaDescription.length}/170</em><textarea rows={3} maxLength={170} value={values.metaDescription} onChange={(e) => setValues({ ...values, metaDescription: e.target.value })} /></label></fieldset>
@@ -416,7 +425,11 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
       const avant = valeursOffre(offre); const apres = brouillons[offre.id]!
       try {
         if (avant.stock !== apres.stock) await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/stock`, { methode: 'POST', corps: { quantite: Number(apres.stock), motif: 'Modification en lot depuis l’espace vendeur' } })
-        const moderation = avant.prix !== apres.prix || avant.prixReference !== apres.prixReference || avant.minimum !== apres.minimum || avant.delai !== apres.delai
+        // Le prix et le prix barre sont publies tout de suite ; seuls le minimum et le delai passent en validation.
+        if (avant.prix !== apres.prix || avant.prixReference !== apres.prixReference) {
+          await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/prix`, { methode: 'POST', corps: { prixFcfa: Number(apres.prix), prixReferenceFcfa: apres.prixReference ? Number(apres.prixReference) : null } })
+        }
+        const moderation = avant.minimum !== apres.minimum || avant.delai !== apres.delai
         if (moderation) {
           const base = offre.revisions[0]
           if (!base) throw new Error('Aucune version de référence disponible')
@@ -432,13 +445,13 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
     }))
     await onRefresh()
     setBrouillons({}); setPending(false)
-    setMessage(echecs.length ? `${modifiees.length - echecs.length} offre(s) enregistrée(s). Échecs : ${echecs.join(', ')}.` : `${modifiees.length} offre(s) traitée(s). Les prix et délais modifiés sont maintenant en validation.`)
+    setMessage(echecs.length ? `${modifiees.length - echecs.length} offre(s) enregistrée(s). Échecs : ${echecs.join(', ')}.` : `${modifiees.length} offre(s) enregistrée(s). Les prix et le stock sont publiés ; un minimum ou un délai modifié passe en validation.`)
   }
 
   return <div className={styles.bulk}>
     <div className={styles.bulkToolbar}><button type="button" className={styles.back} onClick={onRetour}>← Revenir à la liste</button><label className={styles.search}><span>⌕</span><input aria-label="Rechercher dans les offres" value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(1) }} placeholder="Produit, référence, variante…" /></label><div className={styles.pageSize}><span>Lignes :</span><button type="button" aria-pressed={taille === 10} onClick={() => { setTaille(10); setPage(1) }}>10</button><button type="button" aria-pressed={taille === 20} onClick={() => { setTaille(20); setPage(1) }}>20</button></div></div>
-    <div className={styles.bulkInfo}><div><strong>Modification en lot</strong><p>Le stock est appliqué immédiatement. Prix, minimum et délai restent en validation jusqu’à la décision KatiMarket.</p></div><span>{filtrees.length} offre(s)</span></div>
-    <div className={styles.bulkScroll}><table className={styles.bulkTable}><thead><tr><th>Produit / offre</th><th>Prix FCFA</th><th>Prix de référence</th><th>Stock</th><th>Minimum</th><th>Délai (3 j max.)</th><th>État</th></tr></thead><tbody>{visibles.map((offre) => {
+    <div className={styles.bulkInfo}><div><strong>Modification en lot</strong><p>Le stock, le prix et le prix barré sont publiés immédiatement. Le minimum et le délai restent en validation jusqu’à la décision KatiMarket.</p></div><span>{filtrees.length} offre(s)</span></div>
+    <div className={styles.bulkScroll}><table className={styles.bulkTable}><thead><tr><th>Produit / offre</th><th>Prix FCFA</th><th>Prix barré</th><th>Stock</th><th>Minimum</th><th>Délai (3 j max.)</th><th>État</th></tr></thead><tbody>{visibles.map((offre) => {
       const valeur = brouillons[offre.id] ?? valeursOffre(offre); const modifiee = !identique(valeur, valeursOffre(offre)); const erreur = erreurLigne(offre)
       const disponible = Number(valeur.stock) - (offre.stock?.quantiteReservee ?? 0)
       return <tr key={offre.id} data-modified={modifiee || undefined} data-error={Boolean(erreur) || undefined}><td><strong>{offre.produit.nom}</strong><small>{offre.referenceVendeur}{offre.libelleVariante ? ` · ${offre.libelleVariante}` : ''}</small></td><td><input aria-label={`Prix de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prix} onChange={(e) => changer(offre, 'prix', e.target.value)} /></td><td><input aria-label={`Prix de référence de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prixReference} onChange={(e) => changer(offre, 'prixReference', e.target.value)} /></td><td><input aria-label={`Stock de ${offre.produit.nom}`} inputMode="numeric" value={valeur.stock} onChange={(e) => changer(offre, 'stock', e.target.value)} /><small className={styles.availability} data-available={disponible > 0}>{disponible > 0 ? `${disponible} disponible(s)` : 'Indisponible'}</small></td><td><input aria-label={`Minimum de ${offre.produit.nom}`} inputMode="numeric" value={valeur.minimum} onChange={(e) => changer(offre, 'minimum', e.target.value)} /></td><td><input aria-label={`Délai de ${offre.produit.nom}`} type="number" min="0" max="3" inputMode="numeric" value={valeur.delai} onChange={(e) => changer(offre, 'delai', e.target.value)} /></td><td>{erreur ? <span className={styles.rowError} title={erreur}>À corriger</span> : REVISIONS_OUVERTES.includes(offre.revisions[0]?.statut ?? '') ? <span className={styles.pending}>En validation</span> : <span className={styles.ready}>{modifiee ? 'Modifié' : 'Prêt'}</span>}</td></tr>
