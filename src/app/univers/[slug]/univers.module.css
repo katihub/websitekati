@@ -1,0 +1,24 @@
+.page{min-height:60vh;padding:24px 0 56px;background:#f6f8fb;color:#071d4c}
+.shell{width:min(100% - 40px,1320px);margin-inline:auto}
+.breadcrumb{display:flex;align-items:center;gap:9px;margin:0 0 18px;color:#71809a;font-size:.75rem}
+.breadcrumb a{color:#375273;text-decoration:none}
+.hero{display:flex;align-items:center;gap:18px;border-radius:18px;background:linear-gradient(115deg,#082758,#164984);padding:26px 30px;color:#fff}
+.hero>svg{width:42px;height:42px;flex:none;color:#ff9a2c}
+.hero>div{flex:1}
+.hero p,.categorySection header p{margin:0 0 5px;color:#ffb56e;font-size:.65rem;font-weight:800;letter-spacing:.1em}
+.hero h1{margin:0;font-size:clamp(1.55rem,4vw,2.4rem)}
+.hero span{display:block;margin-top:5px;color:#dbe7fa;font-size:.82rem}
+.hero>a,.categorySection header>a{display:inline-flex;align-items:center;gap:8px;border-radius:8px;background:#ff7900;padding:11px 14px;color:#fff;font-size:.74rem;font-weight:800;text-decoration:none}
+.hero>a svg,.categorySection header>a svg{width:17px;height:17px}
+.categoryNav{display:flex;gap:9px;overflow-x:auto;padding:18px 0 26px}
+.categoryNav a,.subcategories a{display:inline-flex;flex:none;align-items:center;gap:7px;border:1px solid #dce4ef;border-radius:999px;background:#fff;padding:9px 13px;color:#17366b;font-size:.74rem;font-weight:700;text-decoration:none}
+.categoryNav a svg,.subcategories a svg{width:15px;height:15px;color:#ff7900}
+.categorySection{margin-top:20px;border:1px solid #e1e7f0;border-radius:16px;background:#fff;padding:22px}
+.categorySection>header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.categorySection h2{margin:0;font-size:1.35rem}
+.categorySection header>a{background:#fff4e8;color:#9e4600}
+.subcategories{display:flex;gap:8px;overflow-x:auto;padding:15px 0 18px}
+.products{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.message{margin:18px 0 3px;color:#64748b;font-size:.85rem}
+@media(max-width:900px){.products{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.shell{width:min(100% - 28px,1320px)}.hero{align-items:flex-start;flex-wrap:wrap;padding:20px}.hero>div{min-width:0}.hero>a{margin-left:58px}.categorySection{padding:16px}.categorySection>header{align-items:flex-start}.categorySection header>a{padding:9px;font-size:.68rem}.products{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}}
