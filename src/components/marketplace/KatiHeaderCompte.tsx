@@ -130,14 +130,13 @@ export function ActionsCompte() {
   if (!session) {
     return <>
       <Link href="/connexion" className={styles.actionLien} aria-label={text('signIn')}><Icon>{ICONE_PERSONNE}</Icon><span>{text('signIn')}</span></Link>
-      <Link href="/espace-vendeur" className={styles.actionLien} aria-label={text('sellerAccount')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('sellerAccount')}</span></Link>
+      <Link href="/espace-vendeur" className={`${styles.actionLien} ${styles.actionContextuelle}`} aria-label={text('sellerAccount')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('sellerAccount')}</span></Link>
     </>
   }
-  // Sur mobile, la cloche prend la place de ce raccourci : il reste dans le menu du compte.
   return <>
     {profil === 'marchand'
-      ? <Link href="/espace-vendeur" className={`${styles.actionLien} ${styles.horsMobile}`} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
-      : <Link href="/compte/commandes" className={`${styles.actionLien} ${styles.horsMobile}`} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
+      ? <Link href="/espace-vendeur" className={`${styles.actionLien} ${styles.actionContextuelle}`} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
+      : <Link href="/compte/commandes" className={`${styles.actionLien} ${styles.actionContextuelle}`} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
     <ClocheNotifications boite={BOITE_CLIENT} classeBouton={styles.actionLien} toutVoir="/compte/notifications"
       onOuvrir={(lien) => router.push(cheminInterne(lien) ?? '/compte/notifications')} />
     <MenuCompte profil={profil} courriel={courriel} onDeconnexion={deconnexion} />

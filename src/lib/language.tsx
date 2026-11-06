@@ -20,7 +20,7 @@ const COPY = {
   customerSignOut: { fr: 'Déconnexion', en: 'Sign out' },
   myAccount: { fr: 'Mon compte', en: 'My account' },
   sellerAccount: { fr: 'Compte vendeur', en: 'Seller account' },
-  myShop: { fr: 'Ma boutique', en: 'My shop' },
+  myShop: { fr: 'Ma Boutique', en: 'My shop' },
   myOrders: { fr: 'Mes commandes', en: 'My orders' },
   myQuotes: { fr: 'Mes devis', en: 'My quotes' },
   faq: { fr: 'Questions fréquentes', en: 'FAQ' },

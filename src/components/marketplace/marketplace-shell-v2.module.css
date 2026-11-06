@@ -161,6 +161,17 @@
   .mainbar .actions .actionLien{padding:6px}
   .mainbar .actions .horsMobile{display:none}
 }
+@media(max-width:1050px){
+  .actions a.actionContextuelle span{display:inline}
+  .actions a.actionContextuelle{gap:4px;font-size:.64rem}
+}
+@media(max-width:700px){
+  .mainbar .actions a.actionContextuelle{gap:3px;padding:4px 3px;font-size:.59rem}
+  .mainbar .actions a.actionContextuelle svg{width:19px;height:19px}
+}
+@media(max-width:700px){
+  .topbar .supportContacts a.supportWhatsApp{display:inline-flex}
+}
 /* Le cadre de la recherche laisse deborder ses suggestions (overflow visible) :
    le bouton orange porte donc lui-meme l'arrondi du cadre. */
 .search>button[type=submit]{border-radius:0 9px 9px 0}
