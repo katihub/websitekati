@@ -13,5 +13,19 @@ export const minimumDe = (offre: { quantiteMinimale?: number | null } | null | u
 /** Ce qu'on dit du stock a un client, sans jamais lui montrer 9 999. */
 export function libelleDisponibilite(disponible: number | null | undefined) {
   if (surCommande(disponible)) return 'Disponible : la boutique confirme votre commande'
-  return disponible ? `${disponible} unité(s) disponible(s)` : 'Indisponible'
+  return disponible ? `${disponible} unité(s) disponible(s)` : 'Hors stock'
+}
+
+/**
+ * LES TROIS STATUTS DE STOCK (6 novembre 2026), choisis par la boutique : « En
+ * stock » et « En reapprovisionnement » se commandent, « Hors stock » se voit
+ * sans s'acheter.
+ */
+export type StatutStock = 'en_stock' | 'reapprovisionnement' | 'rupture'
+export const STATUTS_STOCK: readonly StatutStock[] = ['en_stock', 'reapprovisionnement', 'rupture']
+
+export function libelleStatutStock(statut: StatutStock | null | undefined, en = false): string {
+  if (statut === 'rupture') return en ? 'Out of stock' : 'Hors stock'
+  if (statut === 'reapprovisionnement') return en ? 'Restocking' : 'En réapprovisionnement'
+  return en ? 'In stock' : 'En stock'
 }

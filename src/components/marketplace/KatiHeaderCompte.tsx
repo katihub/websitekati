@@ -133,10 +133,13 @@ export function ActionsCompte() {
       <Link href="/espace-vendeur" className={`${styles.actionLien} ${styles.actionContextuelle}`} aria-label={text('sellerAccount')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('sellerAccount')}</span></Link>
     </>
   }
+  // Sur mobile, la cloche prend la place des « Mes commandes » du client (ils restent dans le
+  // menu du compte) ; la boutique du marchand garde son raccourci, c'est son espace de travail.
   return <>
     {profil === 'marchand'
-      ? <Link href="/espace-vendeur" className={`${styles.actionLien} ${styles.actionContextuelle}`} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
-      : <Link href="/compte/commandes" className={`${styles.actionLien} ${styles.actionContextuelle}`} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
+      ? <Link href="/espace-vendeur" className={styles.actionLien} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
+      : <Link href="/compte/commandes" className={`${styles.actionLien} ${styles.horsMobile}`} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
+
     <ClocheNotifications boite={BOITE_CLIENT} classeBouton={styles.actionLien} toutVoir="/compte/notifications"
       onOuvrir={(lien) => router.push(cheminInterne(lien) ?? '/compte/notifications')} />
     <MenuCompte profil={profil} courriel={courriel} onDeconnexion={deconnexion} />

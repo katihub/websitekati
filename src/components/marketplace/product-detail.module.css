@@ -26,3 +26,5 @@
 /* « Payer en plusieurs fois » : visible seulement pour une offre eligible. */
 .plusieursFois{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;min-height:52px;margin-top:10px;padding:8px 12px;border:1px dashed var(--orange);border-radius:7px;background:#fff7ef;color:var(--navy);text-align:center;text-decoration:none}
 .plusieursFois b{font-size:13px;font-weight:800}.plusieursFois small{font-size:11.5px;color:#56657a}.plusieursFois:hover{border-style:solid}
+/* Les trois statuts de stock (6 novembre 2026) : vert, orange, rouge. */
+.stock[data-statut=reapprovisionnement]{color:#b45309}.stock[data-statut=rupture]{color:#c2362b}

@@ -69,3 +69,19 @@ export function useCategoriesMarketplace() {
   const reessayer = () => { setErreur(''); setEssai((n) => n + 1) }
   return { categories, erreur, reessayer }
 }
+
+/** Trois categories au plus par produit : la principale et deux autres (6 novembre 2026). */
+export const MAX_AUTRES_CATEGORIES = 2
+
+/**
+ * TOUTES LES CATEGORIES QUI PEUVENT RECEVOIR UN PRODUIT, a plat : une famille sans
+ * sous-categorie, chaque sous-categorie, et ses categories d'accessoires.
+ */
+export function categoriesRangeables(arbre: readonly CategorieMarketplace[] | null | undefined): { id: string; libelle: string }[] {
+  return (arbre ?? []).flatMap((famille) => famille.sousCategories?.length
+    ? famille.sousCategories.flatMap((sous) => [
+      { id: sous.id, libelle: `${famille.nom} › ${sous.nom}` },
+      ...(sous.sousCategories ?? []).map((accessoire) => ({ id: accessoire.id, libelle: `${famille.nom} › ${sous.nom} › ${accessoire.nom}` })),
+    ])
+    : [{ id: famille.id, libelle: famille.nom }])
+}

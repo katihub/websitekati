@@ -155,10 +155,10 @@
    reste, sans le texte KATIMARKET. */
 @media(max-width:700px){
   .mainbar{grid-template-columns:minmax(0,auto) minmax(0,1fr)}
-  .mainbar .brandHome{gap:8px;min-width:0}
-  .mainbar .logoMark{width:46px;height:46px}
-  .mainbar .actions{gap:2px;min-width:0}
-  .mainbar .actions .actionLien{padding:6px}
+  .mainbar .brandHome{gap:6px;min-width:0}
+  .mainbar .logoMark{width:40px;height:40px}
+  .mainbar .actions{gap:0;min-width:0}
+  .mainbar .actions .actionLien{padding:5px}
   .mainbar .actions .horsMobile{display:none}
 }
 @media(max-width:1050px){
@@ -175,6 +175,8 @@
 /* Le cadre de la recherche laisse deborder ses suggestions (overflow visible) :
    le bouton orange porte donc lui-meme l'arrondi du cadre. */
 .search>button[type=submit]{border-radius:0 9px 9px 0}
-@media(max-width:380px){
+/* Connecte, le marchand a quatre icones (boutique, cloche, compte, panier) : sous 390 px,
+   le texte du logo leur laisse la place. */
+@media(max-width:389px){
   .mainbar .logoText{display:none}
 }

@@ -104,7 +104,6 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         referenceVendeur: String(donnees.get('reference') ?? '').trim(),
         prixFcfa,
         prixReferenceFcfa,
-        quantiteInitiale: entier(donnees, 'stock', false) ?? 0,
       },
     })
     await onCreee()
@@ -136,7 +135,6 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         <ChampTexte nom="prix" libelle="Prix FCFA" required inputMode="numeric" pattern="[0-9]+" />
         <ChampTexte nom="prix-reference" libelle="Prix barré" inputMode="numeric" pattern="[0-9]*" />
       </div>
-      <ChampTexte nom="stock" libelle="Stock initial" inputMode="numeric" pattern="[0-9]*" defaultValue="0" />
     </FenetreAction>
   )
 }
@@ -154,8 +152,12 @@ export function FenetrePrixVariante({ boutiqueId, offre, onFermer, onSoumis }: {
     const prixFcfa = entier(donnees, 'prix')!
     const prixReferenceFcfa = entier(donnees, 'prix-reference', false)
     if (prixReferenceFcfa !== undefined && prixReferenceFcfa <= prixFcfa) throw new Error('Le prix barré doit être supérieur au prix de vente.')
-    // La revision reprend tout le reste de la derniere version : seul le prix change.
-    await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/revisions`, {
+    // Le prix et le prix barre sont publies tout de suite (6 novembre 2026).
+    await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/prix`, { methode: 'POST', corps: { prixFcfa, prixReferenceFcfa: prixReferenceFcfa ?? null } })
+    // Seul un nouveau minimum passe encore en validation : la revision reprend le reste de la derniere version.
+    const minimumActuel = base.quantiteMinimale || offre.quantiteMinimale || 1
+    const minimum = entier(donnees, 'minimum', false) || minimumActuel
+    if (minimum !== minimumActuel) await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/revisions`, {
       methode: 'POST',
       corps: {
         titre: base.titre,
@@ -167,7 +169,7 @@ export function FenetrePrixVariante({ boutiqueId, offre, onFermer, onSoumis }: {
         modesLivraison: base.modesLivraison,
         villesLivraison: base.villesLivraison,
         delaiMaxJours: base.delaiMaxJours,
-        quantiteMinimale: entier(donnees, 'minimum', false) || base.quantiteMinimale || offre.quantiteMinimale || 1,
+        quantiteMinimale: minimum,
         libelleVariante: base.libelleVariante ?? offre.libelleVariante ?? undefined,
         attributsVariante: base.attributsVariante ?? offre.attributsVariante ?? undefined,
       },
@@ -180,8 +182,8 @@ export function FenetrePrixVariante({ boutiqueId, offre, onFermer, onSoumis }: {
     <FenetreAction
       ouverte={Boolean(offre)}
       titre="Prix et minimum de commande"
-      description={offre ? <>{offre.produit.nom}{offre.libelleVariante ? <> — <strong>{offre.libelleVariante}</strong></> : null}. Le nouveau prix et le nouveau minimum s’appliquent après validation par KatiMarket ; d’ici là, les conditions actuelles restent en vigueur.</> : null}
-      libelleValider="Soumettre"
+      description={offre ? <>{offre.produit.nom}{offre.libelleVariante ? <> — <strong>{offre.libelleVariante}</strong></> : null}. Le prix et le prix barré sont publiés tout de suite. Un nouveau minimum s’applique après validation par KatiMarket.</> : null}
+      libelleValider="Enregistrer"
       onValider={valider}
       onFermer={onFermer}
     >

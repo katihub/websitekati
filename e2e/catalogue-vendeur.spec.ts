@@ -95,6 +95,7 @@ test('le marchand crée une variante avec son prix, puis change le prix d’une 
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [offre])
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/variantes$`), { id: 'nouvelle', statut: 'brouillon' })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/revisions$`), { id: 'rev-2', statut: 'soumise' })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/prix$`), { id: OFFRE, prixFcfa: 139_000, prixReferenceFcfa: 149_000, statut: 'publiee' })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Offres', exact: true }).click()
@@ -112,13 +113,14 @@ test('le marchand crée une variante avec son prix, puis change le prix d’une 
   await variante.getByLabel('Valeur de l’attribut 4').fill('2 ans')
   await variante.getByLabel('Référence vendeur').fill('A15-256-BLEU')
   await variante.getByLabel('Prix FCFA').fill('179000')
-  await variante.getByLabel('Stock initial').fill('3')
+  // Plus de stock initial : la variante part « En stock » (6 novembre 2026).
+  await expect(variante.getByLabel('Stock initial')).toHaveCount(0)
   await variante.getByRole('button', { name: 'Soumettre la variante' }).click()
   await expect(variante).toBeHidden()
 
   expect(api.appelsVers('POST', /\/variantes$/)[0]!.corps).toEqual({
     libelleVariante: '256 Go / Bleu / 2 ans', attributsVariante: { Capacité: '256 Go', Couleur: 'Bleu', 'Garantie fabricant': '2 ans' },
-    referenceVendeur: 'A15-256-BLEU', prixFcfa: 179_000, quantiteInitiale: 3,
+    referenceVendeur: 'A15-256-BLEU', prixFcfa: 179_000,
   })
 
   await page.getByRole('button', { name: 'Prix et minimum' }).click()
@@ -128,9 +130,11 @@ test('le marchand crée une variante avec son prix, puis change le prix d’une 
   // Le MOQ part de celui de l'offre (1 ici) ; le marchand le releve en meme temps que le prix.
   await expect(prix.getByLabel(/^Minimum de commande/)).toHaveValue('1')
   await prix.getByLabel(/^Minimum de commande/).fill('3')
-  await prix.getByRole('button', { name: 'Soumettre', exact: true }).click()
+  await prix.getByRole('button', { name: 'Enregistrer', exact: true }).click()
   await expect(prix).toBeHidden()
 
+  // Le prix et le prix barre partent tout de suite ; seul le nouveau minimum passe en validation.
+  expect(api.appelsVers('POST', /\/prix$/)[0]!.corps).toEqual({ prixFcfa: 139_000, prixReferenceFcfa: 149_000 })
   expect(api.appelsVers('POST', /\/revisions$/)[0]!.corps).toMatchObject({
     titre: 'Samsung Galaxy A15 128 Go', prixFcfa: 139_000, prixReferenceFcfa: 149_000, etat: 'neuf', garantieMois: 12,
     modesLivraison: ['katihub'], villesLivraison: ['Douala'], delaiMaxJours: 2, quantiteMinimale: 3, libelleVariante: '128 Go', attributsVariante: { Capacité: '128 Go' },
@@ -219,27 +223,52 @@ test('le copilote KatiHub génère toute la fiche, signale les faits à vérifie
   await expect(page.getByTestId('assistant-produit-resultat')).toHaveCount(0)
 })
 
-test('le marchand modifie prix, stock et minimum en lot depuis Produits', async ({ page }) => {
+test('le marchand modifie prix, statut du stock et minimum en lot depuis Produits', async ({ page }) => {
   api = (await espaceVendeur(page, []))
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [offre])
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/stock$`), { quantite: 9, quantiteReservee: 1 })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/statut-stock$`), { id: OFFRE, statutStock: 'reapprovisionnement' })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/revisions$`), { id: 'rev-lot', statut: 'soumise' })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/prix$`), { id: OFFRE, prixFcfa: 139_000, prixReferenceFcfa: null, statut: 'publiee' })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
   await page.getByRole('button', { name: 'Modification en lot' }).click()
   await page.getByLabel('Prix de Samsung Galaxy A15').fill('139000')
-  await page.getByLabel('Stock de Samsung Galaxy A15').fill('9')
-  await expect(page.getByText('8 disponible(s)')).toBeVisible()
+  await page.getByLabel('Statut du stock de Samsung Galaxy A15').selectOption('reapprovisionnement')
   await page.getByLabel('Minimum de Samsung Galaxy A15').fill('3')
   await expect(page.getByText('3 modification(s) non enregistrée(s)')).toBeVisible()
   if (process.env.CAPTURE_SELLER_PRODUCTS) await page.screenshot({ path: 'test-results/katihub-produits-lot.png', fullPage: true })
   await page.getByRole('button', { name: 'Enregistrer 3 modification(s)' }).click()
-  await expect(page.getByText(/1 offre\(s\) traitée\(s\)/)).toBeVisible()
+  await expect(page.getByText(/1 offre\(s\) enregistrée\(s\)/)).toBeVisible()
 
-  expect(api.appelsVers('POST', /\/stock$/)[0]!.corps).toMatchObject({ quantite: 9 })
+  expect(api.appelsVers('POST', /\/statut-stock$/)[0]!.corps).toEqual({ statutStock: 'reapprovisionnement' })
+  // Le prix est publie tout de suite ; le minimum passe en validation.
+  expect(api.appelsVers('POST', /\/prix$/)[0]!.corps).toEqual({ prixFcfa: 139_000, prixReferenceFcfa: null })
   expect(api.appelsVers('POST', /\/revisions$/)[0]!.corps).toMatchObject({ prixFcfa: 139_000, quantiteMinimale: 3 })
+})
+
+test('le marchand range son produit dans trois catégories, publiées sans validation', async ({ page }) => {
+  const famille = (id: string, nom: string, sous: [string, string][]) => ({ id, nom, slug: id, garantie: { mois: 0, unite: 'mois', heritee: false, libelle: 'aucune' },
+    sousCategories: sous.map(([sid, snom]) => ({ id: sid, nom: snom, slug: sid, garantie: { mois: 0, unite: 'mois', heritee: true, libelle: 'aucune' }, sousCategories: [] })) })
+  const T = '00000000-0000-4000-8000-0000000003a1'; const A = '00000000-0000-4000-8000-0000000003a2'; const E = '00000000-0000-4000-8000-0000000003a3'
+  api = (await espaceVendeur(page, []))
+    .quand('GET', /^\/marketplace\/categories$/, [famille('f1', 'Électronique', [[T, 'Téléphones'], [A, 'Accessoires téléphonie']]), famille(E, 'Électricité', [])])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [{ ...produit, categorieId: T, categoriesSupplementaires: [] }])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [offre])
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/categories$`), { id: PRODUIT, categorieId: T, categoriesSupplementaires: [A, E] })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByTestId('categories-galaxy-a15').click()
+  const fenetre = page.getByRole('dialog', { name: /Catégories de « Samsung Galaxy A15 »/ })
+  await expect(fenetre.getByTestId('categorie-principale')).toHaveValue(T)
+  await expect(fenetre.getByTestId('autre-categorie-2')).toBeDisabled()
+  await fenetre.getByTestId('autre-categorie-1').selectOption(A)
+  await fenetre.getByTestId('autre-categorie-2').selectOption(E)
+  await fenetre.getByRole('button', { name: 'Enregistrer les catégories' }).click()
+  await expect(page.getByText('Catégories enregistrées et publiées.')).toBeVisible()
+  expect(api.appelsVers('POST', /\/categories$/)[0]!.corps).toEqual({ categorieId: T, categoriesSupplementaires: [A, E] })
 })
 
 test('l’offre part de la garantie minimale de la catégorie et ne peut pas descendre en dessous', async ({ page }) => {

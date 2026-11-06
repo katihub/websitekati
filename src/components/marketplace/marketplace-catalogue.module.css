@@ -20,3 +20,5 @@
 .productCard:hover .visual>img{transform:scale(1.08)}
 @media(max-width:760px){.visual{height:155px}}
 @media(prefers-reduced-motion:reduce){.visual>img{transition:none}.productCard:hover .visual>img{transform:scale(1.04)}}
+/* Les trois statuts de stock (6 novembre 2026) : vert, orange, rouge. */
+.stock[data-statut=reapprovisionnement]{color:#b45309}.stock[data-statut=rupture]{color:#c2362b}
