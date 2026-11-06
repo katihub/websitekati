@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 type SearchParams = Record<string, string | string[] | undefined>
 type CategorieSelection = { nom: string; slug: string }
 
-const SUGGESTIONS_PAR_DEFAUT = [2_000, 5_000, 10_000, 20_000, 50_000]
+const SUGGESTIONS_PAR_DEFAUT = [2_000, 5_000, 10_000, 20_000, 50_000, 100_000]
 
 function valeurs(params: SearchParams, cle: string): string[] {
   const valeur = params[cle]
@@ -58,14 +58,16 @@ function arrondirBudget(prix: number) {
 }
 
 function suggestionsBudget(offres: readonly OffreMarketplace[], minimum?: number): number[] {
-  const montants = [...new Set(offres.filter((offre) =>
+  const prix = offres.filter((offre) =>
     disponible(offre) && (minimum === undefined || offre.prixFcfa! >= minimum),
-  ).map((offre) => arrondirBudget(offre.prixFcfa!)))]
-    .sort((a, b) => a - b)
-  if (montants.length <= 10) return montants
-  return Array.from({ length: 10 }, (_, index) =>
-    montants[Math.round(index * (montants.length - 1) / 9)]!,
-  ).filter((montant, index, liste) => index === 0 || montant !== liste[index - 1])
+  ).map((offre) => offre.prixFcfa!).sort((a, b) => a - b)
+  if (!prix.length) return []
+
+  const bas = arrondirBudget(prix[0]!)
+  const haut = Math.max(bas + 2_500, arrondirBudget(prix[prix.length - 1]!))
+  return Array.from({ length: 6 }, (_, index) =>
+    Math.ceil((bas + (haut - bas) * index / 5) / 500) * 500,
+  )
 }
 
 function cheminBudget(categories: readonly string[], sousCategorieSlugs: readonly string[], minimum?: number, maximum?: number) {
@@ -126,6 +128,8 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
     : filtresRenseignes ? [] : SUGGESTIONS_PAR_DEFAUT
   const indisponible = listes.some((liste) => liste.indisponible)
   const categoriesIndisponibles = arbre.length === 0
+  const categoriesSuggerees = arbre.slice(0, 4)
+  const categoriesAilleurs = arbre.slice(4)
 
   return (
     <div className={styles.page}>
@@ -147,16 +151,38 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
                 <legend>Catégories</legend>
                 {categoriesIndisponibles
                   ? <p className={styles.hint} role="status">Les catégories ne peuvent pas être chargées pour le moment.</p>
-                  : <div className={styles.categoryColumns}>
-                      <label className={styles.categoryColumn}>
-                        <span>Catégorie</span>
-                        <select name="categorie" defaultValue={categorieChoisie?.slug ?? ''} data-auto-submit>
-                          <option value="">Toutes les catégories</option>
-                          {arbre.map((categorie) => (
-                            <option key={categorie.id} value={categorie.slug}>{categorie.nom}</option>
-                          ))}
-                        </select>
-                      </label>
+                  : <div className={styles.categoryPicker}>
+                      <p className={styles.pickerLabel}>Suggestions de catégories</p>
+                      <div className={styles.categorySuggestions}>
+                        {categoriesSuggerees.map((categorie) => (
+                          <Link
+                            key={categorie.id}
+                            href={cheminBudget([categorie.slug], [], min)}
+                            aria-current={categorieChoisie?.slug === categorie.slug ? 'true' : undefined}
+                          >
+                            {categorie.nom}
+                          </Link>
+                        ))}
+                        {categoriesAilleurs.length ? (
+                          <details className={styles.moreCategories}>
+                            <summary>Voir plus</summary>
+                            <div>
+                              {categoriesAilleurs.map((categorie) => (
+                                <Link
+                                  key={categorie.id}
+                                  href={cheminBudget([categorie.slug], [], min)}
+                                  aria-current={categorieChoisie?.slug === categorie.slug ? 'true' : undefined}
+                                >
+                                  {categorie.nom}
+                                </Link>
+                              ))}
+                            </div>
+                          </details>
+                        ) : null}
+                      </div>
+                      {categorieChoisie ? (
+                        <Link className={styles.allCategories} href={cheminBudget([], [], min)}>Toutes les catégories</Link>
+                      ) : null}
                       <div className={styles.subcategoryColumn}>
                         <h2>Sous-catégories <span>(facultatif)</span></h2>
                         {categorieChoisie
@@ -189,7 +215,7 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
                   <div className={styles.chips}>
                     {suggestions.map((montant) => (
                       <Link key={montant} href={cheminBudget(selection, selectionSous, min, montant)} aria-current={max === montant ? 'true' : undefined}>
-                        Maxi {new Intl.NumberFormat('fr-FR').format(montant)} F
+                        Maxi {new Intl.NumberFormat('fr-FR').format(montant)}
                       </Link>
                     ))}
                   </div>
