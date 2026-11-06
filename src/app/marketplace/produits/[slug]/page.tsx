@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { lireOffresMarketplace } from '@/lib/marketplace-data'
 import type { OffreMarketplace } from '@/lib/marketplace-data'
 import { buildAccessoryRecommendationQuery } from '@/lib/marketplace-accessories'
@@ -17,6 +17,26 @@ async function chargerProduit(slug: string): Promise<MarketplaceProduct> {
   if (reponse.status === 404) notFound()
   if (!reponse.ok) throw new Error(`Le catalogue KatiMarket a répondu ${reponse.status}.`)
   return reponse.json() as Promise<MarketplaceProduct>
+}
+
+/**
+ * UNE ANCIENNE ADRESSE `?boutique=…` (6 novembre 2026) : chaque boutique a desormais
+ * sa propre fiche. Si celle demandee appartient a une autre boutique, l'API rend
+ * l'adresse de la fiche de cette boutique, que l'on suit (redirection permanente).
+ */
+async function adresseDeLaBoutique(slug: string, boutique: string): Promise<string | null> {
+  if (!API) return null
+  try {
+    const reponse = await fetch(`${API}/v1/marketplace/produits/${encodeURIComponent(slug)}?boutique=${encodeURIComponent(boutique)}`, {
+      next: { revalidate: 60 },
+      headers: { Accept: 'application/json' },
+    })
+    if (!reponse.ok) return null
+    const corps = await reponse.json() as { redirection?: unknown }
+    return typeof corps.redirection === 'string' ? corps.redirection : null
+  } catch {
+    return null
+  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -40,6 +60,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ProduitMarketplacePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ boutique?: string }> }) {
   const { slug } = await params
   const { boutique: preferredShop } = await searchParams
+  if (preferredShop) {
+    const adresse = await adresseDeLaBoutique(slug, preferredShop)
+    if (adresse && adresse !== slug) permanentRedirect(`/marketplace/produits/${encodeURIComponent(adresse)}?boutique=${encodeURIComponent(preferredShop)}`)
+  }
   const produit = await chargerProduit(slug)
   let accessoires: OffreMarketplace[] = []
   const accessoryQuery = buildAccessoryRecommendationQuery(produit.categorieDetail?.id ? [produit.categorieDetail.id] : [], [slug])
