@@ -13,6 +13,7 @@ import { EditeurFicheProduit, type ImageFiche } from './EditeurFicheProduit'
 import { AutresCategories } from './AutresCategories'
 import { libelleStatutStock, STATUTS_STOCK } from '@/lib/stock'
 import { FenetreCategories } from './FenetreCategories'
+import { VenteDuProduit, type OffreDuProduit } from './VenteDuProduit'
 import styles from './administration-produits.module.css'
 
 type Produit = {
@@ -110,7 +111,10 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
   const [notice, setNotice] = useState('')
   const [rangement, setRangement] = useState<Produit | null>(null)
 
-  if (fiche) return <EditeurFicheProduit key={fiche} boutiqueId={boutiqueId} produitId={fiche} onFermer={() => setFiche(null)} />
+  // La fiche complete (6 novembre 2026) : le contenu valide, et entre deux, ce qui se publie tout de suite.
+  const produitOuvert = fiche ? produits.find((produit) => produit.id === fiche) : undefined
+  if (fiche) return <EditeurFicheProduit key={fiche} boutiqueId={boutiqueId} produitId={fiche} onFermer={() => setFiche(null)}
+    vente={produitOuvert ? <VenteDuProduit boutiqueId={boutiqueId} produit={produitOuvert} offres={offres.filter((offre) => offre.produit.id === fiche) as unknown as OffreDuProduit[]} onRefresh={onRefresh} /> : null} />
 
   return <section className={styles.shell} aria-label="Administration des produits">
     <header className={styles.header}>
@@ -214,7 +218,7 @@ function ListeProduits({ boutiqueId, produits, offres, onFiche, onCategories, on
       const prix = liees.map((offre) => offre.prixFcfa ?? offre.revisions[0]?.prixFcfa).filter((value): value is number => typeof value === 'number').sort((a, b) => a - b)[0]
       const disponibles = liees.reduce((total, offre) => total + Math.max(0, (offre.stock?.quantite ?? 0) - (offre.stock?.quantiteReservee ?? 0)), 0)
       const stockLabel = liees.length ? liees.some((offre) => !offre.stock) ? 'Stock non renseigné' : `${disponibles} disponible(s)` : null
-      return <tr key={produit.id}><td><div className={styles.productIdentity}><ApercuProduit boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small></div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span></td><td><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</td><td>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>Fiche et photos</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : '—'}</td></tr>
+      return <tr key={produit.id}><td><div className={styles.productIdentity}><ApercuProduit boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small></div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span></td><td><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</td><td>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>Modifier la fiche</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : '—'}</td></tr>
     })}</tbody></table></div>
       <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" aria-label="Page précédente" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>←</button><button type="button" aria-label="Page suivante" disabled={page === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>→</button></div></div>
     </> : <div className={styles.empty}><span aria-hidden>□</span><h3>{recherche || statut !== 'tous' ? 'Aucun résultat' : 'Votre catalogue est vide'}</h3><p>{recherche || statut !== 'tous' ? 'Modifiez la recherche ou le statut sélectionné.' : 'Créez votre première fiche avec un aperçu client en direct.'}</p>{!recherche && statut === 'tous' ? <button type="button" className={styles.primary} onClick={onAjouter}>Ajouter un produit</button> : null}</div>}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 
 import { ErreurApi, api } from '@/lib/api'
@@ -20,6 +20,7 @@ type Revision = { id: string; numero: number; statut: string; motifDecision: str
 export type ContenuFiche = {
   produit: {
     id: string; nom: string; slug: string; metaTitre: string | null; metaDescription: string | null
+    marque?: string | null; description?: string | null
     descriptionCourte?: string | null; ficheTechnique?: string | null; ficheTechniquePdfUrl?: string | null; ficheTechniquePdfCle?: string | null
   }
   images: ImageFiche[]
@@ -47,8 +48,15 @@ export function galerieInitiale(images: ImageFiche[]): Element[] {
     .map((image) => ({ imageId: image.id, texteAlternatif: image.texteAlternatif ?? '' }))
 }
 
-export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { boutiqueId: string; produitId: string; onFermer: () => void }) {
+/**
+ * `vente` : la partie publiee tout de suite (categories, prix, variantes, vente),
+ * placee entre le general et les photos (fiche complete, 6 novembre 2026).
+ */
+export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: { boutiqueId: string; produitId: string; onFermer: () => void; vente?: ReactNode }) {
   const [contenu, setContenu] = useState<ContenuFiche | null>(null)
+  const [nom, setNom] = useState('')
+  const [marque, setMarque] = useState('')
+  const [description, setDescription] = useState('')
   const [galerie, setGalerie] = useState<Element[]>([])
   const [metaTitre, setMetaTitre] = useState('')
   const [metaDescription, setMetaDescription] = useState('')
@@ -64,6 +72,9 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
     try {
       const prochain = await api<ContenuFiche>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu`, { signal })
       setContenu(prochain)
+      setNom(prochain.produit.nom)
+      setMarque(prochain.produit.marque ?? '')
+      setDescription(prochain.produit.description ?? '')
       setGalerie(galerieInitiale(prochain.images))
       setMetaTitre(prochain.produit.metaTitre ?? '')
       setMetaDescription(prochain.produit.metaDescription ?? '')
@@ -152,6 +163,10 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
       await api(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu/revisions`, {
         methode: 'POST',
         corps: {
+          // Le nom, la marque et la description ne partent que s'ils ont change.
+          ...(nom.trim() && nom.trim() !== contenu?.produit.nom ? { nom: nom.trim() } : {}),
+          ...(marque.trim() && marque.trim() !== (contenu?.produit.marque ?? '') ? { marque: marque.trim() } : {}),
+          ...(description.trim() && description.trim() !== (contenu?.produit.description ?? '') ? { description: description.trim() } : {}),
           metaTitre: metaTitre.trim() || undefined,
           metaDescription: metaDescription.trim() || undefined,
           descriptionCourte: descriptionCourte.trim() || undefined,
@@ -188,9 +203,9 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
     <section className="grid gap-6" aria-labelledby="fiche-titre">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="t-label text-ink-3">Fiche produit</p>
+          <p className="t-label text-ink-3">Modifier le produit</p>
           <h2 id="fiche-titre" className="text-h3 font-semibold">{contenu.produit.nom}</h2>
-          <p className="text-micro text-ink-3">Photos, textes et référencement sont publiés après validation par KatiMarket.</p>
+          <p className="text-micro text-ink-3">Les catégories, prix, variantes et le délai sont publiés tout de suite. Le nom, les textes, les photos, l’état et la garantie sont publiés après validation par KatiMarket.</p>
         </div>
         <button type="button" onClick={onFermer} className="min-h-11 rounded-control border border-rule px-4 text-small font-semibold">← Retour aux produits</button>
       </header>
@@ -201,6 +216,21 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
         <p role="status" className="rounded-well border border-warn p-3 text-small text-warn">Dernière proposition {STATUTS[derniere.statut] ?? derniere.statut} : {derniere.motifDecision}</p>
       ) : null}
       {message ? <p role={message.type === 'erreur' ? 'alert' : 'status'} className={`rounded-well border p-3 text-small ${message.type === 'erreur' ? 'border-warn text-warn' : 'border-primary text-primary'}`}>{message.texte}</p> : null}
+
+      <section aria-labelledby="general-titre" className="grid gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-2"><h3 id="general-titre" className="text-h4 font-semibold">Général</h3><span className="rounded-full bg-[#fff4e5] px-2.5 py-0.5 text-micro font-bold text-[#9a4b00]">Validé par KatiMarket</span></div>
+        <label className="block text-small font-semibold">Nom du produit
+          <input value={nom} minLength={2} maxLength={240} disabled={verrouille} onChange={(event) => setNom(event.currentTarget.value)} data-testid="fiche-nom" className="mt-1 w-full rounded-control border border-rule bg-surface p-3 text-small font-normal" />
+        </label>
+        <label className="block text-small font-semibold">Marque
+          <input value={marque} maxLength={120} disabled={verrouille} onChange={(event) => setMarque(event.currentTarget.value)} placeholder="Ex. Samsung" data-testid="fiche-marque" className="mt-1 w-full rounded-control border border-rule bg-surface p-3 text-small font-normal" />
+        </label>
+        <label className="block text-small font-semibold">Description
+          <textarea value={description} rows={6} maxLength={10000} disabled={verrouille} onChange={(event) => setDescription(event.currentTarget.value)} placeholder="Usage, bénéfices et éléments de différenciation…" data-testid="fiche-description" className="mt-1 w-full rounded-control border border-rule bg-surface p-3 text-small font-normal" />
+        </label>
+      </section>
+
+      {vente}
 
       <section aria-labelledby="galerie-titre" className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -294,7 +324,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer }: { bouti
 
       <div className="flex flex-wrap justify-end gap-2 border-t border-rule pt-4">
         <button type="button" onClick={() => void soumettre()} disabled={verrouille || !titreValide || !descriptionValide || !altValides || !courteValide}
-          className="min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Envoi…' : 'Soumettre la fiche à validation'}</button>
+          className="min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Envoi…' : 'Soumettre le contenu à validation'}</button>
       </div>
     </section>
   )

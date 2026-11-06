@@ -37,7 +37,7 @@ test('le marchand écrit la description courte et la fiche technique, et joint l
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
-  await page.getByRole('button', { name: 'Fiche et photos' }).click()
+  await page.getByRole('button', { name: 'Modifier la fiche' }).click()
 
   await page.getByRole('textbox', { name: /^Description courte/ }).fill('Smartphone endurant : batterie 5 000 mAh, 128 Go, double SIM.')
   await page.getByRole('textbox', { name: /^Fiche technique/ }).fill('Écran : 6,5 pouces\nBatterie : 5 000 mAh')
@@ -45,7 +45,7 @@ test('le marchand écrit la description courte et la fiche technique, et joint l
   await expect(page.getByText('PDF déposé. Soumettez la fiche pour le publier.')).toBeVisible()
   await expect(page.getByTestId('fiche-pdf')).toHaveAttribute('href', `https://cdn.test/documents/${CLE}`)
 
-  await page.getByRole('button', { name: 'Soumettre la fiche à validation' }).click()
+  await page.getByRole('button', { name: 'Soumettre le contenu à validation' }).click()
   await expect(page.getByText(/Elle sera publiée après validation/)).toBeVisible()
   expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toEqual({
     descriptionCourte: 'Smartphone endurant : batterie 5 000 mAh, 128 Go, double SIM.',
