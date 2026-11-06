@@ -10,6 +10,7 @@ import {
   type OffreMarketplace,
 } from '@/lib/marketplace-data'
 import { FormulaireBudget } from './FormulaireBudget'
+import { CategoriesVoirPlus } from './CategoriesVoirPlus'
 import styles from './mon-budget.module.css'
 
 export const metadata: Metadata = {
@@ -164,20 +165,17 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
                           </Link>
                         ))}
                         {categoriesAilleurs.length ? (
-                          <details className={styles.moreCategories}>
-                            <summary>Voir plus</summary>
-                            <div>
-                              {categoriesAilleurs.map((categorie) => (
-                                <Link
-                                  key={categorie.id}
-                                  href={cheminBudget([categorie.slug], [], min)}
-                                  aria-current={categorieChoisie?.slug === categorie.slug ? 'true' : undefined}
-                                >
-                                  {categorie.nom}
-                                </Link>
-                              ))}
-                            </div>
-                          </details>
+                          <CategoriesVoirPlus>
+                            {categoriesAilleurs.map((categorie) => (
+                              <Link
+                                key={categorie.id}
+                                href={cheminBudget([categorie.slug], [], min)}
+                                aria-current={categorieChoisie?.slug === categorie.slug ? 'true' : undefined}
+                              >
+                                {categorie.nom}
+                              </Link>
+                            ))}
+                          </CategoriesVoirPlus>
                         ) : null}
                       </div>
                       {categorieChoisie ? (
@@ -207,6 +205,15 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
                     </div>}
               </fieldset>
 
+              <fieldset>
+                <legend>Définissez votre budget</legend>
+                <div className={styles.prices}>
+                  <label>Minimum (FCFA)<input type="number" name="prixMin" min="0" max="1000000000" step="500" inputMode="numeric" defaultValue={min} placeholder="Sans minimum" /></label>
+                  <label>Maximum (FCFA)<input type="number" name="prixMax" min="0" max="1000000000" step="500" inputMode="numeric" defaultValue={max} placeholder="Sans maximum" /></label>
+                  <button type="submit"><ShopIcon name="search" />Voir les offres</button>
+                </div>
+              </fieldset>
+
               <section className={styles.shortcuts} aria-labelledby="suggestions-titre">
                 <header><div><p>DES IDÉES SELON VOS CHOIX</p><h2 id="suggestions-titre">Quel montant maximum ?</h2></div>
                   <span>{suggestions.length} suggestion{suggestions.length > 1 ? 's' : ''}</span>
@@ -221,15 +228,6 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
                   </div>
                 ) : <p className={styles.hint}>Aucune suggestion pour cette sélection de catégories et de budget.</p>}
               </section>
-
-              <fieldset>
-                <legend>Définissez votre budget</legend>
-                <div className={styles.prices}>
-                  <label>Minimum (FCFA)<input type="number" name="prixMin" min="0" max="1000000000" step="500" inputMode="numeric" defaultValue={min} placeholder="Sans minimum" /></label>
-                  <label>Maximum (FCFA)<input type="number" name="prixMax" min="0" max="1000000000" step="500" inputMode="numeric" defaultValue={max} placeholder="Sans maximum" /></label>
-                  <button type="submit"><ShopIcon name="search" />Voir les offres</button>
-                </div>
-              </fieldset>
             </aside>
 
             <section className={styles.results} aria-label="Offres selon votre budget">
