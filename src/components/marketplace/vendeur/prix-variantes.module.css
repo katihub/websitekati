@@ -1,0 +1,13 @@
+/* Le tableau des variantes d'un nouveau produit : il defile sur mobile plutot que de deborder. */
+.variantes{display:grid;gap:10px;min-width:0}
+.scroll{position:relative;overflow-x:auto;border:1px solid #dce5f0;border-radius:9px}
+.table{width:100%;min-width:760px;border-collapse:collapse;font-size:12px}
+.table th{background:#f6f8fb;color:#667892;font-weight:700;text-align:left;padding:8px;white-space:nowrap}
+.table th b{color:#e25420}
+.table th small{font-weight:400}
+.table td{padding:6px;border-top:1px solid #edf1f7;vertical-align:middle}
+.table input,.table select{width:100%;min-width:0;height:36px;border:1px solid #cbd7e4;border-radius:7px;background:#fff;color:#071d4c;padding:0 8px;font:inherit}
+.table tr[data-error] td{background:#fff8f6}
+.retirer{width:30px;height:30px;border:1px solid #f1c7c2;border-radius:7px;background:#fff;color:#c2362b;cursor:pointer}
+.ajouter{justify-self:start;min-height:38px;border:1px dashed #a5b5d2;border-radius:8px;background:#fff;color:#071d4c;padding:0 14px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

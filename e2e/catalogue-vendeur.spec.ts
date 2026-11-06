@@ -143,17 +143,20 @@ test('le marchand crée une variante avec son prix, puis change le prix d’une 
 
 test('le marchand classe son produit dans une catégorie KatiHub et voit la garantie minimale', async ({ page }) => {
   api = (await espaceVendeur(page, []))
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), { id: 'nouveau', statut: 'soumis' })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'soumis' }, offres: [] })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
   await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
   await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
+  // Le prix part avec la fiche (6 novembre 2026).
+  await page.getByLabel('Référence de la variante 1').fill('A25-128')
+  await page.getByLabel('Prix de la variante 1').fill('189000')
   await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
   await page.getByRole('button', { name: 'Soumettre à la validation' }).click()
   // Le navigateur bloque l'envoi tant que la sous-categorie manque.
   expect(await page.getByRole('combobox', { name: /^Sous-catégorie/ }).evaluate((champ: HTMLSelectElement) => champ.validity.valueMissing)).toBe(true)
-  expect(api.appelsVers('POST', /propositions-produits$/)).toHaveLength(0)
+  expect(api.appelsVers('POST', /produits-complets$/)).toHaveLength(0)
 
   await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléviseurs' })
   await expect(page.getByTestId('garantie-categorie')).toContainText('2 ans')
@@ -162,8 +165,48 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
   await page.getByRole('button', { name: 'Soumettre à la validation' }).click()
   await expect(page.getByText('Produit envoyé à la modération.')).toBeVisible()
 
-  expect(api.appelsVers('POST', /propositions-produits$/)[0]!.corps).toEqual({
-    nom: 'Samsung Galaxy A25', slug: 'samsung-galaxy-a25', categorieId: '00000000-0000-4000-8000-000000000402',
+  expect(api.appelsVers('POST', /produits-complets$/)[0]!.corps).toEqual({
+    produit: { nom: 'Samsung Galaxy A25', slug: 'samsung-galaxy-a25', categorieId: '00000000-0000-4000-8000-000000000402' },
+    vente: { etat: 'neuf', garantieMois: 12, delaiMaxJours: 2 },
+    variantes: [{ referenceVendeur: 'A25-128', prixFcfa: 189_000, quantiteMinimale: 1, statutStock: 'en_stock' }],
+  })
+})
+
+test('le marchand crée un produit complet : deux variantes avec leur prix, leur statut et la garantie', async ({ page }) => {
+  api = (await espaceVendeur(page, []))
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'soumis' }, offres: [] })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
+  await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
+  await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléphones' })
+  await page.getByLabel('Référence de la variante 1').fill('A25-128')
+  await page.getByLabel('Prix de la variante 1').fill('189000')
+  await page.getByLabel('Prix barré de la variante 1').fill('199000')
+  await page.getByTestId('ajouter-variante').click()
+  await page.getByLabel('Référence de la variante 2').fill('A25-256')
+  await page.getByLabel('Prix de la variante 2').fill('219000')
+  await page.getByLabel('Statut du stock de la variante 2').selectOption('reapprovisionnement')
+
+  // Deux variantes : chacune doit porter un nom.
+  await page.getByRole('button', { name: 'Soumettre à la validation' }).click()
+  await expect(page.getByText('Donnez un nom à chaque variante (ex. 128 Go / Noir).')).toBeVisible()
+  expect(api.appelsVers('POST', /produits-complets$/)).toHaveLength(0)
+
+  await page.getByLabel('Nom de la variante 1').fill('128 Go')
+  await page.getByLabel('Nom de la variante 2').fill('256 Go')
+  await page.getByLabel('Garantie (mois)').fill('24')
+  await expect(page.getByText('189 000 FCFA').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Soumettre à la validation' }).click()
+  await expect(page.getByText('Produit envoyé à la modération.')).toBeVisible()
+  expect(api.appelsVers('POST', /produits-complets$/)[0]!.corps).toMatchObject({
+    vente: { etat: 'neuf', garantieMois: 24, delaiMaxJours: 2 },
+    variantes: [
+      { libelleVariante: '128 Go', referenceVendeur: 'A25-128', prixFcfa: 189_000, prixReferenceFcfa: 199_000, quantiteMinimale: 1, statutStock: 'en_stock' },
+      { libelleVariante: '256 Go', referenceVendeur: 'A25-256', prixFcfa: 219_000, quantiteMinimale: 1, statutStock: 'reapprovisionnement' },
+    ],
   })
 })
 
@@ -182,7 +225,8 @@ test('la création reflète instantanément les données et la photo dans l’ap
   await expect(apercu).toContainText('Samsung Galaxy A25 5G')
   await expect(apercu).toContainText('Samsung')
   await expect(page.getByAltText('Aperçu principal du produit')).toBeVisible()
-  await expect(page.getByText('Prix ajouté après validation')).toBeVisible()
+  // Sans prix saisi, l'aperçu le demande ; le prix part avec la fiche (6 novembre 2026).
+  await expect(page.getByText('Indiquez un prix')).toBeVisible()
   if (process.env.CAPTURE_SELLER_PRODUCTS) await page.screenshot({ path: 'test-results/katihub-ajout-produit.png', fullPage: true })
 })
 

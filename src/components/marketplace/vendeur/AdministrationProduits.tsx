@@ -7,7 +7,8 @@ import Image from 'next/image'
 
 import { api, enteteAutorisation } from '@/lib/api'
 import { lireSuggestionProduit, type MerchantProductDraft, type MerchantProductSuggestion } from '@/lib/merchant-product-ai'
-import { cheminCategorie, useCategoriesMarketplace, type CategorieProduit } from './categories'
+import { cheminCategorie, libelleMois, useCategoriesMarketplace, type CategorieProduit } from './categories'
+import { erreurVariantes, LIGNE_VIDE, PrixEtVariantes, variantesPourApi, type LigneVariante } from './PrixEtVariantes'
 import { EditeurFicheProduit, type ImageFiche } from './EditeurFicheProduit'
 import { AutresCategories } from './AutresCategories'
 import { libelleStatutStock, STATUTS_STOCK } from '@/lib/stock'
@@ -234,13 +235,19 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
   const [suggestionIa, setSuggestionIa] = useState<MerchantProductSuggestion | null>(null)
   const [avantIa, setAvantIa] = useState<MerchantProductDraft | null>(null)
   const [autres, setAutres] = useState<string[]>([])
+  // Le prix, les variantes et la vente partent avec la fiche (6 novembre 2026).
+  const [variantes, setVariantes] = useState<LigneVariante[]>([{ ...LIGNE_VIDE }])
+  const [vente, setVente] = useState({ etat: 'neuf', garantie: '', delai: '2' })
   const { categories, erreur: erreurCategories } = useCategoriesMarketplace()
   const racine = categories?.find((categorie) => categorie.id === values.categorie)
   const sousCategorie = racine?.sousCategories.find((sous) => sous.id === values.sousCategorie)
-  const accessoireCategorie = sousCategorie?.sousCategories.find((accessoire) => accessoire.id === values.accessoireCategorie)
+  const accessoireCategorie = sousCategorie?.sousCategories?.find((accessoire) => accessoire.id === values.accessoireCategorie)
   const categorieId = accessoireCategorie?.id ?? (racine ? (racine.sousCategories.length ? sousCategorie?.id : racine.id) : undefined)
   const garantie = accessoireCategorie?.garantie ?? sousCategorie?.garantie ?? (racine && !racine.sousCategories.length ? racine.garantie : null)
   const libelleCategorie = accessoireCategorie?.nom ?? sousCategorie?.nom ?? racine?.nom ?? 'Catégorie à choisir'
+  const garantieMinimale = garantie?.mois ?? 0
+  const garantieSaisie = vente.garantie === '' ? garantieMinimale : Number(vente.garantie)
+  const prixApercu = Number(variantes[0]?.prix) >= 1 ? Number(variantes[0]!.prix) : null
   const image = photos[0]?.url
   const lignes = useMemo(() => values.ficheTechnique.split('\n').map((ligne) => ligne.trim()).filter(Boolean).slice(0, 5), [values.ficheTechnique])
 
@@ -317,12 +324,19 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
   async function submit(event: FormEvent) {
     event.preventDefault(); setMessage('')
     if (!categorieId) return setMessage(racine ? 'Choisissez la sous-catégorie du produit.' : 'Choisissez la catégorie du produit.')
+    const erreurPrix = erreurVariantes(variantes)
+    if (erreurPrix) return setMessage(erreurPrix)
+    if (!Number.isInteger(garantieSaisie) || garantieSaisie < garantieMinimale || garantieSaisie > 120) return setMessage(`La garantie de cette catégorie est d’au moins ${libelleMois(garantieMinimale)}.`)
     setPending(true)
     try {
-      const produit = await api<{ id: string }>(`/marketplace/boutiques/${boutiqueId}/propositions-produits`, { methode: 'POST', corps: {
-        nom: values.nom.trim(), slug: slugify(values.nom), marque: values.marque.trim() || undefined, categorieId,
-        ...(autres.filter((id) => id !== categorieId).length ? { categoriesSupplementaires: autres.filter((id) => id !== categorieId) } : {}),
-        description: values.description.trim() || undefined, descriptionCourte: values.descriptionCourte.trim() || undefined, ficheTechnique: values.ficheTechnique.trim() || undefined,
+      const { produit } = await api<{ produit: { id: string } }>(`/marketplace/boutiques/${boutiqueId}/produits-complets`, { methode: 'POST', corps: {
+        produit: {
+          nom: values.nom.trim(), slug: slugify(values.nom), marque: values.marque.trim() || undefined, categorieId,
+          ...(autres.filter((id) => id !== categorieId).length ? { categoriesSupplementaires: autres.filter((id) => id !== categorieId) } : {}),
+          description: values.description.trim() || undefined, descriptionCourte: values.descriptionCourte.trim() || undefined, ficheTechnique: values.ficheTechnique.trim() || undefined,
+        },
+        vente: { etat: vente.etat, garantieMois: garantieSaisie, delaiMaxJours: Number(vente.delai) },
+        variantes: variantesPourApi(variantes),
       } })
       const images: ImageFiche[] = []
       for (const photo of photos) {
@@ -342,7 +356,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
           ficheTechniquePdfCle: clePdf, images: images.map((photo, index) => ({ imageId: photo.id, texteAlternatif: `${values.nom.trim()}, photo ${index + 1}` })),
         } })
       }
-      setMessage('Produit et médias envoyés à la modération KatiMarket.'); await onCree()
+      setMessage('Produit, prix et médias envoyés à la modération KatiMarket.'); await onCree()
     } catch (cause) { setMessage(messageErreur(cause)) } finally { setPending(false) }
   }
 
@@ -367,20 +381,22 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, onAnnuler, onCree }
           {messageIa ? <p className={styles.aiStatus} role="status">{messageIa}</p> : null}
           {suggestionIa ? <div className={styles.aiReview} data-testid="assistant-produit-resultat"><div><strong>8 champs proposés et appliqués</strong><small>Photos, PDF, prix et stock restent sous votre contrôle.</small></div>{suggestionIa.pointsAValider.length ? <div className={styles.aiWarnings}><strong>À vérifier avant validation</strong><ul>{suggestionIa.pointsAValider.map((point) => <li key={point}>{point}</li>)}</ul></div> : <p className={styles.aiClean}>Aucun fait manquant signalé. Une relecture humaine reste requise.</p>}</div> : null}
         </section>
-        <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/150</em><input required minLength={2} maxLength={150} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '', accessoireCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value, accessoireCategorie: '' })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{sousCategorie?.sousCategories.length ? <label className={styles.full}>Catégorie d’accessoires <span>(facultatif)</span><select value={values.accessoireCategorie} onChange={(e) => setValues({ ...values, accessoireCategorie: e.target.value })}><option value="">Garder la sous-catégorie parente</option>{sousCategorie.sousCategories.map((accessoire) => <option key={accessoire.id} value={accessoire.id}>{accessoire.nom}</option>)}</select></label> : null}{categorieId ? <AutresCategories arbre={categories} principale={categorieId} valeur={autres} onChange={setAutres} className={styles.full} /> : null}</div>{categorieId ? <p className={styles.categoryRule}>Le produit apparaît aussi dans les autres catégories choisies ; la première garde les règles (garantie, variantes).</p> : null}{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
+        <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/150</em><input required minLength={2} maxLength={150} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '', accessoireCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value, accessoireCategorie: '' })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{sousCategorie?.sousCategories?.length ? <label className={styles.full}>Catégorie d’accessoires <span>(facultatif)</span><select value={values.accessoireCategorie} onChange={(e) => setValues({ ...values, accessoireCategorie: e.target.value })}><option value="">Garder la sous-catégorie parente</option>{(sousCategorie.sousCategories ?? []).map((accessoire) => <option key={accessoire.id} value={accessoire.id}>{accessoire.nom}</option>)}</select></label> : null}{categorieId ? <AutresCategories arbre={categories} principale={categorieId} valeur={autres} onChange={setAutres} className={styles.full} /> : null}</div>{categorieId ? <p className={styles.categoryRule}>Le produit apparaît aussi dans les autres catégories choisies ; la première garde les règles (garantie, variantes).</p> : null}{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
         <fieldset><legend><span>2</span>Médias</legend><p className={styles.help}>La première image devient le visuel principal · JPEG, PNG ou WebP · 5 Mio maximum.</p><label className={styles.dropzone}>＋ Ajouter des photos<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => choisirPhotos(e.currentTarget.files)} /></label>{photos.length ? <div className={styles.thumbnails}>{photos.map((photo, index) => <figure key={photo.url}><img src={photo.url} alt=""/><button type="button" onClick={() => retirerPhoto(index)} aria-label={`Retirer la photo ${index + 1}`}>×</button><figcaption>{index === 0 ? 'Principale' : index + 1}</figcaption></figure>)}</div> : null}</fieldset>
         <fieldset><legend><span>3</span>Contenu</legend><label>Description courte <em>{values.descriptionCourte.length}/300</em><textarea minLength={10} maxLength={300} rows={3} value={values.descriptionCourte} onChange={(e) => setValues({ ...values, descriptionCourte: e.target.value })} placeholder="La promesse essentielle du produit en trois lignes." /></label><label>Description détaillée<textarea rows={5} value={values.description} onChange={(e) => setValues({ ...values, description: e.target.value })} placeholder="Usage, bénéfices et éléments de différenciation…" /></label><label>Fiche technique<textarea rows={6} maxLength={20000} value={values.ficheTechnique} onChange={(e) => setValues({ ...values, ficheTechnique: e.target.value })} placeholder={'Écran : 16 pouces\nMémoire : 16 Go\nStockage : SSD 1 To'} /></label><label>Fiche technique PDF<input type="file" accept="application/pdf" onChange={(e) => setPdf(e.currentTarget.files?.[0] ?? null)} /></label></fieldset>
-        <fieldset><legend><span>4</span>Référencement</legend><label>Meta title <em>{values.metaTitre.length}/70</em><input maxLength={70} value={values.metaTitre} onChange={(e) => setValues({ ...values, metaTitre: e.target.value })} placeholder={values.nom || 'Titre visible sur Google'} /></label><label>Meta description <em>{values.metaDescription.length}/170</em><textarea rows={3} maxLength={170} value={values.metaDescription} onChange={(e) => setValues({ ...values, metaDescription: e.target.value })} /></label></fieldset>
+        <fieldset className={styles.fieldsetLarge}><legend><span>4</span>Prix et variantes</legend><p className={styles.help}>Une ligne par variante (capacité, couleur, taille…). Un produit sans variante garde une seule ligne. Les prix sont publiés en même temps que le produit, dès sa validation.</p><PrixEtVariantes lignes={variantes} onChange={setVariantes} disabled={!canPublish} /></fieldset>
+        <fieldset><legend><span>5</span>Vente</legend><div className={styles.fieldGrid}><label>État<select value={vente.etat} disabled={!canPublish} onChange={(e) => setVente({ ...vente, etat: e.target.value })}><option value="neuf">Neuf</option><option value="reconditionne">Reconditionné</option><option value="occasion">Occasion</option></select></label><label>Garantie (mois)<input inputMode="numeric" value={vente.garantie === '' ? String(garantieMinimale) : vente.garantie} disabled={!canPublish} onChange={(e) => setVente({ ...vente, garantie: e.target.value })} /></label><label>Délai de préparation<select value={vente.delai} disabled={!canPublish} onChange={(e) => setVente({ ...vente, delai: e.target.value })}>{['0', '1', '2', '3'].map((jours) => <option key={jours} value={jours}>{jours === '0' ? 'Le jour même' : `${jours} jour(s)`}</option>)}</select></label></div><p className={styles.help}>La livraison reprend les modes et les villes de votre boutique.{garantieMinimale ? ` Cette catégorie impose au moins ${libelleMois(garantieMinimale)} de garantie.` : ''}</p></fieldset>
+        <fieldset><legend><span>6</span>Référencement</legend><label>Meta title <em>{values.metaTitre.length}/70</em><input maxLength={70} value={values.metaTitre} onChange={(e) => setValues({ ...values, metaTitre: e.target.value })} placeholder={values.nom || 'Titre visible sur Google'} /></label><label>Meta description <em>{values.metaDescription.length}/170</em><textarea rows={3} maxLength={170} value={values.metaDescription} onChange={(e) => setValues({ ...values, metaDescription: e.target.value })} /></label></fieldset>
         {message ? <p role="status" className={styles.feedback}>{message}</p> : null}
       </div>
       <aside className={`${styles.preview} ${mobile ? styles.previewMobile : ''}`}>
         <header><div><strong>Aperçu client en direct</strong><small><i /> Non publié · mise à jour instantanée</small></div><div className={styles.device}><button type="button" aria-pressed={!mobile} onClick={() => setMobile(false)}>Ordinateur</button><button type="button" aria-pressed={mobile} onClick={() => setMobile(true)}>Mobile</button></div></header>
         <div className={styles.storePreview}>
           <div className={styles.previewImage}>{image ? <img src={image} alt="Aperçu principal du produit" /> : <span>Ajoutez une photo<br/><small>pour visualiser le produit</small></span>}</div>
-          <div className={styles.previewCopy}><small className={styles.shopName}>▣ {nomBoutique}</small><h4>{values.nom || 'Nom de votre produit'}</h4><p className={styles.previewBrand}>{values.marque || 'Marque'} · {libelleCategorie}</p><div className={styles.pricePlaceholder}>Prix ajouté après validation</div><p>{values.descriptionCourte || 'Votre description courte apparaîtra ici pour aider le client à comprendre le produit en quelques secondes.'}</p><button type="button" disabled>Ajouter au panier</button></div>
+          <div className={styles.previewCopy}><small className={styles.shopName}>▣ {nomBoutique}</small><h4>{values.nom || 'Nom de votre produit'}</h4><p className={styles.previewBrand}>{values.marque || 'Marque'} · {libelleCategorie}</p>{prixApercu ? <div className={styles.previewPrice}>{money(prixApercu)}{variantes.length > 1 ? <small> · {variantes.length} variantes</small> : null}</div> : <div className={styles.pricePlaceholder}>Indiquez un prix</div>}<p>{values.descriptionCourte || 'Votre description courte apparaîtra ici pour aider le client à comprendre le produit en quelques secondes.'}</p><button type="button" disabled>Ajouter au panier</button></div>
           {lignes.length ? <dl className={styles.specs}>{lignes.map((ligne) => { const [nom, ...reste] = ligne.split(':'); return <div key={ligne}><dt>{nom}</dt><dd>{reste.join(':').trim() || '—'}</dd></div> })}</dl> : null}
         </div>
-        <div className={styles.previewNote}><strong>Ce qui sera contrôlé</strong><p>Catégorie, contenu, photos et référencement sont vérifiés par KatiMarket avant publication. Le prix et le stock seront ajoutés ensuite dans l’offre.</p></div>
+        <div className={styles.previewNote}><strong>Ce qui sera contrôlé</strong><p>Fiche, photos, prix et variantes sont vérifiés ensemble par KatiMarket : tout est publié dès la validation.</p></div>
       </aside>
     </div>
   </form>

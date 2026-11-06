@@ -8,3 +8,9 @@
 .statusFilter{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11px;white-space:nowrap}.statusFilter select{min-height:40px;border:1px solid #cbd7e6;border-radius:7px;background:#fff;padding:0 10px;color:#15335f;font:500 11px inherit}.listSummary{margin:0;color:var(--muted);font-size:11px}.productIdentity{display:flex;align-items:center;gap:10px;min-width:220px}.productThumb{display:grid;width:56px;height:56px;flex:none;place-items:center;overflow:hidden;border:1px solid var(--line);border-radius:7px;background:#f4f6f9;color:#91a0b4}.productThumb img{width:100%;height:100%;object-fit:contain}.productThumb>span{font-size:18px}
 @media(max-width:700px){.statusFilter{justify-content:space-between}.statusFilter select{flex:1}.toolbar button{min-height:42px}}
 .availability{display:block;margin-top:4px;color:#a33d12;font-size:9px;font-weight:750}.availability[data-available=true]{color:#217145}
+/* Le prix de la premiere variante dans l'apercu client (6 novembre 2026). */
+.previewPrice{margin:8px 0;color:#ee5100;font-size:20px;font-weight:800}.previewPrice small{color:#667892;font-size:11px;font-weight:600}
+/* Un fieldset garde par defaut la largeur de son contenu : le tableau des variantes doit y defiler. */
+.fieldsetLarge{min-width:0;max-width:100%}
+/* Les colonnes du formulaire peuvent retrecir : un contenu large (le tableau des variantes) y defile. */
+.createGrid>*,.formColumn>*{min-width:0}
