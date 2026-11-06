@@ -9,6 +9,7 @@ import {
   type CategorieArbre,
   type OffreMarketplace,
 } from '@/lib/marketplace-data'
+import { FormulaireBudget } from './FormulaireBudget'
 import styles from './mon-budget.module.css'
 
 export const metadata: Metadata = {
@@ -165,7 +166,7 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
           </div>
         </header>
 
-        <form action="/mon-budget" method="get" className={styles.filters}>
+        <FormulaireBudget>
           <fieldset>
             <legend>1. Choisissez vos catégories</legend>
             {categoriesIndisponibles
@@ -175,32 +176,53 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
                     const enfants = sousCategories(categorie)
                     const cochee = selection.includes(categorie.slug)
                     return (
-                      <section key={categorie.id} className={styles.categoryChoice}>
-                        <label className={styles.categoryOption}>
-                          <input type="checkbox" name="categorie" value={categorie.slug} defaultChecked={cochee} />
+                      <details
+                        key={categorie.id}
+                        className={styles.categoryChoice}
+                        open={cochee || enfants.some((enfant) => selectionSous.includes(enfant.slug))}
+                      >
+                        <summary className={styles.categorySummary}>
                           <ShopIcon name="grid" />
                           <span>{categorie.nom}</span>
-                        </label>
-                        {enfants.length ? (
-                          <details className={styles.subcategories} open={cochee}>
-                            <summary>Sous-catégories (facultatif)</summary>
-                            <div>
-                              {enfants.map((enfant) => (
-                                <label key={enfant.slug} className={styles.subcategoryOption}>
-                                  <input
-                                    type="checkbox"
-                                    name="sousCategorie"
-                                    value={enfant.slug}
-                                    defaultChecked={selectionSous.includes(enfant.slug)}
-                                    disabled={!cochee}
-                                  />
-                                  {enfant.nom}
-                                </label>
-                              ))}
-                            </div>
-                          </details>
-                        ) : null}
-                      </section>
+                          {enfants.length ? <small>{enfants.length} sous-catégorie{enfants.length > 1 ? 's' : ''}</small> : null}
+                          <ShopIcon name="arrow" />
+                        </summary>
+                        <div className={styles.categoryContents}>
+                          <label className={styles.categoryOption}>
+                            <input
+                              type="checkbox"
+                              name="categorie"
+                              value={categorie.slug}
+                              defaultChecked={cochee}
+                              data-auto-submit
+                            />
+                            Inclure toute cette catégorie
+                          </label>
+                          {enfants.length ? (
+                            <details
+                              className={styles.subcategories}
+                              open={enfants.some((enfant) => selectionSous.includes(enfant.slug))}
+                            >
+                              <summary>Sous-catégories facultatives</summary>
+                              <div>
+                                {enfants.map((enfant) => (
+                                  <label key={enfant.slug} className={styles.subcategoryOption}>
+                                    <input
+                                      type="checkbox"
+                                      name="sousCategorie"
+                                      value={enfant.slug}
+                                      defaultChecked={selectionSous.includes(enfant.slug)}
+                                      disabled={!cochee}
+                                      data-auto-submit
+                                    />
+                                    {enfant.nom}
+                                  </label>
+                                ))}
+                              </div>
+                            </details>
+                          ) : null}
+                        </div>
+                      </details>
                     )
                   })}
                 </div>}
@@ -213,7 +235,7 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
               <button type="submit"><ShopIcon name="search" />Voir les offres</button>
             </div>
           </fieldset>
-        </form>
+        </FormulaireBudget>
 
         <section className={styles.shortcuts} aria-labelledby="suggestions-titre">
           <header><div><p>DES IDÉES SELON VOS CHOIX</p><h2 id="suggestions-titre">Quel montant maximum ?</h2></div>
