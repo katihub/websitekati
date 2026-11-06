@@ -10,6 +10,10 @@
 .filters{display:grid;gap:16px;margin-top:18px}
 .filters fieldset,.shortcuts,.results{min-width:0;border:1px solid #e1e7f0;border-radius:14px;background:#fff;padding:19px}
 .filters legend{padding:0 8px;font-size:.95rem;font-weight:800}
+.budgetLayout{display:grid;grid-template-columns:minmax(310px,.82fr) minmax(0,1.8fr);align-items:start;gap:18px}
+.filtersColumn{display:grid;min-width:0;gap:14px}
+.filtersColumn fieldset{min-width:0;border:1px solid #e1e7f0;border-radius:14px;background:#fff;padding:17px}
+.filtersColumn legend{padding:0 7px;font-size:.88rem;font-weight:800}
 .categoryColumns{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr);gap:14px}
 .categoryColumn,.subcategoryColumn{display:grid;align-content:start;gap:9px;min-width:0;border:1px solid #d7e1ef;border-radius:12px;background:linear-gradient(180deg,#fff,#fbfcff);padding:14px;box-shadow:0 3px 10px #071d4c08}
 .categoryColumn>span,.subcategoryColumn h2{margin:0;color:#17366b;font-size:.79rem;font-weight:800}
@@ -27,7 +31,7 @@
 .prices input{width:100%;min-height:42px;border:1px solid #c8d4e4;border-radius:8px;padding:0 11px;color:#071d4c;font:inherit}
 .prices button{display:inline-flex;min-height:42px;align-items:center;justify-content:center;gap:8px;border:0;border-radius:8px;background:#ff7900;padding:0 16px;color:#fff;font:inherit;font-size:.76rem;font-weight:800;cursor:pointer}
 .prices button svg,.empty svg{width:18px;height:18px}
-.shortcuts{margin-top:18px}
+.shortcuts{margin:0;padding:16px}
 .shortcuts>header,.results>header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .shortcuts h2,.results h2{margin:0;font-size:1.08rem}
 .shortcuts>header>span,.results>header>span{color:#71809a;font-size:.72rem}
@@ -35,8 +39,8 @@
 .chips a{display:flex;min-height:58px;align-items:center;justify-content:center;border:1px solid #e1b986;border-radius:12px;background:linear-gradient(145deg,#fffdf9,#fff4e7);padding:10px;color:#914200;font-size:.78rem;font-weight:850;text-align:center;text-decoration:none;box-shadow:0 3px 10px #7c3d1010;transition:transform .16s,border-color .16s,box-shadow .16s,background .16s}
 .chips a:hover,.chips a[aria-current=true]{transform:translateY(-2px);border-color:#ff7900;background:#fff0df;box-shadow:0 6px 15px #ff790026}
 .hint{margin:14px 0 0;color:#71809a;font-size:.78rem}
-.results{margin-top:18px}
-.products{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}
+.results{position:sticky;top:185px;margin:0;padding:18px}
+.products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
 .products>article{border:1px solid #cad6e6;border-radius:12px;background:#fff;box-shadow:0 3px 12px #071d4c0a;transition:transform .18s,border-color .18s,box-shadow .18s}
 .products>article:hover{transform:translateY(-3px);border-color:#ffae65;box-shadow:0 9px 22px #071d4c16}
 .empty{display:grid;justify-items:center;gap:9px;padding:42px 12px;color:#64748b;text-align:center}
@@ -44,5 +48,5 @@
 .empty b{color:#17366b}
 .empty span{font-size:.8rem}
 .error{margin:16px 0 0;border-radius:8px;background:#fff1f0;padding:12px;color:#a32118;font-size:.8rem}
-@media(max-width:1000px){.products{grid-template-columns:repeat(3,minmax(0,1fr))}.chips{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:650px){.shell{width:min(100% - 28px,1200px)}.intro{padding:18px}.filters fieldset,.shortcuts,.results{padding:15px}.categoryColumns{grid-template-columns:1fr}.subcategoryList{grid-template-columns:1fr;max-height:220px}.prices{flex-wrap:wrap}.prices label{min-width:calc(50% - 8px)}.prices button{width:100%}.products{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.chips{grid-template-columns:repeat(2,minmax(0,1fr))}.shortcuts>header,.results>header{align-items:flex-start;flex-direction:column}}
+@media(max-width:1000px){.budgetLayout{grid-template-columns:minmax(280px,.9fr) minmax(0,1.4fr);gap:12px}.products{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.chips{grid-template-columns:repeat(3,minmax(0,1fr))}.filtersColumn fieldset{padding:14px}}
+@media(max-width:700px){.shell{width:min(100% - 28px,1200px)}.intro{padding:18px}.budgetLayout{grid-template-columns:1fr}.results{position:static;grid-row:2}.filtersColumn fieldset,.shortcuts,.results{padding:15px}.categoryColumns{grid-template-columns:1fr}.subcategoryList{grid-template-columns:1fr;max-height:220px}.prices{flex-wrap:wrap}.prices label{min-width:calc(50% - 8px)}.prices button{width:100%}.products{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.chips{grid-template-columns:repeat(2,minmax(0,1fr))}.shortcuts>header,.results>header{align-items:flex-start;flex-direction:column}}

@@ -114,43 +114,17 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
         prixMax: max,
         page: 1,
         taille: 24,
-        tri: 'prix_asc',
+        tri: 'recent',
       })))
-  const listesPourSuggestions = invalidInterval || !filtresRenseignes
-    ? []
-    : await Promise.all(sources.map(({ categorieSlug }) => lireOffresMarketplace({
-        categorieSlug,
-        page: 1,
-        taille: 100,
-        tri: 'prix_asc',
-      })))
-  const listesPrixEleves = invalidInterval || !filtresRenseignes
-    ? []
-    : await Promise.all(listesPourSuggestions.map((liste, index) => {
-        const dernierePage = liste.pagination.pages
-        if (liste.indisponible || dernierePage <= 1) return Promise.resolve(null)
-        return lireOffresMarketplace({
-          categorieSlug: sources[index]?.categorieSlug,
-          page: dernierePage,
-          taille: 100,
-          tri: 'prix_desc',
-        })
-      }))
   const offresParId = new Map<string, OffreMarketplace>()
   for (const liste of listes) {
     for (const offre of liste.offres) if (disponible(offre)) offresParId.set(offre.id, offre)
   }
   const offres = [...offresParId.values()].sort((a, b) => a.prixFcfa! - b.prixFcfa!)
-  const offresPourSuggestions = [
-    ...listesPourSuggestions.flatMap((liste) => liste.offres),
-    ...listesPrixEleves.flatMap((liste) => liste?.offres ?? []),
-  ]
-  const suggestions = filtresRenseignes
-    ? suggestionsBudget(offresPourSuggestions, min)
-    : SUGGESTIONS_PAR_DEFAUT
+  const suggestions = filtresRenseignes && !listes.some((liste) => liste.indisponible)
+    ? suggestionsBudget(offres, min)
+    : filtresRenseignes ? [] : SUGGESTIONS_PAR_DEFAUT
   const indisponible = listes.some((liste) => liste.indisponible)
-  const suggestionsIndisponibles = listesPourSuggestions.some((liste) => liste.indisponible)
-    || listesPrixEleves.some((liste) => liste?.indisponible)
   const categoriesIndisponibles = arbre.length === 0
 
   return (
@@ -167,78 +141,80 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
         </header>
 
         <FormulaireBudget>
-          <fieldset>
-            <legend>1. Choisissez vos catégories</legend>
-            {categoriesIndisponibles
-              ? <p className={styles.hint} role="status">Les catégories ne peuvent pas être chargées pour le moment.</p>
-              : <div className={styles.categoryColumns}>
-                  <label className={styles.categoryColumn}>
-                    <span>Catégorie</span>
-                    <select name="categorie" defaultValue={categorieChoisie?.slug ?? ''} data-auto-submit>
-                      <option value="">Toutes les catégories</option>
-                      {arbre.map((categorie) => (
-                        <option key={categorie.id} value={categorie.slug}>{categorie.nom}</option>
-                      ))}
-                    </select>
-                    <small>Choisissez une catégorie principale.</small>
-                  </label>
-                  <div className={styles.subcategoryColumn}>
-                    <h2>Sous-catégories <span>(facultatif)</span></h2>
-                    {categorieChoisie
-                      ? sousCategories(categorieChoisie).length
-                        ? <div className={styles.subcategoryList}>
-                            {sousCategories(categorieChoisie).map((enfant) => (
-                              <label key={enfant.slug} className={styles.subcategoryOption}>
-                                <input
-                                  type="checkbox"
-                                  name="sousCategorie"
-                                  value={enfant.slug}
-                                  defaultChecked={selectionSous.includes(enfant.slug)}
-                                  data-auto-submit
-                                />
-                                {enfant.nom}
-                              </label>
-                            ))}
-                          </div>
-                        : <p className={styles.hint}>Aucune sous-catégorie pour ce choix.</p>
-                      : <p className={styles.hint}>Choisissez une catégorie pour afficher ses sous-catégories.</p>}
+          <div className={styles.budgetLayout}>
+            <aside className={styles.filtersColumn} aria-label="Filtres du budget">
+              <fieldset>
+                <legend>Catégories</legend>
+                {categoriesIndisponibles
+                  ? <p className={styles.hint} role="status">Les catégories ne peuvent pas être chargées pour le moment.</p>
+                  : <div className={styles.categoryColumns}>
+                      <label className={styles.categoryColumn}>
+                        <span>Catégorie</span>
+                        <select name="categorie" defaultValue={categorieChoisie?.slug ?? ''} data-auto-submit>
+                          <option value="">Toutes les catégories</option>
+                          {arbre.map((categorie) => (
+                            <option key={categorie.id} value={categorie.slug}>{categorie.nom}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className={styles.subcategoryColumn}>
+                        <h2>Sous-catégories <span>(facultatif)</span></h2>
+                        {categorieChoisie
+                          ? sousCategories(categorieChoisie).length
+                            ? <div className={styles.subcategoryList}>
+                                {sousCategories(categorieChoisie).map((enfant) => (
+                                  <label key={enfant.slug} className={styles.subcategoryOption}>
+                                    <input
+                                      type="checkbox"
+                                      name="sousCategorie"
+                                      value={enfant.slug}
+                                      defaultChecked={selectionSous.includes(enfant.slug)}
+                                      data-auto-submit
+                                    />
+                                    {enfant.nom}
+                                  </label>
+                                ))}
+                              </div>
+                            : <p className={styles.hint}>Aucune sous-catégorie pour ce choix.</p>
+                          : <p className={styles.hint}>Choisissez une catégorie pour afficher ses sous-catégories.</p>}
+                      </div>
+                    </div>}
+              </fieldset>
+
+              <section className={styles.shortcuts} aria-labelledby="suggestions-titre">
+                <header><div><p>DES IDÉES SELON VOS CHOIX</p><h2 id="suggestions-titre">Quel montant maximum ?</h2></div>
+                  <span>{suggestions.length} suggestion{suggestions.length > 1 ? 's' : ''}</span>
+                </header>
+                {suggestions.length ? (
+                  <div className={styles.chips}>
+                    {suggestions.map((montant) => (
+                      <Link key={montant} href={cheminBudget(selection, selectionSous, min, montant)} aria-current={max === montant ? 'true' : undefined}>
+                        Maxi {new Intl.NumberFormat('fr-FR').format(montant)} F
+                      </Link>
+                    ))}
                   </div>
-                </div>}
-          </fieldset>
-          <fieldset>
-            <legend>2. Définissez votre budget</legend>
-            <div className={styles.prices}>
-              <label>Minimum (FCFA)<input type="number" name="prixMin" min="0" max="1000000000" step="500" inputMode="numeric" defaultValue={min} placeholder="Sans minimum" /></label>
-              <label>Maximum (FCFA)<input type="number" name="prixMax" min="0" max="1000000000" step="500" inputMode="numeric" defaultValue={max} placeholder="Sans maximum" /></label>
-              <button type="submit"><ShopIcon name="search" />Voir les offres</button>
-            </div>
-          </fieldset>
+                ) : <p className={styles.hint}>Aucune suggestion pour cette sélection de catégories et de budget.</p>}
+              </section>
+
+              <fieldset>
+                <legend>Définissez votre budget</legend>
+                <div className={styles.prices}>
+                  <label>Minimum (FCFA)<input type="number" name="prixMin" min="0" max="1000000000" step="500" inputMode="numeric" defaultValue={min} placeholder="Sans minimum" /></label>
+                  <label>Maximum (FCFA)<input type="number" name="prixMax" min="0" max="1000000000" step="500" inputMode="numeric" defaultValue={max} placeholder="Sans maximum" /></label>
+                  <button type="submit"><ShopIcon name="search" />Voir les offres</button>
+                </div>
+              </fieldset>
+            </aside>
+
+            <section className={styles.results} aria-label="Offres selon votre budget">
+              <header><h2>Offres des boutiques</h2><span>{offres.length} offre{offres.length > 1 ? 's' : ''} affichée{offres.length > 1 ? 's' : ''}</span></header>
+              {invalidInterval ? <p className={styles.error} role="alert">Le budget minimum doit être inférieur ou égal au maximum.</p>
+                : indisponible ? <p className={styles.error} role="alert">Le catalogue est momentanément indisponible. Réessayez dans un instant.</p>
+                  : offres.length ? <div className={styles.products}>{offres.map((offre) => <CatalogueProductCard key={offre.id} offer={offre} />)}</div>
+                    : <div className={styles.empty}><ShopIcon name="search" /><b>Aucune offre dans cette sélection.</b><span>Modifiez votre budget ou choisissez d’autres catégories.</span></div>}
+            </section>
+          </div>
         </FormulaireBudget>
-
-        <section className={styles.shortcuts} aria-labelledby="suggestions-titre">
-          <header><div><p>DES IDÉES SELON VOS CHOIX</p><h2 id="suggestions-titre">Quel montant maximum ?</h2></div>
-            <span>{suggestions.length} suggestion{suggestions.length > 1 ? 's' : ''}</span>
-          </header>
-          {suggestions.length ? (
-            <div className={styles.chips}>
-              {suggestions.map((montant) => (
-                <Link key={montant} href={cheminBudget(selection, selectionSous, min, montant)} aria-current={max === montant ? 'true' : undefined}>
-                  Maxi {new Intl.NumberFormat('fr-FR').format(montant)} F
-                </Link>
-              ))}
-            </div>
-          ) : <p className={suggestionsIndisponibles ? styles.error : styles.hint} role={suggestionsIndisponibles ? 'status' : undefined}>
-            {suggestionsIndisponibles ? 'Les suggestions ne peuvent pas être chargées pour le moment.' : 'Aucune suggestion pour ces catégories et ce budget.'}
-          </p>}
-        </section>
-
-        <section className={styles.results} aria-label="Offres selon votre budget">
-          <header><h2>Offres disponibles</h2><span>{offres.length} offre{offres.length > 1 ? 's' : ''} affichée{offres.length > 1 ? 's' : ''}</span></header>
-          {invalidInterval ? <p className={styles.error} role="alert">Le budget minimum doit être inférieur ou égal au maximum.</p>
-            : indisponible ? <p className={styles.error} role="alert">Le catalogue est momentanément indisponible. Réessayez dans un instant.</p>
-              : offres.length ? <div className={styles.products}>{offres.map((offre) => <CatalogueProductCard key={offre.id} offer={offre} />)}</div>
-                : <div className={styles.empty}><ShopIcon name="search" /><b>Aucune offre dans cette sélection.</b><span>Modifiez votre budget ou choisissez d’autres catégories.</span></div>}
-        </section>
       </div>
     </div>
   )
