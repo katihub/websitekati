@@ -137,7 +137,7 @@ export function ActionsCompte() {
   // menu du compte) ; la boutique du marchand garde son raccourci, c'est son espace de travail.
   return <>
     {profil === 'marchand'
-      ? <Link href="/espace-vendeur" className={styles.actionLien} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
+      ? <Link href="/espace-vendeur" className={`${styles.actionLien} ${styles.actionContextuelle}`} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
       : <Link href="/compte/commandes" className={`${styles.actionLien} ${styles.horsMobile}`} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
 
     <ClocheNotifications boite={BOITE_CLIENT} classeBouton={styles.actionLien} toutVoir="/compte/notifications"

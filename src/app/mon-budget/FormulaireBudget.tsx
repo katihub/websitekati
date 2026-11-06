@@ -14,7 +14,10 @@ export function FormulaireBudget({ children }: { children: ReactNode }) {
 
   function actualiser(event: ChangeEvent<HTMLFormElement>) {
     const cible = event.target
-    if (!(cible instanceof HTMLInputElement) || !cible.matches('[data-auto-submit]')) return
+    if (
+      (!(cible instanceof HTMLInputElement) && !(cible instanceof HTMLSelectElement))
+      || !cible.matches('[data-auto-submit]')
+    ) return
     if (minuterie.current) clearTimeout(minuterie.current)
     minuterie.current = setTimeout(() => form.current?.requestSubmit(), 120)
   }

@@ -81,17 +81,17 @@ function cheminBudget(categories: readonly string[], sousCategorieSlugs: readonl
 export default async function MonBudgetPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams
   const arbre = await lireCategoriesMarketplace()
-  const categoriesChoisies = [...new Set(valeurs(params, 'categorie'))]
-    .map((slug) => arbre.find((categorie) => categorie.slug === slug))
-    .filter((categorie): categorie is CategorieArbre => categorie !== undefined)
+  const categorieChoisieSlug = valeurs(params, 'categorie')[0]
+  const categorieChoisie = arbre.find((categorie) => categorie.slug === categorieChoisieSlug)
+  const categoriesChoisies = categorieChoisie ? [categorieChoisie] : []
   const sousChoisiesDemandees = new Set(valeurs(params, 'sousCategorie'))
-  const sousCategoriesValides = categoriesChoisies.flatMap((categorie) => sousCategories(categorie))
+  const sousCategoriesValides = categorieChoisie ? sousCategories(categorieChoisie) : []
   const sousCategoriesChoisies = sousCategoriesValides
     .filter((categorie) => sousChoisiesDemandees.has(categorie.slug))
   const min = prixValide(premier(params, 'prixMin'))
   const max = prixValide(premier(params, 'prixMax'))
   const invalidInterval = min !== undefined && max !== undefined && min > max
-  const aChoisiUneCategorie = valeurs(params, 'categorie').length > 0
+  const aChoisiUneCategorie = Boolean(categorieChoisieSlug)
   const sources: Array<{ categorieSlug?: string }> = categoriesChoisies.length
     ? categoriesChoisies.flatMap((categorie) => {
         const enfantsChoisis = sousCategoriesChoisies.filter((enfant) =>
@@ -171,60 +171,38 @@ export default async function MonBudgetPage({ searchParams }: { searchParams: Pr
             <legend>1. Choisissez vos catégories</legend>
             {categoriesIndisponibles
               ? <p className={styles.hint} role="status">Les catégories ne peuvent pas être chargées pour le moment.</p>
-              : <div className={styles.categories}>
-                  {arbre.map((categorie) => {
-                    const enfants = sousCategories(categorie)
-                    const cochee = selection.includes(categorie.slug)
-                    return (
-                      <details
-                        key={categorie.id}
-                        className={styles.categoryChoice}
-                        open={cochee || enfants.some((enfant) => selectionSous.includes(enfant.slug))}
-                      >
-                        <summary className={styles.categorySummary}>
-                          <ShopIcon name="grid" />
-                          <span>{categorie.nom}</span>
-                          {enfants.length ? <small>{enfants.length} sous-catégorie{enfants.length > 1 ? 's' : ''}</small> : null}
-                          <ShopIcon name="arrow" />
-                        </summary>
-                        <div className={styles.categoryContents}>
-                          <label className={styles.categoryOption}>
-                            <input
-                              type="checkbox"
-                              name="categorie"
-                              value={categorie.slug}
-                              defaultChecked={cochee}
-                              data-auto-submit
-                            />
-                            Inclure toute cette catégorie
-                          </label>
-                          {enfants.length ? (
-                            <details
-                              className={styles.subcategories}
-                              open={enfants.some((enfant) => selectionSous.includes(enfant.slug))}
-                            >
-                              <summary>Sous-catégories facultatives</summary>
-                              <div>
-                                {enfants.map((enfant) => (
-                                  <label key={enfant.slug} className={styles.subcategoryOption}>
-                                    <input
-                                      type="checkbox"
-                                      name="sousCategorie"
-                                      value={enfant.slug}
-                                      defaultChecked={selectionSous.includes(enfant.slug)}
-                                      disabled={!cochee}
-                                      data-auto-submit
-                                    />
-                                    {enfant.nom}
-                                  </label>
-                                ))}
-                              </div>
-                            </details>
-                          ) : null}
-                        </div>
-                      </details>
-                    )
-                  })}
+              : <div className={styles.categoryColumns}>
+                  <label className={styles.categoryColumn}>
+                    <span>Catégorie</span>
+                    <select name="categorie" defaultValue={categorieChoisie?.slug ?? ''} data-auto-submit>
+                      <option value="">Toutes les catégories</option>
+                      {arbre.map((categorie) => (
+                        <option key={categorie.id} value={categorie.slug}>{categorie.nom}</option>
+                      ))}
+                    </select>
+                    <small>Choisissez une catégorie principale.</small>
+                  </label>
+                  <div className={styles.subcategoryColumn}>
+                    <h2>Sous-catégories <span>(facultatif)</span></h2>
+                    {categorieChoisie
+                      ? sousCategories(categorieChoisie).length
+                        ? <div className={styles.subcategoryList}>
+                            {sousCategories(categorieChoisie).map((enfant) => (
+                              <label key={enfant.slug} className={styles.subcategoryOption}>
+                                <input
+                                  type="checkbox"
+                                  name="sousCategorie"
+                                  value={enfant.slug}
+                                  defaultChecked={selectionSous.includes(enfant.slug)}
+                                  data-auto-submit
+                                />
+                                {enfant.nom}
+                              </label>
+                            ))}
+                          </div>
+                        : <p className={styles.hint}>Aucune sous-catégorie pour ce choix.</p>
+                      : <p className={styles.hint}>Choisissez une catégorie pour afficher ses sous-catégories.</p>}
+                  </div>
                 </div>}
           </fieldset>
           <fieldset>
