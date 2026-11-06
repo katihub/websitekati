@@ -104,7 +104,6 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         referenceVendeur: String(donnees.get('reference') ?? '').trim(),
         prixFcfa,
         prixReferenceFcfa,
-        quantiteInitiale: entier(donnees, 'stock', false) ?? 0,
       },
     })
     await onCreee()
@@ -136,7 +135,6 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         <ChampTexte nom="prix" libelle="Prix FCFA" required inputMode="numeric" pattern="[0-9]+" />
         <ChampTexte nom="prix-reference" libelle="Prix barré" inputMode="numeric" pattern="[0-9]*" />
       </div>
-      <ChampTexte nom="stock" libelle="Stock initial" inputMode="numeric" pattern="[0-9]*" defaultValue="0" />
     </FenetreAction>
   )
 }

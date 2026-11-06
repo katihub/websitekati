@@ -10,6 +10,7 @@ import { lireSuggestionProduit, type MerchantProductDraft, type MerchantProductS
 import { cheminCategorie, useCategoriesMarketplace, type CategorieProduit } from './categories'
 import { EditeurFicheProduit, type ImageFiche } from './EditeurFicheProduit'
 import { AutresCategories } from './AutresCategories'
+import { libelleStatutStock, STATUTS_STOCK } from '@/lib/stock'
 import { FenetreCategories } from './FenetreCategories'
 import styles from './administration-produits.module.css'
 
@@ -62,6 +63,7 @@ type Offre = {
   attributsVariante: Record<string, string> | null
   produit: { id: string; nom: string; slug: string; statut: string }
   stock: { quantite: number; quantiteReservee: number } | null
+  statutStock?: 'en_stock' | 'reapprovisionnement' | 'rupture'
   revisions: Revision[]
 }
 
@@ -84,7 +86,7 @@ function valeursOffre(offre: Offre): BrouillonLot {
   return {
     prix: String(offre.prixFcfa ?? revision?.prixFcfa ?? ''),
     prixReference: String(offre.prixReferenceFcfa ?? revision?.prixReferenceFcfa ?? ''),
-    stock: String(offre.stock?.quantite ?? 0),
+    stock: offre.statutStock ?? 'en_stock',
     minimum: String(offre.quantiteMinimale ?? revision?.quantiteMinimale ?? 1),
     delai: String(offre.delaiMaxJours ?? revision?.delaiMaxJours ?? 0),
   }
@@ -409,7 +411,6 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
     const prix = Number(valeur.prix); const reference = valeur.prixReference ? Number(valeur.prixReference) : 0
     if (!Number.isInteger(prix) || prix < 1) return 'Prix invalide'
     if (reference && reference <= prix) return 'Le prix barré doit être supérieur'
-    if (Number(valeur.stock) < (offre.stock?.quantiteReservee ?? 0)) return `Stock inférieur aux ${offre.stock?.quantiteReservee ?? 0} réservées`
     if (Number(valeur.minimum) < 1) return 'Minimum invalide'
     if (Number(valeur.delai) < 0 || Number(valeur.delai) > 3) return 'Le délai doit être de 3 jours maximum'
     return ''
@@ -424,7 +425,8 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
     await Promise.all(modifiees.map(async (offre) => {
       const avant = valeursOffre(offre); const apres = brouillons[offre.id]!
       try {
-        if (avant.stock !== apres.stock) await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/stock`, { methode: 'POST', corps: { quantite: Number(apres.stock), motif: 'Modification en lot depuis l’espace vendeur' } })
+        // Le statut remplace les quantites (6 novembre 2026) : applique tout de suite.
+        if (avant.stock !== apres.stock) await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/statut-stock`, { methode: 'POST', corps: { statutStock: apres.stock } })
         // Le prix et le prix barre sont publies tout de suite ; seuls le minimum et le delai passent en validation.
         if (avant.prix !== apres.prix || avant.prixReference !== apres.prixReference) {
           await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/prix`, { methode: 'POST', corps: { prixFcfa: Number(apres.prix), prixReferenceFcfa: apres.prixReference ? Number(apres.prixReference) : null } })
@@ -445,16 +447,15 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
     }))
     await onRefresh()
     setBrouillons({}); setPending(false)
-    setMessage(echecs.length ? `${modifiees.length - echecs.length} offre(s) enregistrée(s). Échecs : ${echecs.join(', ')}.` : `${modifiees.length} offre(s) enregistrée(s). Les prix et le stock sont publiés ; un minimum ou un délai modifié passe en validation.`)
+    setMessage(echecs.length ? `${modifiees.length - echecs.length} offre(s) enregistrée(s). Échecs : ${echecs.join(', ')}.` : `${modifiees.length} offre(s) enregistrée(s). Les prix et les statuts de stock sont publiés ; un minimum ou un délai modifié passe en validation.`)
   }
 
   return <div className={styles.bulk}>
     <div className={styles.bulkToolbar}><button type="button" className={styles.back} onClick={onRetour}>← Revenir à la liste</button><label className={styles.search}><span>⌕</span><input aria-label="Rechercher dans les offres" value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(1) }} placeholder="Produit, référence, variante…" /></label><div className={styles.pageSize}><span>Lignes :</span><button type="button" aria-pressed={taille === 10} onClick={() => { setTaille(10); setPage(1) }}>10</button><button type="button" aria-pressed={taille === 20} onClick={() => { setTaille(20); setPage(1) }}>20</button></div></div>
-    <div className={styles.bulkInfo}><div><strong>Modification en lot</strong><p>Le stock, le prix et le prix barré sont publiés immédiatement. Le minimum et le délai restent en validation jusqu’à la décision KatiMarket.</p></div><span>{filtrees.length} offre(s)</span></div>
-    <div className={styles.bulkScroll}><table className={styles.bulkTable}><thead><tr><th>Produit / offre</th><th>Prix FCFA</th><th>Prix barré</th><th>Stock</th><th>Minimum</th><th>Délai (3 j max.)</th><th>État</th></tr></thead><tbody>{visibles.map((offre) => {
+    <div className={styles.bulkInfo}><div><strong>Modification en lot</strong><p>Le statut du stock, le prix et le prix barré sont publiés immédiatement. Le minimum et le délai restent en validation jusqu’à la décision KatiMarket.</p></div><span>{filtrees.length} offre(s)</span></div>
+    <div className={styles.bulkScroll}><table className={styles.bulkTable}><thead><tr><th>Produit / offre</th><th>Prix FCFA</th><th>Prix barré</th><th>Statut du stock</th><th>Minimum</th><th>Délai (3 j max.)</th><th>État</th></tr></thead><tbody>{visibles.map((offre) => {
       const valeur = brouillons[offre.id] ?? valeursOffre(offre); const modifiee = !identique(valeur, valeursOffre(offre)); const erreur = erreurLigne(offre)
-      const disponible = Number(valeur.stock) - (offre.stock?.quantiteReservee ?? 0)
-      return <tr key={offre.id} data-modified={modifiee || undefined} data-error={Boolean(erreur) || undefined}><td><strong>{offre.produit.nom}</strong><small>{offre.referenceVendeur}{offre.libelleVariante ? ` · ${offre.libelleVariante}` : ''}</small></td><td><input aria-label={`Prix de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prix} onChange={(e) => changer(offre, 'prix', e.target.value)} /></td><td><input aria-label={`Prix de référence de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prixReference} onChange={(e) => changer(offre, 'prixReference', e.target.value)} /></td><td><input aria-label={`Stock de ${offre.produit.nom}`} inputMode="numeric" value={valeur.stock} onChange={(e) => changer(offre, 'stock', e.target.value)} /><small className={styles.availability} data-available={disponible > 0}>{disponible > 0 ? `${disponible} disponible(s)` : 'Indisponible'}</small></td><td><input aria-label={`Minimum de ${offre.produit.nom}`} inputMode="numeric" value={valeur.minimum} onChange={(e) => changer(offre, 'minimum', e.target.value)} /></td><td><input aria-label={`Délai de ${offre.produit.nom}`} type="number" min="0" max="3" inputMode="numeric" value={valeur.delai} onChange={(e) => changer(offre, 'delai', e.target.value)} /></td><td>{erreur ? <span className={styles.rowError} title={erreur}>À corriger</span> : REVISIONS_OUVERTES.includes(offre.revisions[0]?.statut ?? '') ? <span className={styles.pending}>En validation</span> : <span className={styles.ready}>{modifiee ? 'Modifié' : 'Prêt'}</span>}</td></tr>
+      return <tr key={offre.id} data-modified={modifiee || undefined} data-error={Boolean(erreur) || undefined}><td><strong>{offre.produit.nom}</strong><small>{offre.referenceVendeur}{offre.libelleVariante ? ` · ${offre.libelleVariante}` : ''}</small></td><td><input aria-label={`Prix de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prix} onChange={(e) => changer(offre, 'prix', e.target.value)} /></td><td><input aria-label={`Prix de référence de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prixReference} onChange={(e) => changer(offre, 'prixReference', e.target.value)} /></td><td><select aria-label={`Statut du stock de ${offre.produit.nom}`} value={valeur.stock} onChange={(e) => changer(offre, 'stock', e.target.value)}>{STATUTS_STOCK.map((statut) => <option key={statut} value={statut}>{libelleStatutStock(statut)}</option>)}</select></td><td><input aria-label={`Minimum de ${offre.produit.nom}`} inputMode="numeric" value={valeur.minimum} onChange={(e) => changer(offre, 'minimum', e.target.value)} /></td><td><input aria-label={`Délai de ${offre.produit.nom}`} type="number" min="0" max="3" inputMode="numeric" value={valeur.delai} onChange={(e) => changer(offre, 'delai', e.target.value)} /></td><td>{erreur ? <span className={styles.rowError} title={erreur}>À corriger</span> : REVISIONS_OUVERTES.includes(offre.revisions[0]?.statut ?? '') ? <span className={styles.pending}>En validation</span> : <span className={styles.ready}>{modifiee ? 'Modifié' : 'Prêt'}</span>}</td></tr>
     })}</tbody></table></div>
     <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>←</button><button type="button" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>→</button></div></div>
     {message ? <p className={styles.feedback} role="status">{message}</p> : null}
