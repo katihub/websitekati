@@ -8,6 +8,7 @@ import { api, ErreurApi } from '@/lib/api'
 import { BOITE_CLIENT, cheminInterne } from '@/lib/notifications'
 import { ClocheNotifications } from '@/components/notifications/ClocheNotifications'
 import { useSession } from '@/lib/session'
+import { DELAIS_NOUVEL_ESSAI_MS, profilApresErreur, profilDesBoutiques, type Profil } from '@/lib/profil-compte'
 import styles from './marketplace-shell-v2.module.css'
 import { useMarketplaceLanguage } from '@/lib/language'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
@@ -21,10 +22,9 @@ import { ShopIcon, type ShopIconName } from './ShopIcon'
  * - un client connecte : ses commandes et son compte ;
  * - un marchand connecte : sa boutique et son compte.
  * Un marchand est reconnu a ses boutiques (`/vendeurs/mes-boutiques`) ; un
- * client recoit un refus, qui le classe simplement client.
+ * client recoit un refus, qui le classe simplement client. Une autre erreur
+ * fait redemander (`lib/profil-compte`).
  */
-
-type Profil = 'client' | 'marchand'
 
 const sansAbonnement = () => () => {}
 /**
@@ -57,10 +57,22 @@ function useProfil(userId: string | null): Profil | null {
   useEffect(() => {
     if (!userId || profils[userId]) return
     const controleur = new AbortController()
-    api<unknown[]>('/vendeurs/mes-boutiques', { signal: controleur.signal })
-      .then((boutiques) => { if (!controleur.signal.aborted) setProfils((p) => ({ ...p, [userId]: Array.isArray(boutiques) && boutiques.length ? 'marchand' : 'client' })) })
-      .catch((cause: unknown) => { if (!controleur.signal.aborted && cause instanceof ErreurApi) setProfils((p) => ({ ...p, [userId]: 'client' })) })
-    return () => controleur.abort()
+    let essai = 0
+    let minuterie: number | undefined
+    const retenir = (profil: Profil) => setProfils((p) => ({ ...p, [userId]: profil }))
+    const demander = () => {
+      api<unknown[]>('/vendeurs/mes-boutiques', { signal: controleur.signal })
+        .then((boutiques) => { if (!controleur.signal.aborted) retenir(profilDesBoutiques(boutiques)) })
+        .catch((cause: unknown) => {
+          if (controleur.signal.aborted) return
+          const profil = profilApresErreur(cause instanceof ErreurApi ? cause.code : null)
+          if (profil) return retenir(profil)
+          const delai = DELAIS_NOUVEL_ESSAI_MS[essai++]
+          if (delai !== undefined) minuterie = window.setTimeout(demander, delai)
+        })
+    }
+    demander()
+    return () => { controleur.abort(); window.clearTimeout(minuterie) }
   }, [userId, profils])
   return userId ? profils[userId] ?? null : null
 }
