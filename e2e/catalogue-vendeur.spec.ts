@@ -383,3 +383,29 @@ test('la fiche complète publie prix et délai tout de suite, et envoie le nouve
   await expect(page.getByText(/Elle sera publiée après validation/)).toBeVisible()
   expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toEqual({ nom: 'Samsung Galaxy A15 4G', images: [] })
 })
+
+test('sur téléphone, la fiche produit tient dans l’écran malgré une catégorie au nom long', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  const garantie = { mois: 12, unite: 'mois', heritee: false, libelle: '12 mois' }
+  api = (await espaceVendeur(page, []))
+    .quand('GET', /^\/marketplace\/categories$/, [{
+      id: '00000000-0000-4000-8000-000000000501', nom: 'Sécurité & Surveillance', slug: 'securite-surveillance', garantie,
+      sousCategories: [{ id: '00000000-0000-4000-8000-000000000502', nom: 'Contrôle d’accès, pointage et lecteurs biométriques professionnels', slug: 'securite-controle-acces', garantie }],
+    }])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [{ ...offre, referenceVendeur: 'NOWTECH-LEGACY-60533' }])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu$`), {
+      // Une adresse NowTech reelle : d'un seul tenant, elle elargissait toute la fiche.
+      produit: { id: PRODUIT, nom: produit.nom, slug: 'nowtech-60533-laptop-hp-omen-16-core-i7-13700hx-16go-ram-1to-ssd-rtx-4060-8go-ecran-16-1-165hz', marque: 'Samsung', description: null, metaTitre: null, metaDescription: null },
+      images: [], revisionOuverte: null, revisions: [],
+    })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: 'Modifier la fiche' }).click()
+  await expect(page.getByTestId('fiche-categorie-principale')).toBeVisible()
+  // L'espace vendeur masque ce qui deborde : on mesure la fiche elle-meme. Le tableau
+  // des variantes defile dans son propre cadre et ne compte pas.
+  const fiche = await page.locator('section[aria-labelledby="fiche-titre"]').evaluate((el) => ({ contenu: el.scrollWidth, visible: el.clientWidth }))
+  expect(fiche.contenu).toBeLessThanOrEqual(fiche.visible + 1)
+})

@@ -29,3 +29,8 @@
 .succes{background:#e7f6ee;color:#146c3b}
 .erreur{background:#fff0ee;color:#b42318}
 .enAttente{color:#9a4b00;font-weight:600}
+/* UNE LISTE NE FAIT PAS LA LARGEUR DE SA PLUS LONGUE OPTION. Une colonne de grille
+   suit son contenu : « Sécurité & Surveillance › Contrôle d'accès… » élargissait
+   la fiche au-delà d'un écran de téléphone. Les colonnes partent de zéro. */
+.fiche,.bloc,.champs label{grid-template-columns:minmax(0,1fr)}
+.champs select,.champs input{width:100%;min-width:0}

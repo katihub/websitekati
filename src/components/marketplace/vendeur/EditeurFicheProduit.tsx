@@ -200,7 +200,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
   const derniere = contenu.revisions[0]
 
   return (
-    <section className="grid gap-6" aria-labelledby="fiche-titre">
+    <section className="grid grid-cols-1 gap-6" aria-labelledby="fiche-titre">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="t-label text-ink-3">Modifier le produit</p>
@@ -300,7 +300,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
         </div>
       </section>
 
-      <section aria-labelledby="seo-titre" className="grid gap-4 lg:grid-cols-[1fr_minmax(0,22rem)]">
+      <section aria-labelledby="seo-titre" className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
         <div className="grid gap-4">
           <h3 id="seo-titre" className="text-h4 font-semibold">Référencement</h3>
           <label className="block text-small font-semibold">Meta title
@@ -314,7 +314,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
             <span id="meta-description-aide" className={`mt-1 block text-micro font-normal ${descriptionValide ? 'text-ink-3' : 'text-warn'}`}>{metaDescription.trim().length}/{META_DESCRIPTION.max} caractères · de {META_DESCRIPTION.min} à {META_DESCRIPTION.max}.</span>
           </label>
         </div>
-        <figure className="rounded-well border border-rule p-4" aria-label="Aperçu dans les résultats de recherche">
+        <figure className="min-w-0 rounded-well border border-rule p-4" aria-label="Aperçu dans les résultats de recherche">
           <figcaption className="t-label text-ink-3">Aperçu Google</figcaption>
           <p className="mt-3 truncate text-micro text-ink-3">katihub.cm › marketplace › {contenu.produit.slug}</p>
           <p className="mt-1 line-clamp-2 text-[1.1rem] leading-snug text-[#1a0dab]">{metaTitre.trim() || `${contenu.produit.nom} — KatiMarket`}</p>

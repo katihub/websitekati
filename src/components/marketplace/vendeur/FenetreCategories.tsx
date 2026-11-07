@@ -40,14 +40,14 @@ export function FenetreCategories({ boutiqueId, produit, onFermer, onEnregistre 
     onValider={valider}
     onFermer={onFermer}
   >
-    <label className="grid gap-1 text-small font-semibold">Catégorie principale
-      <select required value={principale} onChange={(e) => { setPrincipale(e.target.value); setAutres((liste) => liste.filter((id) => id !== e.target.value)) }} className="rounded-control border border-rule bg-surface p-3 text-small font-normal" data-testid="categorie-principale">
+    <label className="grid grid-cols-1 gap-1 text-small font-semibold">Catégorie principale
+      <select required value={principale} onChange={(e) => { setPrincipale(e.target.value); setAutres((liste) => liste.filter((id) => id !== e.target.value)) }} className="w-full min-w-0 rounded-control border border-rule bg-surface p-3 text-small font-normal" data-testid="categorie-principale">
         <option value="">Sélectionner…</option>
         {options.map((option) => <option key={option.id} value={option.id}>{option.libelle}</option>)}
       </select>
     </label>
-    <div className="grid gap-3 text-small font-semibold [&_select]:mt-1 [&_select]:w-full [&_select]:rounded-control [&_select]:border [&_select]:border-rule [&_select]:bg-surface [&_select]:p-3 [&_select]:font-normal [&_span]:font-normal [&_span]:text-ink-3">
-      <AutresCategories arbre={categories} principale={principale || undefined} valeur={autres} onChange={setAutres} className="grid" />
+    <div className="grid grid-cols-1 gap-3 text-small font-semibold [&_select]:mt-1 [&_select]:w-full [&_select]:min-w-0 [&_select]:rounded-control [&_select]:border [&_select]:border-rule [&_select]:bg-surface [&_select]:p-3 [&_select]:font-normal [&_span]:font-normal [&_span]:text-ink-3">
+      <AutresCategories arbre={categories} principale={principale || undefined} valeur={autres} onChange={setAutres} className="grid grid-cols-1" />
     </div>
   </FenetreAction>
 }

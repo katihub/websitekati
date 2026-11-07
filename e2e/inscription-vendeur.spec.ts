@@ -93,3 +93,38 @@ test('un particulier de moins de 18 ans ne peut pas continuer', async ({ page })
   await expect(page.getByRole('alert').filter({ hasText: 'Vous devez avoir au moins 18 ans pour vendre sur KatiMarket.' })).toBeVisible()
   expect(api.appelsVers('POST', /^\/vendeurs\/inscription$/)).toHaveLength(0)
 })
+
+test('sur téléphone, les cases à cocher gardent leur taille et rien ne dépasse de l’écran', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  const api = await simulerApi(page)
+  api.quand('GET', /^\/marketplace\/categories$/, [])
+  const mesurer = () => page.evaluate(() => {
+    const largeur = document.documentElement.clientWidth
+    const cases = [...document.querySelectorAll<HTMLInputElement>('main input[type=checkbox], main input[type=radio]')]
+      .filter((c) => c.getBoundingClientRect().width > 0)
+      .map((c) => Math.round(c.getBoundingClientRect().width))
+    const debords = [...document.querySelectorAll('main *')].filter((el) => {
+      const r = el.getBoundingClientRect()
+      if (!r.width || (r.left >= -1 && r.right <= largeur + 1)) return false
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(p).overflowX)) return false
+      return true
+    }).length
+    return { plusGrandeCase: Math.max(0, ...cases), debords }
+  })
+  await page.goto('/devenir-vendeur')
+  expect(await mesurer()).toEqual({ plusGrandeCase: expect.any(Number), debords: 0 })
+  expect((await mesurer()).plusGrandeCase).toBeLessThanOrEqual(24)
+  await page.getByLabel(/Votre nom complet/).fill('Aline Test')
+  await page.getByLabel(/Adresse e-mail/).fill('aline.test@example.cm')
+  await page.getByLabel(/Numéro mobile/).fill('699123456')
+  const password = page.getByLabel(/Créer un mot de passe/)
+  if (await password.isVisible()) {
+    await password.fill('TestPass123!')
+    await page.getByLabel(/Confirmer le mot de passe/).fill('TestPass123!')
+  }
+  await page.getByRole('button', { name: /Continuer/ }).click()
+  await expect(page.getByTestId('mode-vendeur')).toBeVisible()
+  const etape2 = await mesurer()
+  expect(etape2.plusGrandeCase).toBeLessThanOrEqual(24)
+  expect(etape2.debords).toBe(0)
+})
