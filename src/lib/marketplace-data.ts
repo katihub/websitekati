@@ -105,11 +105,10 @@ export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
 /**
  * L'IDENTITE D'UNE BOUTIQUE, SANS SES OFFRES.
  *
- * `/marketplace/boutiques/:slug` renvoie TOUTES les offres et n'accepte aucune
- * taille : 4 Mo pour les 3 393 produits de NowTech. Au-dela de 2 Mo, le cache de
- * `fetch` refuse la reponse : chaque visite la relisait, et la page entiere
- * partait dans le HTML (4,5 Mo, 15 a 45 s). Seule cette route donne le telephone
- * de la boutique ; on la lit donc ici, et seule l'identite est gardee.
+ * Seule `/marketplace/boutiques/:slug` donne le telephone de la boutique. Elle
+ * renvoyait aussi TOUTES les offres (4 Mo et 8 s pour les 3 393 produits de
+ * NowTech) ; depuis le 7 novembre 2026, elle ne renvoie plus que l'identite. Les
+ * champs d'offres restent ecartes ici tant qu'un ancien backend peut repondre.
  */
 const lireIdentiteBoutique = unstable_cache(async (slug: string): Promise<BoutiqueMarketplace | null> => {
   const reponse = await fetch(`${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`, { headers: entetesLectureCommune(), cache: 'no-store' })

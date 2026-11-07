@@ -16,8 +16,9 @@ import styles from './marketplace-shell-v2.module.css'
 export async function KatiHeader() {
   const [categories, announcements] = await Promise.all([lireCategoriesMarketplace(), lireAnnonces()])
   return (
-    <header className={styles.header} data-marketplace-header>
-      <CaptureParrainage />
+    <>
+      {/* LA BARRE DU HAUT DEFILE AVEC LA PAGE ; seule la ligne logo, recherche et rayons reste
+          collee en haut. Collee entiere, elle prenait un tiers d'un ecran de telephone. */}
       <div className={styles.topbar} data-marketplace-topbar><div className={`${styles.shell} ${styles.topbarInner}`}>
         <KatiAnnouncementTicker announcements={announcements} />
         <div className={styles.supportContacts}>
@@ -36,6 +37,8 @@ export async function KatiHeader() {
         <LanguageSwitcher />
         <LiensBarreHaut />
       </div></div>
+      <header className={styles.header} data-marketplace-header>
+      <CaptureParrainage />
       <div className={`${styles.shell} ${styles.mainbar}`}>
         <div className={styles.brandHome}>
           <KatiLogo />
@@ -50,6 +53,7 @@ export async function KatiHeader() {
         </div>
       </div>
       <MarketplaceNav categories={categories} />
-    </header>
+      </header>
+    </>
   )
 }

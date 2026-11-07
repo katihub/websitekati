@@ -23,6 +23,13 @@ export interface CarteBoutique {
 const LOT = 5
 /** Une image lente n'arrete pas la suite : l'optimiseur peut y passer plusieurs secondes. */
 const ATTENTE_LOT_MS = 4000
+/**
+ * UNE IMAGE QUI NE REPOND JAMAIS NE BLOQUE PAS LA BARRE. L'optimiseur peut ne
+ * jamais rendre une variante (une conversion AVIF bloquee, le 7 novembre 2026,
+ * laissait la barre a 9/10 indefiniment) : passe ce delai, ses images comptent
+ * comme terminees.
+ */
+const ATTENTE_IMAGE_MS = 8000
 const NOMBRE_APERCUS = 5
 const normaliserRecherche = (valeur: string) => valeur.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr').trim()
 
@@ -141,6 +148,15 @@ export function GrilleBoutiques({ boutiques }: { boutiques: CarteBoutique[] }) {
     const minuterie = window.setTimeout(() => setDelaiEcoulePour(autorisees), ATTENTE_LOT_MS)
     return () => window.clearTimeout(minuterie)
   }, [enCours, autorisees, delaiEcoulePour])
+
+  useEffect(() => {
+    const urls = listeVisible.slice(0, autorisees).flatMap(imagesDe)
+    const minuterie = window.setTimeout(() => setTerminees((avant) => {
+      const manquantes = urls.filter((url) => !avant.has(url))
+      return manquantes.length ? new Set([...avant, ...manquantes]) : avant
+    }), ATTENTE_IMAGE_MS)
+    return () => window.clearTimeout(minuterie)
+  }, [listeVisible, autorisees])
 
   useEffect(() => {
     const prochaine = grille.current?.children[autorisees]

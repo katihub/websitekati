@@ -158,15 +158,13 @@ export default async function configuration(): Promise<NextConfig> {
       // invisible, and it removes the rung that was timing out.
       imageSizes: [96, 128, 160, 200, 256, 320, 400],
       deviceSizes: [420, 640, 828, 1080],
-      // AVIF FIRST, WEBP BEHIND IT, AND THE ORDER IS THE PREFERENCE. A browser
-      // that accepts both is served AVIF, which on a packshot shot on white is
-      // the case AVIF is best at: large flat areas and a single object. Everything
-      // else falls back to WebP, and anything older than that to the original.
-      //
-      // The cost is the first encode, which is slower than WebP and happens once
-      // per size per image, on the server, and is then cached for the 30 days
-      // below. The reader never waits for it twice.
-      formats: ['image/avif', 'image/webp'],
+      // WEBP ONLY, AND AVIF WAS TAKEN OUT ON PURPOSE (7 November 2026). The AVIF
+      // encoder can hang on a given image and size: a 600x600 packshot asked at
+      // 96 px never answered after 90 seconds, while WebP took 1.5. A hung encode
+      // is never cached, so every visitor started it again on the server, and
+      // the shops page waited for it forever. WebP files are a little heavier,
+      // but they always come back, and they are cached for the 30 days below.
+      formats: ['image/webp'],
       minimumCacheTTL: 60 * 60 * 24 * 30,
     },
   }

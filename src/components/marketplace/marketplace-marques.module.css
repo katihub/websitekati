@@ -19,10 +19,10 @@
 .visuel{display:grid;flex:none;place-items:center;width:30px;height:20px}
 .logo{display:block;width:30px;height:20px;background-color:#c9d7ec;opacity:.55;mask-image:var(--mark-src);mask-repeat:no-repeat;mask-position:center;mask-size:contain;-webkit-mask-image:var(--mark-src);-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;transition:opacity .2s ease,background-color .2s ease}
 .tuile:hover .logo{opacity:1;background-color:var(--mark-ink,#fff)}
-.monogramme{display:grid;place-items:center;width:22px;height:20px;border:1px solid #ffffff2e;border-radius:5px;color:#9fb3d1;font-size:.5rem;font-weight:800;letter-spacing:.03em;transition:border-color .2s ease,color .2s ease}
+.monogramme{display:grid;place-items:center;width:22px;height:20px;border:1px solid #ffffff2e;border-radius:5px;color:#9fb3d1;font-size:.625rem;font-weight:800;letter-spacing:.03em;transition:border-color .2s ease,color .2s ease}
 .tuile:hover .monogramme{border-color:#ff9a3d;color:#ff9a3d}
-.nom{min-width:0;flex:1;overflow:hidden;font-size:.62rem;font-weight:700;letter-spacing:.03em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
-.compte{flex:none;color:#7f97ba;font-size:.56rem;font-variant-numeric:tabular-nums}
+.nom{min-width:0;flex:1;overflow:hidden;font-size:.625rem;font-weight:700;letter-spacing:.03em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
+.compte{flex:none;color:#7f97ba;font-size:.625rem;font-variant-numeric:tabular-nums}
 
 @media(max-width:900px){.section{width:min(100% - 28px,1480px);margin-top:40px;padding:24px}.entete{align-items:flex-start;flex-direction:column;gap:15px}}
 @media(max-width:650px){.section{width:min(100% - 22px,1480px);padding:22px 18px}.entete h2{font-size:1.45rem}.entete p{font-size:.78rem}.entete>a{width:100%;justify-content:space-between}.grille{grid-template-rows:repeat(3,40px);grid-template-columns:none;grid-auto-columns:156px;grid-auto-flow:column;gap:6px;overflow-x:auto;margin:18px -18px 0;padding:0 18px 8px;scroll-snap-type:x proximity;scrollbar-width:none}.grille::-webkit-scrollbar{display:none}.grille li{scroll-snap-align:start}.tuile{height:40px}}
