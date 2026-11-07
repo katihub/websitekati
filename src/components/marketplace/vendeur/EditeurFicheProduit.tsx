@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 
 import { ErreurApi, api } from '@/lib/api'
+import { avertissementPhoto, CONSEIL_PHOTOS } from '@/lib/publication-produit'
 
 /**
  * LA FICHE PRODUIT VUE PAR LE MARCHAND QUI L'A PROPOSEE : PHOTOS, TEXTES ET REFERENCEMENT.
@@ -52,7 +53,19 @@ export function galerieInitiale(images: ImageFiche[]): Element[] {
  * `vente` : la partie publiee tout de suite (categories, prix, variantes, vente),
  * placee entre le general et les photos (fiche complete, 6 novembre 2026).
  */
-export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: { boutiqueId: string; produitId: string; onFermer: () => void; vente?: ReactNode }) {
+/** Les photos trop petites ou trop allongees, mesurees dans le navigateur : un avertissement, jamais un blocage. */
+function mesurerPhotos(fichiers: File[]): Promise<string[]> {
+  return Promise.all(fichiers.map((fichier) => new Promise<string | null>((resoudre) => {
+    const url = URL.createObjectURL(fichier)
+    const image = new window.Image()
+    image.onload = () => { URL.revokeObjectURL(url); const texte = avertissementPhoto(image.naturalWidth, image.naturalHeight); resoudre(texte ? `${fichier.name} : ${texte}` : null) }
+    image.onerror = () => { URL.revokeObjectURL(url); resoudre(null) }
+    image.src = url
+  }))).then((textes) => textes.filter((texte): texte is string => Boolean(texte)))
+}
+
+export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente, direct = true }: { boutiqueId: string; produitId: string; onFermer: () => void; vente?: ReactNode; direct?: boolean }) {
+  const [avertissements, setAvertissements] = useState<string[]>([])
   const [contenu, setContenu] = useState<ContenuFiche | null>(null)
   const [nom, setNom] = useState('')
   const [marque, setMarque] = useState('')
@@ -105,6 +118,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
   async function deposer(liste: FileList | null) {
     if (!liste?.length || !contenu) return
     setEnvoi(true); setMessage(null)
+    void mesurerPhotos(Array.from(liste)).then(setAvertissements)
     const ajoutees: ImageFiche[] = []
     try {
       for (const fichier of Array.from(liste).slice(0, IMAGES_MAX)) {
@@ -120,7 +134,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
       if (ajoutees.length) {
         setContenu({ ...contenu, images: [...contenu.images.filter((i) => !ajoutees.some((a) => a.id === i.id)), ...ajoutees] })
         setGalerie((actuelle) => [...actuelle, ...ajoutees.filter((a) => !actuelle.some((e) => e.imageId === a.id)).map((a) => ({ imageId: a.id, texteAlternatif: '' }))].slice(0, IMAGES_MAX))
-        setMessage((m) => m ?? { type: 'succes', texte: `${ajoutees.length} photo(s) ajoutée(s) à la galerie. Soumettez la fiche pour les publier.` })
+        setMessage((m) => m ?? { type: 'succes', texte: `${ajoutees.length} photo(s) ajoutée(s) à la galerie. ${direct ? 'Enregistrez la fiche pour les mettre en ligne.' : 'Soumettez la fiche pour les publier.'}` })
       }
       setEnvoi(false)
       if (fichiers.current) fichiers.current.value = ''
@@ -139,7 +153,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
       corps.append('fichier', fichier)
       const depot = await api<{ cle: string; url: string; appliquee: boolean }>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/fiche-technique`, { methode: 'POST', corps })
       setPdf({ cle: depot.cle, url: depot.url })
-      setMessage({ type: 'succes', texte: depot.appliquee ? 'PDF ajouté à votre proposition de produit.' : 'PDF déposé. Soumettez la fiche pour le publier.' })
+      setMessage({ type: 'succes', texte: depot.appliquee ? 'PDF ajouté à votre proposition de produit.' : direct ? 'PDF déposé. Enregistrez la fiche pour le mettre en ligne.' : 'PDF déposé. Soumettez la fiche pour le publier.' })
     } catch (cause) {
       setMessage({ type: 'erreur', texte: erreur(cause) })
     } finally {
@@ -160,7 +174,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
   async function soumettre() {
     setEnvoi(true); setMessage(null)
     try {
-      await api(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu/revisions`, {
+      const revision = await api<{ statut?: string }>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu/revisions`, {
         methode: 'POST',
         corps: {
           // Le nom, la marque et la description ne partent que s'ils ont change.
@@ -175,7 +189,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
           images: galerie.map((e) => ({ imageId: e.imageId, texteAlternatif: e.texteAlternatif.trim() || undefined })),
         },
       })
-      setMessage({ type: 'succes', texte: 'Fiche envoyée à KatiMarket. Elle sera publiée après validation.' })
+      setMessage({ type: 'succes', texte: revision?.statut === 'approuvee' ? 'Fiche enregistrée : elle est en ligne.' : 'Fiche envoyée à KatiMarket. Elle sera publiée après validation.' })
       await charger()
     } catch (cause) {
       setMessage({ type: 'erreur', texte: erreur(cause) })
@@ -205,7 +219,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
         <div>
           <p className="t-label text-ink-3">Modifier le produit</p>
           <h2 id="fiche-titre" className="text-h3 font-semibold">{contenu.produit.nom}</h2>
-          <p className="text-micro text-ink-3">Les catégories, prix, variantes et le délai sont publiés tout de suite. Le nom, les textes, les photos, l’état et la garantie sont publiés après validation par KatiMarket.</p>
+          <p className="text-micro text-ink-3">{direct ? 'Chaque modification est en ligne dès son enregistrement. KatiMarket la contrôle ensuite et peut vous demander une correction.' : 'Les catégories, prix, variantes et le délai sont publiés tout de suite. Le nom, les textes, les photos, l’état et la garantie sont publiés après validation par KatiMarket.'}</p>
         </div>
         <button type="button" onClick={onFermer} className="min-h-11 rounded-control border border-rule px-4 text-small font-semibold">← Retour aux produits</button>
       </header>
@@ -234,7 +248,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
 
       <section aria-labelledby="galerie-titre" className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><h3 id="galerie-titre" className="text-h4 font-semibold">Galerie</h3><p className="text-micro text-ink-3">La première photo est l’image principale. {galerie.length}/{IMAGES_MAX} · JPEG, PNG ou WebP, 5 Mio maximum.</p></div>
+          <div><h3 id="galerie-titre" className="text-h4 font-semibold">Galerie</h3><p className="text-micro text-ink-3">La première photo est l’image principale. {galerie.length}/{IMAGES_MAX}</p><p className="text-micro text-ink-3" data-testid="conseil-photos">{CONSEIL_PHOTOS}</p>{avertissements.map((texte) => <p key={texte} role="status" className="text-micro text-[#b45309]">{texte}</p>)}</div>
           <label className={`inline-flex min-h-11 items-center rounded-control bg-secondary px-4 text-small font-bold text-on-surface ${verrouille ? 'opacity-50' : 'cursor-pointer'}`}>
             Ajouter des photos
             <input ref={fichiers} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" disabled={verrouille} onChange={(event) => void deposer(event.currentTarget.files)} />
@@ -324,7 +338,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente }: 
 
       <div className="flex flex-wrap justify-end gap-2 border-t border-rule pt-4">
         <button type="button" onClick={() => void soumettre()} disabled={verrouille || !titreValide || !descriptionValide || !altValides || !courteValide}
-          className="min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Envoi…' : 'Soumettre le contenu à validation'}</button>
+          className="min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Envoi…' : direct ? 'Enregistrer et mettre en ligne' : 'Soumettre le contenu à validation'}</button>
       </div>
     </section>
   )

@@ -42,8 +42,10 @@ function Badge({ direct }: { direct: boolean }) {
   return <span className={direct ? styles.badgeDirect : styles.badgeValide}>{direct ? 'Publié tout de suite' : 'Validé par KatiMarket'}</span>
 }
 
-export function VenteDuProduit({ boutiqueId, produit, offres, onRefresh }: {
+export function VenteDuProduit({ boutiqueId, produit, offres, onRefresh, direct = true }: {
   boutiqueId: string
+  /** Faux pour un vendeur sous surveillance : l'etat et la garantie attendent la validation (7 novembre 2026). */
+  direct?: boolean
   produit: { id: string; nom: string; categorieId?: string | null; categoriesSupplementaires?: string[] }
   offres: OffreDuProduit[]
   onRefresh: () => Promise<void>
@@ -104,7 +106,7 @@ export function VenteDuProduit({ boutiqueId, produit, offres, onRefresh }: {
         attributsVariante: derniere.attributsVariante ?? offre.attributsVariante ?? undefined,
       } })
     }
-  }, 'État et garantie envoyés à la validation de KatiMarket.')
+  }, direct ? 'État et garantie enregistrés : ils sont en ligne.' : 'État et garantie envoyés à la validation de KatiMarket.')
 
   return <div className={styles.fiche}>
     {message ? <p role={message.type === 'erreur' ? 'alert' : 'status'} className={message.type === 'erreur' ? styles.erreur : styles.succes}>{message.texte}</p> : null}
@@ -121,7 +123,7 @@ export function VenteDuProduit({ boutiqueId, produit, offres, onRefresh }: {
 
     <section className={styles.bloc} aria-labelledby="fiche-variantes">
       <header><h3 id="fiche-variantes">Prix et variantes</h3><Badge direct /></header>
-      <p className={styles.aide}>Chaque ligne s’enregistre séparément et se publie aussitôt. Une variante nouvellement ajoutée passe par la validation.</p>
+      <p className={styles.aide}>{direct ? 'Chaque ligne s’enregistre séparément et se publie aussitôt, nouvelles variantes comprises.' : 'Chaque ligne s’enregistre séparément et se publie aussitôt. Une variante nouvellement ajoutée passe par la validation.'}</p>
       {offres.length ? <div className={styles.scroll}><table className={styles.table}>
         <thead><tr><th>Variante</th><th>Référence</th><th>Prix FCFA</th><th>Prix barré</th><th>Minimum commandable</th><th>Statut du stock</th><th><span className={styles.sr}>Enregistrer</span></th></tr></thead>
         <tbody>{offres.map((offre) => {
@@ -153,7 +155,7 @@ export function VenteDuProduit({ boutiqueId, produit, offres, onRefresh }: {
       <div className={styles.champs}>
         <label>État <Badge direct={false} /><select value={etat} onChange={(e) => setEtat(e.target.value)}>{Object.entries(ETATS).map(([valeur, libelle]) => <option key={valeur} value={valeur}>{libelle}</option>)}</select></label>
         <label>Garantie (mois)<input inputMode="numeric" value={garantie} onChange={(e) => setGarantie(e.target.value)} /></label>
-        <button type="button" className={styles.enregistrer} disabled={occupe === 'garantie' || !offres.length} onClick={() => void proposerEtatGarantie()}>Envoyer à la validation</button>
+        <button type="button" className={styles.enregistrer} disabled={occupe === 'garantie' || !offres.length} onClick={() => void proposerEtatGarantie()}>{direct ? 'Enregistrer' : 'Envoyer à la validation'}</button>
       </div>
       <p className={styles.aide}>Actuellement : {ETATS[offres[0]?.etat ?? base?.etat ?? 'neuf'] ?? 'Neuf'}, garantie {libelleMois(Number(offres[0]?.garantieMois ?? base?.garantieMois ?? 0))}.</p>
     </section>

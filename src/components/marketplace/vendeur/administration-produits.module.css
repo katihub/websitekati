@@ -14,3 +14,8 @@
 .fieldsetLarge{min-width:0;max-width:100%}
 /* Les colonnes du formulaire peuvent retrecir : un contenu large (le tableau des variantes) y defile. */
 .createGrid>*,.formColumn>*{min-width:0}
+/* PUBLIE TOUT DE SUITE (7 novembre 2026) : le prix ajoute sur la ligne, le conseil photos, le motif d'un produit masque. */
+.ajoutPrix{display:grid;gap:4px;min-width:0;max-width:220px}.ajoutPrix>small{color:var(--muted);font-size:10px;line-height:1.4}.ajoutPrix>span{display:flex;gap:5px;min-width:0}.ajoutPrix input{min-width:0;flex:1;min-height:36px;border:1px solid #cbd7e6;border-radius:7px;padding:0 9px;font:inherit;font-size:12px}.ajoutPrix button{flex:none;min-height:36px;border:0;border-radius:7px;background:#f47605;color:#fff;padding:0 10px;font:700 11px inherit;cursor:pointer}.ajoutPrix button:disabled{opacity:.5;cursor:default}
+.sansPrix{color:#b45309;font-size:11px}.erreurPrix{color:#b42318;font-size:10px}.motif{display:block;margin-top:4px;color:#b42318;font-size:10px;line-height:1.4;max-width:220px}
+.conseilPhotos{margin:0;padding:8px 10px;border-radius:7px;background:#f4f7fb;color:var(--muted);font-size:10px;line-height:1.5}.avertissementPhoto{margin:6px 0 0;color:#b45309;font-size:10px;line-height:1.4}
+.status[data-status=suspendu]{background:#fdecea;color:#b42318}

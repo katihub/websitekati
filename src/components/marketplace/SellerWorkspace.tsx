@@ -387,7 +387,6 @@ export function SellerWorkspace() {
           {space?.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <button className={panel === 'verification' ? styles.activeNav : ''} onClick={() => openPanel('verification')}><ShopIcon name="shield" />{en ? 'Verification' : 'Vérification'}</button> : null}
           {([
             ['products', 'package', en ? 'Products' : 'Produits'],
-            ['offers', 'tag', en ? 'Offers' : 'Offres'],
             ['quotes', 'clock', en ? 'Quotes' : 'Devis'],
             ['messages', 'headphones', en ? 'KATI messages' : 'Messagerie KATI'],
           ] as const).map(([value, icon, label]) => (
@@ -426,7 +425,7 @@ export function SellerWorkspace() {
             onPanel={openPanel}
           /> : null}
           {panel === 'verification' ? !loaded.documents ? <SectionLoading /> : access.documents === 'allowed' ? <VerificationPanel shopId={space.id} documents={documents} onRefresh={() => refreshSections(['documents'])} /> : <SectionUnavailable access={access.documents} /> : null}
-          {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.products} /> : null}
+          {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} direct={space.vendeur.statut === 'actif'} livraison={space} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.products} /> : null}
           {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
           {panel === 'messages' ? <MessagerieKati shopId={space.id} /> : null}
           {panel === 'offers' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.offers} /> : null}

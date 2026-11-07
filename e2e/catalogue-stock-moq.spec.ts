@@ -33,7 +33,7 @@ test('le marchand écrit la description courte et la fiche technique, et joint l
       images: [], revisionOuverte: null, revisions: [],
     })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/fiche-technique$`), { cle: CLE, url: `https://cdn.test/documents/${CLE}`, appliquee: false })
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu/revisions$`), { id: 'rc-1', numero: 1, statut: 'soumise' })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu/revisions$`), { id: 'rc-1', numero: 1, statut: 'approuvee' })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
@@ -42,11 +42,11 @@ test('le marchand écrit la description courte et la fiche technique, et joint l
   await page.getByRole('textbox', { name: /^Description courte/ }).fill('Smartphone endurant : batterie 5 000 mAh, 128 Go, double SIM.')
   await page.getByRole('textbox', { name: /^Fiche technique/ }).fill('Écran : 6,5 pouces\nBatterie : 5 000 mAh')
   await page.locator('input[type=file][accept="application/pdf"]').setInputFiles({ name: 'fiche.pdf', mimeType: 'application/pdf', buffer: PDF })
-  await expect(page.getByText('PDF déposé. Soumettez la fiche pour le publier.')).toBeVisible()
+  await expect(page.getByText('PDF déposé. Enregistrez la fiche pour le mettre en ligne.')).toBeVisible()
   await expect(page.getByTestId('fiche-pdf')).toHaveAttribute('href', `https://cdn.test/documents/${CLE}`)
 
-  await page.getByRole('button', { name: 'Soumettre le contenu à validation' }).click()
-  await expect(page.getByText(/Elle sera publiée après validation/)).toBeVisible()
+  await page.getByRole('button', { name: 'Enregistrer et mettre en ligne' }).click()
+  await expect(page.getByText('Fiche enregistrée : elle est en ligne.')).toBeVisible()
   expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toEqual({
     descriptionCourte: 'Smartphone endurant : batterie 5 000 mAh, 128 Go, double SIM.',
     ficheTechnique: 'Écran : 6,5 pouces\nBatterie : 5 000 mAh',
@@ -87,27 +87,22 @@ test('l’offre porte son minimum de commande, et la variante reprend les attrib
   api = (await espaceVendeur(page, []))
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [offre])
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres$`), { id: 'offre', statut: 'brouillon' })
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu$`), {
+      produit: { id: PRODUIT, nom: produit.nom, slug: produit.slug, marque: 'Samsung', description: null, metaTitre: null, metaDescription: null },
+      images: [], revisionOuverte: null, revisions: [],
+    })
 
+  // Plus d'onglet Offres (7 novembre 2026) : le minimum et les variantes se gerent dans la fiche produit.
   await page.goto('/espace-vendeur')
-  await page.getByRole('button', { name: 'Offres', exact: true }).click()
-  await expect(page.getByText('Minimum 5', { exact: false })).toBeVisible()
-  await expect(page.getByText('Vérifié par KatiHub')).toBeVisible()
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: 'Modifier la fiche' }).click()
+  await expect(page.getByLabel('Minimum commandable de 128 Go')).toHaveValue('5')
 
-  await page.getByRole('button', { name: 'Ajouter une variante' }).click()
+  await page.getByTestId('fiche-ajouter-variante').click()
   const variante = page.getByRole('dialog', { name: 'Ajouter une variante' })
   await expect(variante.getByLabel('Nom de l’attribut 1')).toHaveValue('Capacité')
   await expect(variante.getByLabel('Nom de l’attribut 2')).toHaveValue('Couleur')
   await variante.getByRole('button', { name: 'Annuler' }).click()
-
-  await page.getByRole('combobox', { name: /^Produit/ }).selectOption({ label: 'Samsung Galaxy A15' })
-  await page.getByLabel('Référence vendeur').fill('A15-CARTON')
-  await page.getByLabel('Titre de l’offre').fill('Samsung Galaxy A15, carton de 10')
-  await page.getByLabel('Prix FCFA').fill('140000')
-  await page.getByLabel(/^Minimum de commande/).fill('10')
-  await page.getByRole('button', { name: 'Créer et soumettre l’offre' }).click()
-  await expect(page.getByText('Offre envoyée à la modération.')).toBeVisible()
-  expect(api.appelsVers('POST', /\/offres$/)[0]!.corps).toMatchObject({ referenceVendeur: 'A15-CARTON', quantiteMinimale: 10 })
 })
 
 test('une boutique sans suivi de stock le règle, puis refuse une ligne qu’elle ne peut pas fournir', async ({ page }) => {
