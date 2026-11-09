@@ -2,6 +2,7 @@
 
 import type { DeliveryMode } from '@/lib/modes-livraison'
 import { libelleDelaiMarketplace } from '@/lib/marketplace-delivery'
+import { libelleStatutStock } from '@/lib/stock'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 
@@ -121,7 +122,7 @@ export function MarketplacePreview({ product }: { product?: MarketplaceProduct }
         name: offre.boutique.nom,
         initials: offre.boutique.nom.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase(),
         rating: 'Nouveau',
-        sales: `${offre.disponible} en stock`,
+        sales: libelleStatutStock(offre.statutStock),
         price: offre.prixFcfa,
         delivery: offre.modesLivraison.includes('katihub') ? 'Kati Express' : offre.modesLivraison.includes('retrait') && !offre.modesLivraison.includes('vendeur') ? 'Retrait en boutique' : 'Livraison vendeur',
         window: libelleDelaiMarketplace(offre.delaiMaxJours),

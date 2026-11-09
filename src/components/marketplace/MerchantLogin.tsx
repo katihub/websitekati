@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { connexionLocaleActive, seConnecterLocalement } from '@/lib/connexion-locale'
 import { supabase } from '@/lib/supabase'
+import { doitChangerMotDePasse, pageChangementObligatoire } from '@/lib/mot-de-passe-temporaire'
 import { ShopIcon } from './ShopIcon'
 import styles from '@/app/connexion-vendeur/merchant-login.module.css'
 import { useMarketplaceLanguage } from '@/lib/language'
@@ -32,6 +33,8 @@ export function MerchantLogin({ onSuccess }: { onSuccess?: () => Promise<void> }
       if (client) {
         const result = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
         if (result.error) throw result.error
+        // Un mot de passe temporaire pose par l'equipe se change d'abord (9 novembre 2026).
+        if (doitChangerMotDePasse(result.data.user?.user_metadata)) { router.replace(pageChangementObligatoire('vendeur')); return }
       } else if (connexionLocaleActive) {
         await seConnecterLocalement(email.trim().toLowerCase(), password)
       } else throw new Error(en ? 'Sign-in is temporarily unavailable.' : 'Le service de connexion est indisponible pour le moment.')
