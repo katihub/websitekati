@@ -34,6 +34,8 @@ export interface OffreMarketplace {
   statutStock?: 'en_stock' | 'rupture' | 'reapprovisionnement'
   quantiteMinimale?: number
   verifieParKatiLe?: string | null
+  /** Les vrais avis « produit » publies (9 novembre 2026) ; null : produit encore sans avis. */
+  avis?: { moyenne: number; nombre: number } | null
   modesLivraison?: string[]
   villesLivraison?: string[]
   /** Caracteristiques propres a la variante, par exemple RAM ou capacite. */
