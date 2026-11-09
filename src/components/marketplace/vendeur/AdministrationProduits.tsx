@@ -405,7 +405,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, onAnnuler, 
   }
 
   return <form className={styles.create} onSubmit={submit}>
-    <div className={styles.createTop}><div><button type="button" className={styles.back} onClick={onAnnuler}>← Retour au catalogue</button><h3>Ajouter un produit</h3><p>Les informations saisies apparaissent immédiatement dans l’aperçu client.</p></div><button className={styles.primary} disabled={!canPublish || pending}>{pending ? 'Envoi en cours…' : direct ? 'Mettre en ligne' : 'Soumettre à la validation'}</button></div>
+    <div className={styles.createTop}><div><button type="button" className={styles.back} onClick={onAnnuler}>← Retour au catalogue</button><h3>Ajouter un produit</h3><p>Les informations saisies apparaissent immédiatement dans l’aperçu client.</p></div></div>
     <div className={styles.createGrid}>
       <div className={styles.formColumn}>
         <section className={styles.aiPanel} aria-labelledby="assistant-produit-titre">
@@ -431,7 +431,11 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, onAnnuler, 
         <fieldset className={styles.fieldsetLarge}><legend><span>4</span>Prix et variantes</legend><p className={styles.help}>Une ligne par variante (capacité, couleur, taille…). Un produit sans variante garde une seule ligne. Les prix sont publiés en même temps que le produit.</p><PrixEtVariantes lignes={variantes} onChange={setVariantes} disabled={!canPublish} /></fieldset>
         <fieldset><legend><span>5</span>Vente</legend><div className={styles.fieldGrid}><label>État<select value={vente.etat} disabled={!canPublish} onChange={(e) => setVente({ ...vente, etat: e.target.value })}><option value="neuf">Neuf</option><option value="reconditionne">Reconditionné</option><option value="occasion">Occasion</option></select></label><label>Garantie (mois)<input inputMode="numeric" value={vente.garantie === '' ? String(garantieMinimale) : vente.garantie} disabled={!canPublish} onChange={(e) => setVente({ ...vente, garantie: e.target.value })} /></label><label>Délai de préparation<select value={vente.delai} disabled={!canPublish} onChange={(e) => setVente({ ...vente, delai: e.target.value })}>{['0', '1', '2', '3'].map((jours) => <option key={jours} value={jours}>{jours === '0' ? 'Le jour même' : `${jours} jour(s)`}</option>)}</select></label></div><p className={styles.help}>La livraison reprend les modes et les villes de votre boutique.{garantieMinimale ? ` Cette catégorie impose au moins ${libelleMois(garantieMinimale)} de garantie.` : ''}</p></fieldset>
         <fieldset><legend><span>6</span>Référencement</legend><label>Meta title <em>{values.metaTitre.length}/70</em><input maxLength={70} value={values.metaTitre} onChange={(e) => setValues({ ...values, metaTitre: e.target.value })} placeholder={values.nom || 'Titre visible sur Google'} /></label><label>Meta description <em>{values.metaDescription.length}/170</em><textarea rows={3} maxLength={170} value={values.metaDescription} onChange={(e) => setValues({ ...values, metaDescription: e.target.value })} /></label></fieldset>
-        {message ? <p role="status" className={styles.feedback}>{message}</p> : null}
+        {/* Le bouton sous le formulaire (9 novembre 2026) : on envoie une fois tout rempli, le resultat s'affiche juste au-dessus. */}
+        <div className={styles.envoiFiche}>
+          {message ? <p role="status" className={styles.feedback}>{message}</p> : null}
+          <button className={styles.primary} disabled={!canPublish || pending}>{pending ? 'Envoi en cours…' : direct ? 'Mettre en ligne' : 'Soumettre à la validation'}</button>
+        </div>
       </div>
       <aside className={`${styles.preview} ${mobile ? styles.previewMobile : ''}`}>
         <header><div><strong>Aperçu client en direct</strong><small><i /> Non publié · mise à jour instantanée</small></div><div className={styles.device}><button type="button" aria-pressed={!mobile} onClick={() => setMobile(false)}>Ordinateur</button><button type="button" aria-pressed={mobile} onClick={() => setMobile(true)}>Mobile</button></div></header>

@@ -174,6 +174,12 @@ test('le marchand crée un produit complet : deux variantes avec leur prix, leur
   await page.getByLabel('Prix de la variante 2').fill('219000')
   await page.getByLabel('Statut du stock de la variante 2').selectOption('reapprovisionnement')
 
+  // Le bouton est sous le formulaire, apres le referencement (9 novembre 2026), et il est le seul.
+  await expect(page.getByRole('button', { name: 'Mettre en ligne' })).toHaveCount(1)
+  const referencement = await page.locator('legend', { hasText: 'Référencement' }).boundingBox()
+  const bouton = await page.getByRole('button', { name: 'Mettre en ligne' }).boundingBox()
+  expect(bouton!.y).toBeGreaterThan(referencement!.y)
+
   // Deux variantes : chacune doit porter un nom.
   await page.getByRole('button', { name: 'Mettre en ligne' }).click()
   await expect(page.getByText('Donnez un nom à chaque variante (ex. 128 Go / Noir).')).toBeVisible()
