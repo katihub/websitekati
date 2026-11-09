@@ -63,7 +63,12 @@ export interface AccueilMarketplace {
 
 export interface ListeOffresMarketplace {
   indisponible?: boolean
-  facettes?: { categories: { nom: string; nombre: number }[]; marques: { nom: string; nombre: number }[] }
+  facettes?: {
+    categories: { nom: string; nombre: number }[]
+    marques: { nom: string; nombre: number }[]
+    /** Le nombre d'offres de chaque categorie, par slug, compte comme sa page (9 novembre 2026). */
+    parCategorie?: Record<string, number>
+  }
   offres: OffreMarketplace[]
   pagination: { page: number; taille: number; total: number; pages: number }
   filtres: { q: string | null; categorie: string | null; boutique: string | null; tri: string }
