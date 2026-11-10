@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { MarketplaceText } from '@/lib/language'
 import { getBanners, type PublishedBanner } from '@/lib/banners'
+import { piecesDuPanel } from '@/lib/carrousel-accueil'
 import { lireAccueilMarketplace, lireCategoriesMarketplace, lireOffresMarketplace } from '@/lib/marketplace-data'
 import { interleaveCategoryProducts } from '@/lib/mixed-category-products'
 import { MarketplaceAvantages } from './MarketplaceAvantages'
@@ -193,11 +194,11 @@ export async function MarketplaceHome() {
     <div className={`${styles.shell} ${styles.commerceGrid}`}>
       <MarketplaceCategoryMenu rayons={rayons} />
       <div className={styles.centerStage}>
-        <MarketplaceHeroCarousel />
+        <MarketplaceHeroCarousel bannieres={piecesDuPanel(bannieres.principales)} />
         <PromosCarrousel promos={promosAccueil} afficherLibelles={!bannieres.promos.length} />
       </div>
       <aside className={styles.promoRail} aria-label="Publicité et engagements KatiMarket">
-        <PubAccueil pub={bannieres.pubsAccueil[0] ?? null} />
+        <PubAccueil pubs={bannieres.pubsAccueil} />
         <section className={styles.engagements} aria-label="Nos engagements">
           <article><i aria-hidden="true">🛵</i><div><b>Livraison rapide <em>à domicile</em></b><p>Recevez vos commandes où que vous soyez.</p><Link href="/contact">En savoir plus →</Link></div></article>
           <article><i aria-hidden="true">🔒</i><div><b>Paiement sécurisé</b><p>Mobile Money et partenaires de confiance.</p><span className={styles.moyens}><small>OM</small><small>MoMo</small><small>VISA</small></span></div></article>
