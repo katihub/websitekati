@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { PublishedBanner } from '@/lib/banners'
+import { texteBanniere } from '@/lib/carrousel-accueil'
 import { useMarketplaceLanguage } from '@/lib/language'
 import styles from './marketplace-home-v2.module.css'
 import { useDefilement } from './useDefilement'
@@ -34,12 +35,19 @@ function BandeauPanel({ bannieres }: { bannieres: readonly PublishedBanner[] }) 
   const { active, aller, changer, pause } = useDefilement(bannieres.length)
   const banniere = bannieres[active]!
   const position = { objectPosition: `center ${banniere.focus}%` }
+  const contenu = texteBanniere(banniere)
 
   return <section className={styles.hero} aria-roledescription="carrousel" aria-label={text('promotions')} data-testid="grand-bandeau" {...pause}>
-    <Link key={banniere.id} href={banniere.href} className={styles.heroLien} aria-label={banniere.label || banniere.alt}>
+    {/* Toute l'image mene au lien ; le bouton du texte porte le meme lien pour le clavier. */}
+    <Link key={banniere.id} href={banniere.href} className={styles.heroLien} tabIndex={-1} aria-hidden="true">
       <Image src={banniere.large.url} alt={banniere.alt} fill priority={active === 0} sizes="(max-width: 900px) 100vw, 70vw" className={`${styles.heroImage} ${styles.heroLarge}`} style={position} />
       <Image src={banniere.mobile.url} alt="" fill sizes="100vw" className={`${styles.heroImage} ${styles.heroMobile}`} style={position} />
     </Link>
+    <div className={`${styles.heroCopy} ${styles.heroCopyPanel}`}>
+      <h1>{contenu.titre}</h1>
+      {contenu.description && <p>{contenu.description}</p>}
+      <Link href={banniere.href}>{contenu.action}<span>→</span></Link>
+    </div>
     <Commandes nombre={bannieres.length} active={active} changer={changer} aller={aller} />
   </section>
 }

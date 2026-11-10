@@ -218,6 +218,10 @@
 @media(max-width:560px){.heroLien .heroLarge{display:none}.heroLien .heroMobile{display:block}}
 .pubLien{position:absolute;inset:0;display:block}
 .pubLien:focus-visible{outline:3px solid var(--orange);outline-offset:-3px}
-.pubPoints{position:absolute;bottom:10px;left:50%;z-index:2;display:flex;gap:6px;transform:translateX(-50%)}
+.pubPoints{position:absolute;top:10px;left:10px;z-index:2;display:flex;gap:6px}
 .pubPoints button{width:8px;height:8px;padding:0;border:0;border-radius:50%;background:#fff9;cursor:pointer}
 .pubPoints button[aria-current=true]{background:var(--orange)}
+.heroCopyPanel{pointer-events:none}
+.heroCopyPanel>a{pointer-events:auto}
+.heroCopyPanel h1{overflow-wrap:anywhere}
+.pubDescription{color:#fff;font-size:.68rem;line-height:1.35}

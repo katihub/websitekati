@@ -27,3 +27,15 @@ test('the next index wraps around in both directions', () => {
   assert.equal(indiceSuivant(4, 1, 3), 2)
   assert.equal(indiceSuivant(0, 1, 0), 0)
 })
+
+test('the banner text comes from the panel fields and skips what is empty', async () => {
+  const { texteBanniere } = await import('../src/lib/carrousel-accueil.ts')
+  assert.deepEqual(
+    texteBanniere({ label: ' Soldes de rentrée ', description: ' Jusqu\'à -40 % ', action: ' Voir les offres ' }),
+    { titre: 'Soldes de rentrée', description: 'Jusqu\'à -40 %', action: 'Voir les offres' },
+  )
+  assert.deepEqual(
+    texteBanniere({ label: 'Nouveautés', description: '   ', action: '' }),
+    { titre: 'Nouveautés', description: '', action: 'Découvrir' },
+  )
+})
