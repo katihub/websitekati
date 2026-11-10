@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 import type { PublishedBanner } from '@/lib/banners'
+import { texteBanniere } from '@/lib/carrousel-accueil'
 import styles from './marketplace-home-v2.module.css'
 import { useDefilement } from './useDefilement'
 
@@ -26,9 +27,11 @@ export function PubAccueil({ pubs }: { pubs: readonly PublishedBanner[] }) {
   }
 
   const pub = pubs[active]!
+  const contenu = texteBanniere(pub)
   return <div className={styles.pubAccueil} data-testid="pub-accueil" aria-roledescription="carrousel" aria-label="Publicité" {...pause}>
-    <Link key={pub.id} href={pub.href} className={styles.pubLien} aria-label={pub.label || pub.alt}>
+    <Link key={pub.id} href={pub.href} className={styles.pubLien}>
       <Image src={pub.large.url} alt={pub.alt} fill sizes="(max-width: 1200px) 50vw, 248px" style={{ objectPosition: `center ${pub.focus}%` }} />
+      <span className={styles.pubDefaut}><b>{contenu.titre}</b>{contenu.description && <span className={styles.pubDescription}>{contenu.description}</span>}<small>{contenu.action} →</small></span>
     </Link>
     <span className={styles.pubMention}>Publicité</span>
     {pubs.length > 1 && <div className={styles.pubPoints}>{pubs.map((item, index) => <button type="button" key={item.id} aria-label={`Afficher la publicité ${index + 1}`} aria-current={index === active} onClick={() => aller(index)} />)}</div>}

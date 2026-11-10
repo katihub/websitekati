@@ -29,3 +29,22 @@ export function indiceSuivant(actuel: number, sens: number, nombre: number): num
   if (nombre <= 0) return 0
   return (((actuel + sens) % nombre) + nombre) % nombre
 }
+
+export interface TexteBanniere {
+  readonly titre: string
+  readonly description: string
+  readonly action: string
+}
+
+/**
+ * Le texte affiche sur une banniere, tire des champs saisis dans le panel :
+ * le libelle en titre, la description en dessous (absente si vide) et le
+ * texte du bouton, « Découvrir » par defaut.
+ */
+export function texteBanniere(banniere: { label: string; description: string; action: string }): TexteBanniere {
+  return {
+    titre: banniere.label.trim(),
+    description: banniere.description.trim(),
+    action: banniere.action.trim() || 'Découvrir',
+  }
+}
