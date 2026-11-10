@@ -24,9 +24,12 @@
 .compactCard .productSpecs li{padding:2px 4px;font-size:10px}
 /* Le logo choisi par la boutique remplace ses initiales (31 octobre 2026). */
 .storeLogoImage{position:relative;overflow:hidden;padding:0}.storeLogoImage img{object-fit:contain;padding:8px}
-.storePhone{color:inherit;font-weight:700;text-decoration:none}.storePhone:hover{text-decoration:underline}
+
 
 .shopNav nav button{display:inline-flex;align-items:center;gap:6px}
 .shopNav nav button svg{width:15px;height:15px;flex:none}
 .loadZone{display:grid;gap:12px;min-height:1px;margin-top:16px}
 .loadError{margin:0;color:#b42318;font-size:.78rem;font-weight:600}
+
+/* Le statut de l'offre sur la carte (9 novembre 2026) : vert, orange ou rouge, sans quantite. */
+.productStock[data-statut=reapprovisionnement]{color:#b45309}.productStock[data-statut=rupture]{color:#b42318}

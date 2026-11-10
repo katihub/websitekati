@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { FacebookPixel } from '@/components/analytics/FacebookPixel'
 import { CartButton } from '@/components/layout/CartButton'
 import { SUPPORT_WHATSAPP } from '@/constants/contact-marketplace'
 import { lireCategoriesMarketplace } from '@/lib/marketplace-data'
@@ -17,6 +18,8 @@ export async function KatiHeader() {
   const [categories, announcements] = await Promise.all([lireCategoriesMarketplace(), lireAnnonces()])
   return (
     <>
+      {/* Le pixel Facebook, sur toutes les pages (10 novembre 2026). */}
+      <FacebookPixel />
       {/* LA BARRE DU HAUT DEFILE AVEC LA PAGE ; seule la ligne logo, recherche et rayons reste
           collee en haut. Collee entiere, elle prenait un tiers d'un ecran de telephone. */}
       <div className={styles.topbar} data-marketplace-topbar><div className={`${styles.shell} ${styles.topbarInner}`}>

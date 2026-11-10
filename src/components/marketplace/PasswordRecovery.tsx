@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { MARQUEUR_MOT_DE_PASSE } from '@/lib/mot-de-passe-temporaire'
 import styles from '@/app/reinitialiser-mot-de-passe/recovery.module.css'
 
 export function PasswordRecovery({ audience = 'vendeur' }: { audience?: 'vendeur' | 'client' }) {
@@ -13,8 +14,11 @@ export function PasswordRecovery({ audience = 'vendeur' }: { audience?: 'vendeur
   const [showPassword, setShowPassword] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  // Arrivee depuis la connexion avec un mot de passe temporaire de l'equipe (9 novembre 2026).
+  const [obligatoire, setObligatoire] = useState(false)
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('obligatoire') === '1') queueMicrotask(() => setObligatoire(true))
     const client = supabase()
     if (!client) return
     const hash = new URLSearchParams(window.location.hash.slice(1))
@@ -40,7 +44,8 @@ export function PasswordRecovery({ audience = 'vendeur' }: { audience?: 'vendeur
     if (!client) return setStatus('unavailable')
     setPending(true)
     try {
-      const { error: updateError } = await client.auth.updateUser({ password })
+      // Le nouveau mot de passe efface le marqueur du mot de passe temporaire.
+      const { error: updateError } = await client.auth.updateUser({ password, data: { [MARQUEUR_MOT_DE_PASSE]: false } })
       if (updateError) throw updateError
       await client.auth.signOut()
       setPassword('')
@@ -58,7 +63,7 @@ export function PasswordRecovery({ audience = 'vendeur' }: { audience?: 'vendeur
     {status === 'unavailable' ? <p>La réinitialisation n’est pas disponible dans cet environnement de démonstration. Contactez l’équipe KatiMarket pour obtenir vos accès.</p> : null}
     {status === 'expired' ? <><p>Ce lien a expiré ou n’est plus valide. Demandez-en un nouveau depuis la page de connexion.</p><Link href={connexion} className={styles.action}>Revenir à la connexion</Link></> : null}
     {status === 'done' ? <><p>Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter.</p><Link href={connexion} className={styles.action}>Se connecter</Link></> : null}
-    {status === 'ready' ? <><p>Choisissez un nouveau mot de passe pour votre {audience === 'client' ? 'compte client' : 'espace vendeur'}.</p><form onSubmit={submit}>
+    {status === 'ready' ? <>{obligatoire ? <p className={styles.notice} role="status" data-testid="mot-de-passe-obligatoire">L’équipe KatiMarket vous a donné un mot de passe temporaire. Choisissez maintenant votre propre mot de passe pour continuer.</p> : null}<p>Choisissez un nouveau mot de passe pour votre {audience === 'client' ? 'compte client' : 'espace vendeur'}.</p><form onSubmit={submit}>
       <label>Nouveau mot de passe <span className={styles.passwordField}><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /><button type="button" onClick={() => setShowPassword(current => !current)}>{showPassword ? 'Masquer' : 'Afficher'}</button></span></label>
       <label>Confirmer le mot de passe<input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label>
       {error ? <p className={styles.error} role="alert">{error}</p> : null}

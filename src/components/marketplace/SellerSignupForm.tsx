@@ -6,6 +6,7 @@ import { CHOIX_VENDEUR, LIBELLE_MODE, MODES_LIVRAISON, type DeliveryMode } from 
 import Image from 'next/image'
 import Link from 'next/link'
 import { api } from '@/lib/api'
+import { messageErreurInscription } from '@/lib/erreur-inscription'
 import { useCategoriesMarketplace, type CategorieMarketplace } from './vendeur/categories'
 import { supabase } from '@/lib/supabase'
 import { ShopIcon } from './ShopIcon'
@@ -151,7 +152,8 @@ export function SellerSignupForm() {
       const message = cause instanceof Error ? cause.message : ''
       const compteExistant = /already registered|already exists|user exists|déjà inscrit|déjà enregistré/i.test(message)
       if (saved) setAccountState(compteExistant ? 'existing-account' : 'needs-action')
-      setError(compteExistant ? '' : message || 'Une erreur est survenue. Réessayez.')
+      // Jamais « Failed to fetch » : ce qui s'est passe, si la candidature est enregistree, et quoi faire.
+      setError(compteExistant ? '' : messageErreurInscription(cause, saved ? 'acces' : 'candidature'))
     } finally { setPending(false) }
   }
 

@@ -7,6 +7,7 @@ import { connexionLocaleActive, seConnecterLocalement } from '@/lib/connexion-lo
 import { completerFicheDepuisInscription } from '@/lib/profil'
 import { avecRetour, useRetourDemande } from '@/lib/retour'
 import { supabase } from '@/lib/supabase'
+import { doitChangerMotDePasse, pageChangementObligatoire } from '@/lib/mot-de-passe-temporaire'
 import styles from '@/app/inscription/signup.module.css'
 import { useMarketplaceLanguage } from '@/lib/language'
 
@@ -35,6 +36,8 @@ export function CustomerLoginForm() {
         const { data, error: authError } = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
         if (authError) throw authError
         await completerFicheDepuisInscription(data.user?.user_metadata)
+        // Un mot de passe temporaire pose par l'equipe se change d'abord (9 novembre 2026).
+        if (doitChangerMotDePasse(data.user?.user_metadata)) { setPassword(''); router.push(pageChangementObligatoire('client')); return }
       } else if (connexionLocaleActive) await seConnecterLocalement(email.trim().toLowerCase(), password)
       else throw new Error(en ? 'Sign-in is temporarily unavailable.' : 'La connexion est indisponible pour le moment.')
       setPassword('')
