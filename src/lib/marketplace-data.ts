@@ -34,6 +34,8 @@ export interface OffreMarketplace {
   statutStock?: 'en_stock' | 'rupture' | 'reapprovisionnement'
   quantiteMinimale?: number
   verifieParKatiLe?: string | null
+  /** Les vrais avis « produit » publies (9 novembre 2026) ; null : produit encore sans avis. */
+  avis?: { moyenne: number; nombre: number } | null
   modesLivraison?: string[]
   villesLivraison?: string[]
   /** Caracteristiques propres a la variante, par exemple RAM ou capacite. */
@@ -63,7 +65,12 @@ export interface AccueilMarketplace {
 
 export interface ListeOffresMarketplace {
   indisponible?: boolean
-  facettes?: { categories: { nom: string; nombre: number }[]; marques: { nom: string; nombre: number }[] }
+  facettes?: {
+    categories: { nom: string; nombre: number }[]
+    marques: { nom: string; nombre: number }[]
+    /** Le nombre d'offres de chaque categorie, par slug, compte comme sa page (9 novembre 2026). */
+    parCategorie?: Record<string, number>
+  }
   offres: OffreMarketplace[]
   pagination: { page: number; taille: number; total: number; pages: number }
   filtres: { q: string | null; categorie: string | null; boutique: string | null; tri: string }
@@ -105,7 +112,8 @@ export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
 /**
  * L'IDENTITE D'UNE BOUTIQUE, SANS SES OFFRES.
  *
- * Seule `/marketplace/boutiques/:slug` donne le telephone de la boutique. Elle
+ * `/marketplace/boutiques/:slug` donne l'identite de la boutique, sans son telephone
+ * depuis le 9 novembre 2026 : les clients passent par KatiMarket. Elle
  * renvoyait aussi TOUTES les offres (4 Mo et 8 s pour les 3 393 produits de
  * NowTech) ; depuis le 7 novembre 2026, elle ne renvoie plus que l'identite. Les
  * champs d'offres restent ecartes ici tant qu'un ancien backend peut repondre.

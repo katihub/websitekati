@@ -34,10 +34,13 @@ function colonnes(offres: OffreMarketplace[]): Colonne[] {
 }
 
 export async function DerniersArrivages() {
-  const recentes = await lireOffresMarketplace({ tri: 'recent', taille: 60 })
+  // Le comptage par categorie vient de la reponse que l'accueil demande deja (meme adresse,
+  // meme cache) : plus un appel par rayon, qui chargeait la base aux heures pleines (9 novembre 2026).
+  const [recentes, catalogue] = await Promise.all([lireOffresMarketplace({ tri: 'recent', taille: 60 }), lireOffresMarketplace({ taille: 1 })])
   const choisies = colonnes(recentes.offres)
   if (!choisies.length) return null
-  const totaux = await Promise.all(choisies.map((c) => lireOffresMarketplace({ categorieSlug: c.slug, taille: 1 }).then((r) => Math.max(r.pagination.total, c.offres.length))))
+  const parCategorie = catalogue.facettes?.parCategorie ?? {}
+  const totaux = choisies.map((c) => Math.max(parCategorie[c.slug] ?? 0, c.offres.length))
   const nombre = new Intl.NumberFormat('fr-FR')
 
   return <section className={styles.section} aria-labelledby="arrivages-titre">

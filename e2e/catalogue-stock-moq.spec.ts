@@ -30,7 +30,8 @@ test('le marchand écrit la description courte et la fiche technique, et joint l
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu$`), {
       produit: { id: PRODUIT, nom: produit.nom, slug: produit.slug, metaTitre: null, metaDescription: null, descriptionCourte: null, ficheTechnique: null, ficheTechniquePdfUrl: null, ficheTechniquePdfCle: null },
-      images: [], revisionOuverte: null, revisions: [],
+      // Une photo deja publiee : une fiche se met en ligne avec au moins une image (9 novembre 2026).
+      images: [{ id: 'photo-1', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', texteAlternatif: 'Vue de face', ordre: 0, statut: 'publiee', tailleOctets: 68 }], revisionOuverte: null, revisions: [],
     })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/fiche-technique$`), { cle: CLE, url: `https://cdn.test/documents/${CLE}`, appliquee: false })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu/revisions$`), { id: 'rc-1', numero: 1, statut: 'approuvee' })
@@ -51,7 +52,7 @@ test('le marchand écrit la description courte et la fiche technique, et joint l
     descriptionCourte: 'Smartphone endurant : batterie 5 000 mAh, 128 Go, double SIM.',
     ficheTechnique: 'Écran : 6,5 pouces\nBatterie : 5 000 mAh',
     ficheTechniquePdfCle: CLE,
-    images: [],
+    images: [{ imageId: 'photo-1', texteAlternatif: 'Vue de face' }],
   })
 })
 

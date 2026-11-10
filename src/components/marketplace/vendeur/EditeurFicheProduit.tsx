@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 
 import { ErreurApi, api } from '@/lib/api'
-import { avertissementPhoto, CONSEIL_PHOTOS } from '@/lib/publication-produit'
+import { avertissementPhoto, CONSEIL_PHOTOS, MESSAGE_PHOTO_OBLIGATOIRE } from '@/lib/publication-produit'
 
 /**
  * LA FICHE PRODUIT VUE PAR LE MARCHAND QUI L'A PROPOSEE : PHOTOS, TEXTES ET REFERENCEMENT.
@@ -172,6 +172,8 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente, di
   }
 
   async function soumettre() {
+    // La fiche garde au moins une photo (9 novembre 2026).
+    if (!galerie.length) return setMessage({ type: 'erreur', texte: MESSAGE_PHOTO_OBLIGATOIRE })
     setEnvoi(true); setMessage(null)
     try {
       const revision = await api<{ statut?: string }>(`/marketplace/boutiques/${boutiqueId}/produits/${produitId}/contenu/revisions`, {
@@ -271,7 +273,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente, di
                   <div className="flex gap-2">
                     <button type="button" disabled={verrouille || index === 0} onClick={() => deplacer(index, -1)} aria-label={`Avancer la photo ${index + 1}`} className="min-h-11 min-w-11 rounded-control border border-rule text-small disabled:opacity-40">←</button>
                     <button type="button" disabled={verrouille || index === galerie.length - 1} onClick={() => deplacer(index, 1)} aria-label={`Reculer la photo ${index + 1}`} className="min-h-11 min-w-11 rounded-control border border-rule text-small disabled:opacity-40">→</button>
-                    <button type="button" disabled={verrouille} onClick={() => setGalerie((a) => a.filter((e) => e.imageId !== element.imageId))} className="min-h-11 flex-1 rounded-control border border-rule px-3 text-small font-semibold disabled:opacity-40">Retirer</button>
+                    <button type="button" disabled={verrouille || galerie.length <= 1} title={galerie.length <= 1 ? 'Un produit garde au moins une photo : ajoutez-en une autre avant de retirer celle-ci.' : undefined} onClick={() => setGalerie((a) => a.filter((e) => e.imageId !== element.imageId))} className="min-h-11 flex-1 rounded-control border border-rule px-3 text-small font-semibold disabled:opacity-40">Retirer</button>
                   </div>
                 </li>
               )

@@ -128,3 +128,17 @@ test('sur téléphone, les cases à cocher gardent leur taille et rien ne dépas
   expect(etape2.plusGrandeCase).toBeLessThanOrEqual(24)
   expect(etape2.debords).toBe(0)
 })
+
+test('une connexion coupée à l’envoi donne un vrai message, jamais « Failed to fetch »', async ({ page }) => {
+  await preparer(page)
+  await page.getByLabel(/Dénomination de l’entreprise/).fill('Entreprise test SARL')
+  // La requete n'aboutit pas : le navigateur ne recoit aucune reponse (9 novembre 2026).
+  await page.route(/\/v1\/vendeurs\/inscription$/, (route) => route.abort('internetdisconnected'))
+  await page.getByRole('button', { name: /Continuer/ }).click()
+  await page.getByLabel(/contrat vendeur/).check()
+  await page.getByRole('button', { name: /Envoyer ma candidature/ }).click()
+
+  await expect(page.getByText(/La connexion a été interrompue pendant l’envoi : votre candidature n’a pas été enregistrée/)).toBeVisible()
+  await expect(page.getByText(/Failed to fetch|Load failed/)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Envoyer ma candidature/ })).toBeEnabled()
+})

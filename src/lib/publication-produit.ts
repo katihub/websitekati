@@ -48,6 +48,9 @@ export function lirePrix(saisie: string): number | null {
   return Number.isInteger(valeur) && valeur >= 1 && valeur <= 2_000_000_000 ? valeur : null
 }
 
+/** Un produit se met en ligne avec au moins une photo (9 novembre 2026). */
+export const MESSAGE_PHOTO_OBLIGATOIRE = 'Ajoutez au moins une photo du produit : sans image, il ne peut pas être mis en ligne.'
+
 export const CONSEIL_PHOTOS = 'Format carré conseillé : 1 000 × 1 000 px (800 px minimum) · produit centré sur fond blanc ou clair · JPEG, PNG ou WebP, 5 Mo max.'
 export const COTE_MINIMUM_PX = 800
 export const RAPPORT_MAXIMUM = 1.5

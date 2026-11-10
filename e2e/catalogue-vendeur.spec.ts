@@ -25,6 +25,12 @@ const PHOTO = '00000000-0000-4000-8000-00000000000a'
 // Un PNG d'un pixel : l'apercu s'affiche sans aucun appel reseau.
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII='
 
+// Une photo deposee, puis publiee : un produit se met en ligne avec au moins une image (9 novembre 2026).
+const IMAGE_DEPOSEE = { id: PHOTO, url: PIXEL, texteAlternatif: null, ordre: 0, statut: 'proposee', tailleOctets: 68 }
+const IMAGE_PUBLIEE = { ...IMAGE_DEPOSEE, texteAlternatif: 'Vue de face', statut: 'publiee' }
+const ajouterPhoto = (page: import('@playwright/test').Page) =>
+  page.locator('main[data-seller-workspace] input[type=file][accept^="image"]').setInputFiles({ name: 'face.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL.split(',')[1]!, 'base64') })
+
 const produit = { id: PRODUIT, slug: 'galaxy-a15', nom: 'Samsung Galaxy A15', description: null, marque: 'Samsung', categorie: 'Téléphones', statut: 'actif', creeLe: '2026-10-13T09:00:00.000Z' }
 const revision = {
   id: 'rev-1', statut: 'approuvee', numero: 1, titre: 'Samsung Galaxy A15 128 Go', description: null, prixFcfa: 149_000, prixReferenceFcfa: null,
@@ -128,11 +134,14 @@ test('le marchand crée une variante depuis la fiche produit, sans onglet Offres
 test('le marchand classe son produit dans une catégorie KatiHub et voit la garantie minimale', async ({ page }) => {
   api = (await espaceVendeur(page, []))
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'actif' }, offres: [] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'approuvee' })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
   await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
   await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
+  await ajouterPhoto(page)
   // Le prix part avec la fiche (6 novembre 2026).
   await page.getByLabel('Référence de la variante 1').fill('A25-128')
   await page.getByLabel('Prix de la variante 1').fill('189000')
@@ -156,14 +165,36 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
   })
 })
 
-test('le marchand crée un produit complet : deux variantes avec leur prix, leur statut et la garantie', async ({ page }) => {
+test('sans photo, le produit ne part pas et le vendeur sait pourquoi (9 novembre 2026)', async ({ page }) => {
   api = (await espaceVendeur(page, []))
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'actif' }, offres: [] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'approuvee' })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
   await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
   await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
+  await page.getByLabel('Référence de la variante 1').fill('A25-128')
+  await page.getByLabel('Prix de la variante 1').fill('189000')
+  await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
+  await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléphones' })
+  await page.getByRole('button', { name: 'Mettre en ligne' }).click()
+  await expect(page.getByText('Ajoutez au moins une photo du produit : sans image, il ne peut pas être mis en ligne.')).toBeVisible()
+  expect(api.appelsVers('POST', /produits-complets$/)).toHaveLength(0)
+})
+
+test('le marchand crée un produit complet : deux variantes avec leur prix, leur statut et la garantie', async ({ page }) => {
+  api = (await espaceVendeur(page, []))
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'actif' }, offres: [] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'approuvee' })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
+  await ajouterPhoto(page)
   await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
   await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléphones' })
   await page.getByLabel('Référence de la variante 1').fill('A25-128')
@@ -173,6 +204,12 @@ test('le marchand crée un produit complet : deux variantes avec leur prix, leur
   await page.getByLabel('Référence de la variante 2').fill('A25-256')
   await page.getByLabel('Prix de la variante 2').fill('219000')
   await page.getByLabel('Statut du stock de la variante 2').selectOption('reapprovisionnement')
+
+  // Le bouton est sous le formulaire, apres le referencement (9 novembre 2026), et il est le seul.
+  await expect(page.getByRole('button', { name: 'Mettre en ligne' })).toHaveCount(1)
+  const referencement = await page.locator('legend', { hasText: 'Référencement' }).boundingBox()
+  const bouton = await page.getByRole('button', { name: 'Mettre en ligne' }).boundingBox()
+  expect(bouton!.y).toBeGreaterThan(referencement!.y)
 
   // Deux variantes : chacune doit porter un nom.
   await page.getByRole('button', { name: 'Mettre en ligne' }).click()
@@ -322,12 +359,15 @@ test('un vendeur sous surveillance soumet encore son produit à la validation', 
   api = (await espaceVendeur(page, []))
     .quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${B}$`), { ...espaceBoutique(), vendeur: { ...espaceBoutique().vendeur, statut: 'sous_surveillance' } })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'soumis' }, offres: [] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'soumise' })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
   await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
   await expect(page.getByText('Ce qui sera contrôlé')).toBeVisible()
   await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
+  await ajouterPhoto(page)
   await page.getByLabel('Référence de la variante 1').fill('A25-128')
   await page.getByLabel('Prix de la variante 1').fill('189000')
   await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
@@ -342,7 +382,7 @@ test('la fiche complète publie prix, délai et nouveau nom tout de suite', asyn
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [offre])
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu$`), {
       produit: { id: PRODUIT, nom: produit.nom, slug: produit.slug, marque: 'Samsung', description: 'Un téléphone fiable.', metaTitre: null, metaDescription: null },
-      images: [], revisionOuverte: null, revisions: [],
+      images: [IMAGE_PUBLIEE], revisionOuverte: null, revisions: [],
     })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/prix$`), { id: OFFRE, prixFcfa: 139_000, prixReferenceFcfa: 149_000, statut: 'publiee' })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/offres/${OFFRE}/conditions$`), { id: OFFRE, delaiMaxJours: 1 })
@@ -373,7 +413,7 @@ test('la fiche complète publie prix, délai et nouveau nom tout de suite', asyn
   await page.getByTestId('fiche-nom').fill('Samsung Galaxy A15 4G')
   await page.getByRole('button', { name: 'Enregistrer et mettre en ligne' }).click()
   await expect(page.getByText('Fiche enregistrée : elle est en ligne.')).toBeVisible()
-  expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toEqual({ nom: 'Samsung Galaxy A15 4G', images: [] })
+  expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toEqual({ nom: 'Samsung Galaxy A15 4G', images: [{ imageId: PHOTO, texteAlternatif: 'Vue de face' }] })
 })
 
 test('sur téléphone, la fiche produit tient dans l’écran malgré une catégorie au nom long', async ({ page }) => {
