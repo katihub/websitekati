@@ -3,6 +3,9 @@ import type { ShopIconName } from '@/components/marketplace/ShopIcon'
 /** L'ancre de la zone « Logo et bannière » dans les paramètres de la boutique. */
 export const ANCRE_VISUELS = 'logo-et-banniere'
 
+/** L'espace vendeur ouvert sur la verification, ou le vendeur arrive apres son inscription. */
+export const ADRESSE_VERIFICATION = '/espace-vendeur?rubrique=verification'
+
 export type CibleRaccourci =
   | { readonly panel: 'verification' }
   | { readonly panel: 'settings'; readonly ancre: string }
@@ -16,6 +19,8 @@ export interface RaccourciVendeur {
   readonly icone: ShopIconName
   readonly cible: CibleRaccourci
   readonly disponible: boolean
+  /** Mis en avant en rouge : la vente reste fermee tant que ce n'est pas fait. */
+  readonly urgent: boolean
 }
 
 /**
@@ -37,10 +42,11 @@ export function raccourcisVendeur({ roles, documents, en, verifiee = false }: {
       id: 'verification',
       titre: en ? 'Verify my shop' : 'Vérifier ma boutique',
       description: en ? 'Send your documents to open sales.' : 'Envoyez vos justificatifs pour ouvrir la vente.',
-      action: en ? 'Complete my verification' : 'Compléter ma vérification',
+      action: en ? 'Submit documents' : 'Soumettre les documents',
       icone: 'shield',
       cible: { panel: 'verification' },
       disponible: documents === 'allowed',
+      urgent: true,
     },
     {
       id: 'visuels',
@@ -50,6 +56,7 @@ export function raccourcisVendeur({ roles, documents, en, verifiee = false }: {
       icone: 'star',
       cible: { panel: 'settings', ancre: ANCRE_VISUELS },
       disponible: gereLaBoutique,
+      urgent: false,
     },
     {
       id: 'contrat',
@@ -59,6 +66,7 @@ export function raccourcisVendeur({ roles, documents, en, verifiee = false }: {
       icone: 'file',
       cible: { href: '/contrat-vendeurs' },
       disponible: true,
+      urgent: false,
     },
     {
       id: 'reglement',
@@ -68,6 +76,7 @@ export function raccourcisVendeur({ roles, documents, en, verifiee = false }: {
       icone: 'info',
       cible: { href: '/conditions-generales-vente' },
       disponible: true,
+      urgent: false,
     },
   ]
   return verifiee ? cartes.filter((carte) => carte.id !== 'verification') : cartes

@@ -5,8 +5,10 @@ import { quartiersDe, useLocalites } from '@/lib/localites'
 import { CHOIX_VENDEUR, LIBELLE_MODE, MODES_LIVRAISON, type DeliveryMode } from '@/lib/modes-livraison'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { messageErreurInscription } from '@/lib/erreur-inscription'
+import { ADRESSE_VERIFICATION } from '@/lib/raccourcis-vendeur'
 import { useCategoriesMarketplace, type CategorieMarketplace } from './vendeur/categories'
 import { supabase } from '@/lib/supabase'
 import { ShopIcon } from './ShopIcon'
@@ -34,6 +36,7 @@ const dateLisible = (iso: string) => (iso ? new Intl.DateTimeFormat('fr-FR', { d
 const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 export function SellerSignupForm() {
+  const router = useRouter()
   const [step, setStep] = useState(0)
   const [values, setValues] = useState<Values>({ owner: '', email: '', phone: '', password: '', confirmation: '', legal: '', type: 'entreprise', niu: '', rccm: '', birthDate: '', birthPlace: '', residenceCity: '', district: '', districtOther: false, sponsorName: '', sponsorPhone: '', shop: '', description: '', cities: ['Douala'], categories: [], modes: ['katihub'], pickup: '', sav: '' })
   const [villeLibre, setVilleLibre] = useState('')
@@ -106,7 +109,10 @@ export function SellerSignupForm() {
 
   async function createAccount() {
     const auth = supabase()
-    if (!auth) return setAccountState('local')
+    if (!auth) {
+      setAccountState('local')
+      return false
+    }
     const { data, error: authError } = await auth.auth.signUp({
       email: values.email.trim().toLowerCase(), password: values.password,
       options: { data: { full_name: values.owner.trim(), account_type: 'seller' } },
@@ -114,6 +120,7 @@ export function SellerSignupForm() {
     if (authError) throw authError
     if (data.user?.identities?.length === 0) throw new Error('User already registered')
     setAccountState(data.session ? 'ready' : 'pending-email')
+    return Boolean(data.session)
   }
 
   async function submit() {
@@ -147,7 +154,8 @@ export function SellerSignupForm() {
         })
         setReceipt(saved)
       }
-      await createAccount()
+      // Connecte d'emblee : il depose ses justificatifs sans repasser par l'accueil de son espace.
+      if (await createAccount()) router.push(ADRESSE_VERIFICATION)
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : ''
       const compteExistant = /already registered|already exists|user exists|déjà inscrit|déjà enregistré/i.test(message)
@@ -176,7 +184,7 @@ export function SellerSignupForm() {
     {accountState === 'needs-action' ? <p className={styles.accountMessage}>Votre candidature est enregistrée, mais la création de l’accès a échoué. Vous pouvez réessayer sans renvoyer votre candidature.</p> : null}
     {error ? <p className={styles.error} role="alert">{error}</p> : null}
     {accountState === 'needs-action' ? <button className={styles.submit} type="button" disabled={pending} onClick={() => void submit()}>{pending ? 'Création en cours…' : 'Réessayer la création du compte'}</button> : null}
-    {accountState !== 'existing-account' ? <div className={styles.successLinks}><Link href="/espace-vendeur">Aller à mon espace vendeur</Link><Link href="/connexion-vendeur">Se connecter</Link></div> : null}
+    {accountState !== 'existing-account' ? <div className={styles.successLinks}><Link href={ADRESSE_VERIFICATION}>Soumettre mes documents</Link><Link href="/connexion-vendeur">Se connecter</Link></div> : null}
   </section>
 
   return <div className={styles.signupLayout}>
