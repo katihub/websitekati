@@ -155,6 +155,11 @@ type Access = 'allowed' | 'denied' | 'error'
 const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed', disputes: 'allowed' }
 const initialLoaded: Record<Section, boolean> = { documents: false, products: false, offers: false, orders: false, deliveries: false, payments: false, finance: false, reviews: false, customers: false, members: false, disputes: false }
 const overviewSections: Section[] = ['documents', 'orders', 'deliveries']
+const SECTIONS_PAR_PANEL: Partial<Record<Panel, Section[]>> = {
+  verification: ['documents'], products: ['products', 'offers'], offers: ['products', 'offers'],
+  orders: ['orders'], deliveries: ['deliveries'], payments: ['payments', 'finance'], reviews: ['reviews'],
+  customers: ['customers'], members: ['members'], disputes: ['disputes'],
+}
 
 const DOCUMENT_LABELS: Record<string, string> = {
   identite: 'Pièce d’identité (CNI ou passeport)',
@@ -317,13 +322,20 @@ export function SellerWorkspace() {
       const nextId = currentId && nextShops.some((shop) => shop.id === currentId) ? currentId : (nextShops[0]?.id ?? '')
       setSelectedId(nextId)
       await openShop(nextId)
+      // Un lien `?rubrique=` (fin d'inscription, notification) ouvre sa rubrique une seule fois.
+      const demandee = rubriqueDe(`${window.location.pathname}${window.location.search}`)
+      if (nextId && estPanel(demandee)) {
+        setPanel(demandee)
+        void loadSections(nextId, SECTIONS_PAR_PANEL[demandee] ?? [])
+        window.history.replaceState(null, '', window.location.pathname)
+      }
     } catch (cause) {
       if (cause instanceof ErreurApi && (cause.code === 401 || cause.code === 403)) setAuthenticated(false)
       else setError(errorText(cause))
     } finally {
       setLoading(false)
     }
-  }, [openShop])
+  }, [openShop, loadSections])
 
   useEffect(() => {
     const chargement = window.setTimeout(() => void load(), 0)
@@ -345,12 +357,7 @@ export function SellerWorkspace() {
   function openPanel(next: Panel) {
     setPanel(next)
     if (!selectedId) return
-    const sectionsByPanel: Partial<Record<Panel, Section[]>> = {
-      verification: ['documents'], products: ['products', 'offers'], offers: ['products', 'offers'],
-      orders: ['orders'], deliveries: ['deliveries'], payments: ['payments', 'finance'], reviews: ['reviews'],
-      customers: ['customers'], members: ['members'], disputes: ['disputes'],
-    }
-    const missing = (sectionsByPanel[next] ?? []).filter(section => !loaded[section])
+    const missing = (SECTIONS_PAR_PANEL[next] ?? []).filter(section => !loaded[section])
     if (missing.length) void loadSections(selectedId, missing)
   }
 
@@ -502,7 +509,7 @@ function Overview({ space, products, offers, orders, deliveries, access, loaded,
             <div className={styles.shortcutHead}><span className={styles.shortcutIcon}><ShopIcon name={carte.icone} /></span><div><h2>{carte.titre}</h2><p>{carte.description}</p></div></div>
             {'href' in carte.cible
               ? <Link className={styles.shortcutAction} href={carte.cible.href}>{carte.action} <ShopIcon name="arrow" /></Link>
-              : <button type="button" className={styles.shortcutAction} disabled={!carte.disponible} onClick={() => ouvrirRaccourci(carte.cible)}>{carte.action} <ShopIcon name="arrow" /></button>}
+              : <button type="button" className={`${styles.shortcutAction} ${carte.urgent ? styles.shortcutUrgent : ''}`} disabled={!carte.disponible} onClick={() => ouvrirRaccourci(carte.cible)}>{carte.action} <ShopIcon name="arrow" /></button>}
           </article>)}
         </section>
       </div>
