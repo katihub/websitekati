@@ -150,3 +150,10 @@
 .visuelBouton{align-self:flex-start;cursor:pointer;border-radius:999px;background:#08265c;color:#fff;font-weight:700;font-size:.78rem;padding:7px 14px}
 .visuelRetirer{align-self:flex-start;border:0;background:none;color:#c23b3b;font-weight:700;font-size:.76rem;cursor:pointer;padding:0}
 @media(max-width:600px){.visuel{flex-direction:column}.visuelBanniere{width:100%}}
+.shortcutGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.shortcutCard{flex-direction:column;align-items:stretch;justify-content:space-between;gap:14px}
+.shortcutHead{display:flex;align-items:flex-start;gap:12px}
+.shortcutIcon{display:grid;flex:none;place-items:center;width:38px;height:38px;border-radius:9px;background:#fff0e4;color:#e87011}.shortcutIcon svg{width:19px;height:19px}
+.shortcutAction{display:flex;align-items:center;justify-content:center;gap:7px;align-self:flex-start;border:1px solid #cad5e4;border-radius:7px;background:#fff;padding:10px 12px;color:#0b2c63;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer}.shortcutAction:hover{border-color:#ff7900;color:#d76000}.shortcutAction:disabled{opacity:.45;cursor:not-allowed}.shortcutAction:focus-visible{outline:3px solid #ff7900;outline-offset:2px}.shortcutAction svg{width:13px;height:13px}
+.ancreVisuels{scroll-margin-top:90px}
+@media(max-width:620px){.shortcutGrid{grid-template-columns:1fr}.shortcutAction{align-self:stretch}}

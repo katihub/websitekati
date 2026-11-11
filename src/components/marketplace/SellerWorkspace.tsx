@@ -23,6 +23,7 @@ import { PlansBoutique } from './vendeur/PlansBoutique'
 import { BandeauContrat } from './vendeur/BandeauContrat'
 import { VisuelsBoutique } from './vendeur/VisuelsBoutique'
 import { useMarketplaceLanguage } from '@/lib/language'
+import { raccourcisVendeur, type CibleRaccourci } from '@/lib/raccourcis-vendeur'
 import { boiteBoutique, rubriqueDe } from '@/lib/notifications'
 import { libelleStatutStock, STATUTS_STOCK, type StatutStock } from '@/lib/stock'
 import { ClocheNotifications } from '@/components/notifications/ClocheNotifications'
@@ -454,10 +455,17 @@ function EmptyShop() {
 }
 
 function Overview({ space, products, offers, orders, deliveries, access, loaded, progress, validatedDocuments, canPublish, onPanel }: {
-  space: ShopSpace; products: ProductProposal[]; offers: Offer[]; orders: Listing<ShopOrder>; deliveries: Listing<ShopDelivery>; access: Record<Section, Access>; loaded: Record<Section, boolean>; progress: number | null; validatedDocuments: number; canPublish: boolean; onPanel: (panel: 'verification' | 'products' | 'offers' | 'orders' | 'deliveries') => void
+  space: ShopSpace; products: ProductProposal[]; offers: Offer[]; orders: Listing<ShopOrder>; deliveries: Listing<ShopDelivery>; access: Record<Section, Access>; loaded: Record<Section, boolean>; progress: number | null; validatedDocuments: number; canPublish: boolean; onPanel: (panel: 'verification' | 'products' | 'offers' | 'orders' | 'deliveries' | 'settings') => void
 }) {
   const { locale } = useMarketplaceLanguage()
   const en = locale === 'en'
+  const raccourcis = raccourcisVendeur({ roles: space.mesRoles, documents: access.documents, en, verifiee: space.vendeur.statutVerification === 'approuve' })
+  function ouvrirRaccourci(cible: CibleRaccourci) {
+    if ('href' in cible) return
+    onPanel(cible.panel)
+    // Les parametres s'affichent au rendu suivant : la zone visee n'existe qu'apres.
+    if ('ancre' in cible) window.setTimeout(() => document.getElementById(cible.ancre)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+  }
   const activeProducts = products.filter(item => item.statut === 'actif').length
   const publishedOffers = offers.filter(item => item.statut === 'publiee').length
   const leadOffer = offers.find(item => item.statut === 'publiee') ?? offers[0]
@@ -489,6 +497,14 @@ function Overview({ space, products, offers, orders, deliveries, access, loaded,
           {!loaded.orders ? <p className={styles.dashboardEmpty}>{en ? 'Refreshing orders…' : 'Actualisation des commandes…'}</p> : access.orders !== 'allowed' ? <p className={styles.dashboardEmpty}>{en ? 'Orders are not available to this role yet.' : 'Les commandes ne sont pas accessibles avec ce rôle pour le moment.'}</p> : orders.elements.length ? <div className={styles.orderTableScroll}><table className={styles.orderTable}><thead><tr><th>{en ? 'Order' : 'Commande'}</th><th>{en ? 'Product' : 'Produit'}</th><th>{en ? 'Products total' : 'Montant produits'}</th><th>{en ? 'Status' : 'Statut'}</th><th>{en ? 'Date' : 'Date'}</th></tr></thead><tbody>{orders.elements.slice(0, 5).map(order => <tr key={order.id}><td><button onClick={() => onPanel('orders')}>{order.reference}</button></td><td>{order.lignes.map(line => `${line.quantite} × ${line.produitNomCapture}`).join(', ')}</td><td>{money(order.totalNetProduits)}</td><td><span data-status={order.statut}>{en ? ({nouvelle:'New', acceptee:'Accepted', en_preparation:'Preparing', prete:'Ready', remise_transporteur:'Handed to carrier', retiree_client:'Picked up', en_livraison:'Out for delivery', livree:'Delivered'}[order.statut] ?? order.statut.replaceAll('_', ' ')) : STATUS_LABELS[order.statut] ?? order.statut.replaceAll('_', ' ')}</span></td><td>{new Intl.DateTimeFormat(en ? 'en-CM' : 'fr-CM', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(order.creeLe))}</td></tr>)}</tbody></table></div> : <p className={styles.dashboardEmpty}>{en ? 'No orders yet. New orders will appear here.' : 'Aucune commande reçue pour l’instant. Vos nouvelles commandes apparaîtront ici.'}</p>}
         </section> : null}
         <section className={styles.quickPanel}><div><h2>Avancer aujourd’hui</h2><p>Deux gestes utiles pour garder votre boutique à jour.</p></div><div className={styles.quickActions}><button disabled={!canPublish || access.products !== 'allowed'} onClick={() => onPanel('products')}><ShopIcon name="package" /> Proposer un produit <ShopIcon name="arrow" /></button><button disabled={access.offers !== 'allowed'} onClick={() => onPanel('offers')}><ShopIcon name="grid" /> Gérer le stock <ShopIcon name="arrow" /></button></div></section>
+        <section className={styles.shortcutGrid} aria-label={en ? 'Shop essentials' : 'L’essentiel de la boutique'}>
+          {raccourcis.map(carte => <article key={carte.id} className={`${styles.quickPanel} ${styles.shortcutCard}`}>
+            <div className={styles.shortcutHead}><span className={styles.shortcutIcon}><ShopIcon name={carte.icone} /></span><div><h2>{carte.titre}</h2><p>{carte.description}</p></div></div>
+            {'href' in carte.cible
+              ? <Link className={styles.shortcutAction} href={carte.cible.href}>{carte.action} <ShopIcon name="arrow" /></Link>
+              : <button type="button" className={styles.shortcutAction} disabled={!carte.disponible} onClick={() => ouvrirRaccourci(carte.cible)}>{carte.action} <ShopIcon name="arrow" /></button>}
+          </article>)}
+        </section>
       </div>
       <div className={styles.dashboardRail}>
         <section className={styles.dashboardPanel}><header className={styles.dashboardPanelHead}><h2>Offre à la une</h2><button disabled={access.offers !== 'allowed'} onClick={() => onPanel('offers')}>Mes offres <ShopIcon name="arrow" /></button></header>{!loaded.offers ? <p className={styles.dashboardEmpty}>Actualisation des offres…</p> : access.offers !== 'allowed' ? <p className={styles.dashboardEmpty}>Offres indisponibles.</p> : leadOffer ? <div className={styles.offerSpotlight}><span className={styles.offerMark}><ShopIcon name="bag" /></span><div><strong>{leadOffer.produit.nom}</strong><b>{offerPrice(leadOffer) === null ? 'Prix en attente' : money(offerPrice(leadOffer)!)}</b><small>{leadOffer.referenceVendeur} · {STATUS_LABELS[leadOffer.statut] ?? leadOffer.statut}</small></div><span className={styles.stockCount}><strong>{leadOffer.stock ? Math.max(0, leadOffer.stock.quantite - leadOffer.stock.quantiteReservee) : '—'}</strong><small>disponibles</small></span></div> : <p className={styles.dashboardEmpty}>Votre première offre apparaîtra ici après validation.</p>}</section>

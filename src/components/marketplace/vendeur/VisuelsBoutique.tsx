@@ -4,6 +4,7 @@
 import { useRef, useState } from 'react'
 
 import { api, ErreurApi } from '@/lib/api'
+import { ANCRE_VISUELS } from '@/lib/raccourcis-vendeur'
 import styles from '@/app/espace-vendeur/seller-workspace.module.css'
 
 /**
@@ -27,7 +28,7 @@ const TEXTES: Record<TypeVisuel, { titre: string; aide: string }> = {
 
 export function VisuelsBoutique({ shopId, visuels, onRefresh }: { shopId: string; visuels: Visuels; onRefresh: () => Promise<void> }) {
   return (
-    <section className={styles.settingsCard}>
+    <section id={ANCRE_VISUELS} className={`${styles.settingsCard} ${styles.ancreVisuels}`}>
       <h3>Logo et bannière</h3>
       <p className={styles.memberHint}>Ils apparaissent tout de suite sur la liste des boutiques, sur votre page et à l’accueil. JPEG, PNG ou WebP, 5 Mio au plus.</p>
       <Visuel shopId={shopId} type="logo" url={visuels.logoUrl ?? null} onRefresh={onRefresh} />
