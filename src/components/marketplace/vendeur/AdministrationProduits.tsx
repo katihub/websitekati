@@ -15,6 +15,7 @@ import { libelleStatutStock, STATUTS_STOCK } from '@/lib/stock'
 import { FenetreCategories } from './FenetreCategories'
 import { VenteDuProduit, type OffreDuProduit } from './VenteDuProduit'
 import { avertissementPhoto, CONSEIL_PHOTOS, MESSAGE_PHOTO_OBLIGATOIRE, lirePrix, offreDuPrix, produitSansPrix, type Livraison } from '@/lib/publication-produit'
+import { erreur, MessageRetour, succes, type Retour } from './MessageRetour'
 import styles from './administration-produits.module.css'
 
 type Produit = {
@@ -261,7 +262,8 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, onAnnuler, 
   const [pdf, setPdf] = useState<File | null>(null)
   const [mobile, setMobile] = useState(false)
   const [pending, setPending] = useState(false)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<Retour>(null)
+  const [afficherErreurs, setAfficherErreurs] = useState(false)
   const [contexteIa, setContexteIa] = useState('')
   const [generationIa, setGenerationIa] = useState(false)
   const [messageIa, setMessageIa] = useState('')
@@ -365,13 +367,14 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, onAnnuler, 
   }
 
   async function submit(event: FormEvent) {
-    event.preventDefault(); setMessage('')
+    event.preventDefault(); setMessage(null)
     // Au moins une photo (9 novembre 2026) : un produit sans image ne se met plus en ligne.
-    if (!photos.length) return setMessage(MESSAGE_PHOTO_OBLIGATOIRE)
-    if (!categorieId) return setMessage(racine ? 'Choisissez la sous-catégorie du produit.' : 'Choisissez la catégorie du produit.')
+    if (!photos.length) return setMessage(erreur(MESSAGE_PHOTO_OBLIGATOIRE))
+    if (!categorieId) return setMessage(erreur(racine ? 'Choisissez la sous-catégorie du produit.' : 'Choisissez la catégorie du produit.'))
     const erreurPrix = erreurVariantes(variantes)
-    if (erreurPrix) return setMessage(erreurPrix)
-    if (!Number.isInteger(garantieSaisie) || garantieSaisie < garantieMinimale || garantieSaisie > 120) return setMessage(`La garantie de cette catégorie est d’au moins ${libelleMois(garantieMinimale)}.`)
+    // Les lignes fautives se montrent toutes, en rouge, sous le tableau des variantes.
+    if (erreurPrix) { setAfficherErreurs(true); return setMessage(erreur(erreurPrix)) }
+    if (!Number.isInteger(garantieSaisie) || garantieSaisie < garantieMinimale || garantieSaisie > 120) return setMessage(erreur(`La garantie de cette catégorie est d’au moins ${libelleMois(garantieMinimale)}.`))
     setPending(true)
     try {
       const { produit } = await api<{ produit: { id: string; statut?: string } }>(`/marketplace/boutiques/${boutiqueId}/produits-complets`, { methode: 'POST', corps: {
@@ -402,8 +405,8 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, onAnnuler, 
         } })
       }
       const enLigne = produit.statut === 'actif'
-      setMessage(enLigne ? 'Produit, prix et médias en ligne.' : 'Produit, prix et médias envoyés à la validation de KatiMarket.'); await onCree(enLigne)
-    } catch (cause) { setMessage(messageErreur(cause)) } finally { setPending(false) }
+      setMessage(succes(enLigne ? 'Produit, prix et médias en ligne.' : 'Produit, prix et médias envoyés à la validation de KatiMarket.')); await onCree(enLigne)
+    } catch (cause) { setMessage(erreur(messageErreur(cause))) } finally { setPending(false) }
   }
 
   return <form className={styles.create} onSubmit={submit}>
@@ -430,12 +433,12 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, onAnnuler, 
         <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/150</em><input required minLength={2} maxLength={150} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '', accessoireCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value, accessoireCategorie: '' })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{sousCategorie?.sousCategories?.length ? <label className={styles.full}>Catégorie d’accessoires <span>(facultatif)</span><select value={values.accessoireCategorie} onChange={(e) => setValues({ ...values, accessoireCategorie: e.target.value })}><option value="">Garder la sous-catégorie parente</option>{(sousCategorie.sousCategories ?? []).map((accessoire) => <option key={accessoire.id} value={accessoire.id}>{accessoire.nom}</option>)}</select></label> : null}{categorieId ? <AutresCategories arbre={categories} principale={categorieId} valeur={autres} onChange={setAutres} className={styles.full} /> : null}</div>{categorieId ? <p className={styles.categoryRule}>Le produit apparaît aussi dans les autres catégories choisies ; la première garde les règles (garantie, variantes).</p> : null}{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
         <fieldset><legend><span>2</span>Médias</legend><p className={styles.help}>La première image devient le visuel principal.</p><p className={styles.conseilPhotos} data-testid="conseil-photos">{CONSEIL_PHOTOS}</p><label className={styles.dropzone}>＋ Ajouter des photos (au moins une)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => choisirPhotos(e.currentTarget.files)} /></label>{photos.length ? <div className={styles.thumbnails}>{photos.map((photo, index) => <figure key={photo.url}><img src={photo.url} alt=""/><button type="button" onClick={() => retirerPhoto(index)} aria-label={`Retirer la photo ${index + 1}`}>×</button><figcaption>{index === 0 ? 'Principale' : index + 1}</figcaption></figure>)}</div> : null}{photos.filter((photo) => photo.avertissement).map((photo) => <p key={photo.url} className={styles.avertissementPhoto} role="status">{photo.fichier.name} : {photo.avertissement}</p>)}</fieldset>
         <fieldset><legend><span>3</span>Contenu</legend><label>Description courte <em>{values.descriptionCourte.length}/300</em><textarea minLength={10} maxLength={300} rows={3} value={values.descriptionCourte} onChange={(e) => setValues({ ...values, descriptionCourte: e.target.value })} placeholder="La promesse essentielle du produit en trois lignes." /></label><label>Description détaillée<textarea rows={5} value={values.description} onChange={(e) => setValues({ ...values, description: e.target.value })} placeholder="Usage, bénéfices et éléments de différenciation…" /></label><label>Fiche technique<textarea rows={6} maxLength={20000} value={values.ficheTechnique} onChange={(e) => setValues({ ...values, ficheTechnique: e.target.value })} placeholder={'Écran : 16 pouces\nMémoire : 16 Go\nStockage : SSD 1 To'} /></label><label>Fiche technique PDF<input type="file" accept="application/pdf" onChange={(e) => setPdf(e.currentTarget.files?.[0] ?? null)} /></label></fieldset>
-        <fieldset className={styles.fieldsetLarge}><legend><span>4</span>Prix et variantes</legend><p className={styles.help}>Une ligne par variante (capacité, couleur, taille…). Un produit sans variante garde une seule ligne. Les prix sont publiés en même temps que le produit.</p><PrixEtVariantes lignes={variantes} onChange={setVariantes} disabled={!canPublish} /></fieldset>
+        <fieldset className={styles.fieldsetLarge}><legend><span>4</span>Prix et variantes</legend><p className={styles.help}>Une ligne par variante (capacité, couleur, taille…). Un produit sans variante garde une seule ligne. Les prix sont publiés en même temps que le produit.</p><PrixEtVariantes lignes={variantes} onChange={setVariantes} disabled={!canPublish} afficherErreurs={afficherErreurs} /></fieldset>
         <fieldset><legend><span>5</span>Vente</legend><div className={styles.fieldGrid}><label>État<select value={vente.etat} disabled={!canPublish} onChange={(e) => setVente({ ...vente, etat: e.target.value })}><option value="neuf">Neuf</option><option value="reconditionne">Reconditionné</option><option value="occasion">Occasion</option></select></label><label>Garantie (mois)<input inputMode="numeric" value={vente.garantie === '' ? String(garantieMinimale) : vente.garantie} disabled={!canPublish} onChange={(e) => setVente({ ...vente, garantie: e.target.value })} /></label><label>Délai de préparation<select value={vente.delai} disabled={!canPublish} onChange={(e) => setVente({ ...vente, delai: e.target.value })}>{['0', '1', '2', '3'].map((jours) => <option key={jours} value={jours}>{jours === '0' ? 'Le jour même' : `${jours} jour(s)`}</option>)}</select></label></div><p className={styles.help}>La livraison reprend les modes et les villes de votre boutique.{garantieMinimale ? ` Cette catégorie impose au moins ${libelleMois(garantieMinimale)} de garantie.` : ''}</p></fieldset>
         <fieldset><legend><span>6</span>Référencement</legend><label>Meta title <em>{values.metaTitre.length}/70</em><input maxLength={70} value={values.metaTitre} onChange={(e) => setValues({ ...values, metaTitre: e.target.value })} placeholder={values.nom || 'Titre visible sur Google'} /></label><label>Meta description <em>{values.metaDescription.length}/170</em><textarea rows={3} maxLength={170} value={values.metaDescription} onChange={(e) => setValues({ ...values, metaDescription: e.target.value })} /></label></fieldset>
         {/* Le bouton sous le formulaire (9 novembre 2026) : on envoie une fois tout rempli, le resultat s'affiche juste au-dessus. */}
         <div className={styles.envoiFiche}>
-          {message ? <p role="status" className={styles.feedback}>{message}</p> : null}
+          <MessageRetour retour={message} className={styles.feedback} />
           <button className={styles.primary} disabled={!canPublish || pending}>{pending ? 'Envoi en cours…' : direct ? 'Mettre en ligne' : 'Soumettre à la validation'}</button>
         </div>
       </div>
@@ -458,7 +461,7 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
   const [recherche, setRecherche] = useState('')
   const [brouillons, setBrouillons] = useState<Record<string, BrouillonLot>>({})
   const [pending, setPending] = useState(false)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<Retour>(null)
   const filtrees = offres.filter((offre) => `${offre.produit.nom} ${offre.referenceVendeur} ${offre.libelleVariante ?? ''}`.toLowerCase().includes(recherche.toLowerCase()))
   const totalPages = Math.max(1, Math.ceil(filtrees.length / taille))
   const visibles = filtrees.slice((page - 1) * taille, page * taille)
@@ -483,9 +486,9 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
   }
 
   async function enregistrer() {
-    setMessage('')
+    setMessage(null)
     const invalide = modifiees.find(erreurLigne)
-    if (invalide) return setMessage(`${invalide.produit.nom} : ${erreurLigne(invalide)}.`)
+    if (invalide) return setMessage(erreur(`${invalide.produit.nom} : ${erreurLigne(invalide)}.`))
     setPending(true)
     const echecs: string[] = []
     await Promise.all(modifiees.map(async (offre) => {
@@ -513,7 +516,7 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
     }))
     await onRefresh()
     setBrouillons({}); setPending(false)
-    setMessage(echecs.length ? `${modifiees.length - echecs.length} offre(s) enregistrée(s). Échecs : ${echecs.join(', ')}.` : `${modifiees.length} offre(s) enregistrée(s). Les prix et les statuts de stock sont publiés ; un minimum ou un délai modifié passe en validation.`)
+    setMessage(echecs.length ? erreur(`${modifiees.length - echecs.length} offre(s) enregistrée(s). Échecs : ${echecs.join(', ')}.`) : succes(`${modifiees.length} offre(s) enregistrée(s). Les prix et les statuts de stock sont publiés ; un minimum ou un délai modifié passe en validation.`))
   }
 
   return <div className={styles.bulk}>
@@ -524,7 +527,7 @@ function ModificationLot({ boutiqueId, offres, onRetour, onRefresh }: { boutique
       return <tr key={offre.id} data-modified={modifiee || undefined} data-error={Boolean(erreur) || undefined}><td><strong>{offre.produit.nom}</strong><small>{offre.referenceVendeur}{offre.libelleVariante ? ` · ${offre.libelleVariante}` : ''}</small></td><td><input aria-label={`Prix de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prix} onChange={(e) => changer(offre, 'prix', e.target.value)} /></td><td><input aria-label={`Prix de référence de ${offre.produit.nom}`} inputMode="numeric" value={valeur.prixReference} onChange={(e) => changer(offre, 'prixReference', e.target.value)} /></td><td><select aria-label={`Statut du stock de ${offre.produit.nom}`} value={valeur.stock} onChange={(e) => changer(offre, 'stock', e.target.value)}>{STATUTS_STOCK.map((statut) => <option key={statut} value={statut}>{libelleStatutStock(statut)}</option>)}</select></td><td><input aria-label={`Minimum de ${offre.produit.nom}`} inputMode="numeric" value={valeur.minimum} onChange={(e) => changer(offre, 'minimum', e.target.value)} /></td><td><input aria-label={`Délai de ${offre.produit.nom}`} type="number" min="0" max="3" inputMode="numeric" value={valeur.delai} onChange={(e) => changer(offre, 'delai', e.target.value)} /></td><td>{erreur ? <span className={styles.rowError} title={erreur}>À corriger</span> : REVISIONS_OUVERTES.includes(offre.revisions[0]?.statut ?? '') ? <span className={styles.pending}>En validation</span> : <span className={styles.ready}>{modifiee ? 'Modifié' : 'Prêt'}</span>}</td></tr>
     })}</tbody></table></div>
     <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>←</button><button type="button" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>→</button></div></div>
-    {message ? <p className={styles.feedback} role="status">{message}</p> : null}
+    <MessageRetour retour={message} className={styles.feedback} />
     <div className={styles.saveBar}><div><strong>{nombreChangements} modification(s) non enregistrée(s)</strong><small>Vous pouvez naviguer entre les pages sans perdre vos changements.</small></div><button type="button" className={styles.secondary} disabled={!modifiees.length || pending} onClick={() => setBrouillons({})}>Annuler les changements</button><button type="button" className={styles.primary} disabled={!modifiees.length || pending} onClick={() => void enregistrer()}>{pending ? 'Enregistrement…' : `Enregistrer ${nombreChangements} modification(s)`}</button></div>
   </div>
 }

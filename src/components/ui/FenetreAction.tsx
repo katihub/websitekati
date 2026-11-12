@@ -87,7 +87,8 @@ export function FenetreAction({ ouverte, titre, description, libelleValider, onV
             <span>{irreversible}</span>
           </label>
         ) : null}
-        {erreur ? <p role="alert" className="rounded-control border border-warn p-3 text-small text-warn">{erreur}</p> : null}
+        {/* EN ROUGE (13 novembre 2026) : `warn` est l'orange de la marque, et une erreur s'y confondait avec un simple avertissement. */}
+        {erreur ? <p role="alert" data-testid="fenetre-erreur" className="flex items-start gap-2 rounded-control border border-[#fda29b] bg-[#fef3f2] p-3 text-small font-semibold text-[#b42318]"><span aria-hidden="true">⚠</span><span>{erreur}</span></p> : null}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" onClick={onFermer} disabled={envoi} className="min-h-11 rounded-control border border-rule px-4 text-small font-semibold">Annuler</button>
           <button type="submit" disabled={envoi || Boolean(irreversible && !confirme)} className="min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">

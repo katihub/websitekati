@@ -7,7 +7,10 @@
 .table th small{font-weight:400}
 .table td{padding:6px;border-top:1px solid #edf1f7;vertical-align:middle}
 .table input,.table select{width:100%;min-width:0;height:36px;border:1px solid #cbd7e4;border-radius:7px;background:#fff;color:#071d4c;padding:0 8px;font:inherit}
-.table tr[data-error] td{background:#fff8f6}
+.table tr[data-error] td{background:#fef3f2}
+/* L'erreur d'une variante, en rouge sous sa ligne, et le champ en cause entoure (13 novembre 2026). */
+.table input[aria-invalid=true]{border-color:#d92d20;box-shadow:0 0 0 2px #fee4e2}
+.ligneErreur td{border-top:0;background:#fef3f2;color:#b42318;font-size:12px;font-weight:600;padding:2px 10px 8px}
 .retirer{width:30px;height:30px;border:1px solid #f1c7c2;border-radius:7px;background:#fff;color:#c2362b;cursor:pointer}
 .ajouter{justify-self:start;min-height:38px;border:1px dashed #a5b5d2;border-radius:8px;background:#fff;color:#071d4c;padding:0 14px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

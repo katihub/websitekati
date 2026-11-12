@@ -101,7 +101,8 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
       corps: {
         libelleVariante: libelle,
         attributsVariante: attributs ?? undefined,
-        referenceVendeur: String(donnees.get('reference') ?? '').trim(),
+        // Vide : KatiMarket compose la reference (prefixe boutique, nom du produit, numerotation).
+        ...(String(donnees.get('reference') ?? '').trim() ? { referenceVendeur: String(donnees.get('reference')).trim() } : {}),
         prixFcfa,
         prixReferenceFcfa,
       },
@@ -130,7 +131,7 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         {lignes < LIGNES_ATTRIBUTS ? <button type="button" onClick={() => setLignes((n) => Math.min(LIGNES_ATTRIBUTS, n + 1))} className="justify-self-start min-h-11 rounded-control border border-dashed border-rule px-3 text-small font-semibold">+ Ajouter un attribut</button> : null}
       </fieldset>
       <ChampTexte nom="libelle" libelle="Nom affiché au client" aide="Vide : composé à partir des attributs (ex. 128 Go / Noir)." maxLength={120} />
-      <ChampTexte nom="reference" libelle="Référence vendeur" required minLength={1} maxLength={80} placeholder="A15-128-NOIR" />
+      <ChampTexte nom="reference" libelle="Référence vendeur (facultatif)" aide="Vide : KatiMarket la crée pour vous." maxLength={80} placeholder="Automatique" />
       <div className="grid grid-cols-2 gap-3">
         <ChampTexte nom="prix" libelle="Prix FCFA" required inputMode="numeric" pattern="[0-9]+" />
         <ChampTexte nom="prix-reference" libelle="Prix barré" inputMode="numeric" pattern="[0-9]*" />

@@ -1,0 +1,5 @@
+/* Le retour d'un envoi : rouge pour une erreur, vert pour un succes (13 novembre 2026). */
+.erreur,.succes{display:flex;align-items:flex-start;gap:8px;margin:0;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;line-height:1.45}
+.erreur{border:1px solid #fda29b;background:#fef3f2;color:#b42318}
+.succes{border:1px solid #a6f4c5;background:#ecfdf3;color:#067647}
+.erreur>span:first-child,.succes>span:first-child{flex-shrink:0}
