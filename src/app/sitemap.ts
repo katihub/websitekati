@@ -3,6 +3,7 @@ import type { MetadataRoute } from 'next'
 import { legalPages } from '@/components/marketplace/legal-content'
 import {
   lireAccueilMarketplace,
+  lireBoutiquesMarketplace,
   lireCategoriesMarketplace,
   lireOffresMarketplace,
   type CategorieArbre,
@@ -13,6 +14,8 @@ const ORIGINE = 'https://www.katimarket.com'
 const TAILLE_PAGE = 100
 const PAGES_PAR_LOT = 4
 const LIMITE_URLS_GOOGLE = 50_000
+/** Six mille boutiques : un garde-fou, loin du volume reel. */
+const MAX_PAGES_BOUTIQUES = 200
 
 export const revalidate = 3600
 
@@ -69,6 +72,29 @@ async function lireToutesLesOffres(): Promise<ListeOffresMarketplace[]> {
   return pages
 }
 
+/**
+ * TOUTES LES BOUTIQUES VISIBLES, Y COMPRIS CELLES SANS OFFRE.
+ *
+ * L'accueil s'arrete a vingt boutiques et les offres ne nomment que les
+ * boutiques qui vendent deja : une boutique validee au-dela de la vingtieme,
+ * sans offre publiee, manquait au sitemap. L'annuaire les rend toutes, trente
+ * par page.
+ */
+async function lireToutesLesBoutiques(): Promise<string[]> {
+  const premiere = await lireBoutiquesMarketplace({ page: 1 })
+  if (premiere.indisponible) {
+    console.error('[sitemap] L\'annuaire des boutiques est indisponible.')
+    return []
+  }
+  const pages = Math.min(premiere.pagination.pages, MAX_PAGES_BOUTIQUES)
+  const suivantes = await Promise.all(
+    Array.from({ length: Math.max(0, pages - 1) }, (_, index) => lireBoutiquesMarketplace({ page: index + 2 })),
+  )
+  return [premiere, ...suivantes]
+    .filter((page) => !page.indisponible)
+    .flatMap((page) => page.boutiques.map((boutique) => boutique.slug))
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pagesStatiques: MetadataRoute.Sitemap = [
     { url: url('/'), changeFrequency: 'daily', priority: 1 },
@@ -94,13 +120,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ]
 
-  const [categories, accueil, pagesOffres] = await Promise.all([
+  const [categories, accueil, pagesOffres, slugsBoutiques] = await Promise.all([
     lireCategoriesMarketplace(),
     lireAccueilMarketplace(),
     lireToutesLesOffres(),
+    lireToutesLesBoutiques(),
   ])
 
-  const boutiques = new Set(accueil.boutiques.map((boutique) => boutique.slug))
+  const boutiques = new Set([...accueil.boutiques.map((boutique) => boutique.slug), ...slugsBoutiques])
   const produits = new Set<string>()
   for (const offre of [...accueil.offres, ...pagesOffres.flatMap((page) => page.offres)]) {
     if (offre.boutique.slug) boutiques.add(offre.boutique.slug)

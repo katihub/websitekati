@@ -2,10 +2,12 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useRef, useState, useTransition, type CSSProperties } from 'react'
 
 import { ShopIcon } from '@/components/marketplace/ShopIcon'
 import { BarreChargement } from '@/components/ui/BarreChargement'
+import { adresseAnnuaire, numerosDePage } from '@/lib/annuaire-boutiques'
 import styles from './shops.module.css'
 
 export interface CarteBoutique {
@@ -17,6 +19,13 @@ export interface CarteBoutique {
   logoUrl: string | null
   banniereUrl: string | null
   miniatures: string[]
+}
+
+export interface PaginationBoutiques {
+  page: number
+  taille: number
+  total: number
+  pages: number
 }
 
 /** Cinq cartes, une rangee sur grand ecran : les images arrivent rangee par rangee. */
@@ -31,7 +40,8 @@ const ATTENTE_LOT_MS = 4000
  */
 const ATTENTE_IMAGE_MS = 8000
 const NOMBRE_APERCUS = 5
-const normaliserRecherche = (valeur: string) => valeur.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr').trim()
+/** Le temps de laisser finir la frappe avant de relancer la recherche cote serveur. */
+const DELAI_RECHERCHE_MS = 400
 
 const imagesDe = (carte: CarteBoutique) => [carte.banniereUrl, carte.logoUrl, ...carte.miniatures].filter((url): url is string => Boolean(url))
 
@@ -102,46 +112,23 @@ function Carte({ carte, index, images, prete, onImage }: { carte: CarteBoutique;
 }
 
 /**
- * TOUTES LES CARTES SONT DANS LE HTML, SEULES LEURS IMAGES ATTENDENT. Le nom et le
- * lien de chaque boutique restent lisibles tout de suite et par les moteurs de
- * recherche. Une carte peut charger sa couverture, son logo et cinq aperçus :
- * un lot ne les demande que
- * lorsque le precedent est termine et que le lot arrive pres de l'ecran, pour ne
- * pas faire payer au client les images qu'il ne verra jamais.
+ * TOUTES LES CARTES DE LA PAGE SONT DANS LE HTML, SEULES LEURS IMAGES ATTENDENT.
+ * Le nom et le lien de chaque boutique restent lisibles tout de suite et par les
+ * moteurs de recherche. Une carte peut charger sa couverture, son logo et cinq
+ * aperçus : un lot ne les demande que lorsque le precedent est termine et que
+ * le lot arrive pres de l'ecran, pour ne pas faire payer au client les images
+ * qu'il ne verra jamais.
  */
-export function GrilleBoutiques({ boutiques }: { boutiques: CarteBoutique[] }) {
+function Grille({ boutiques, decalage }: { boutiques: CarteBoutique[]; decalage: number }) {
   const [autorisees, setAutorisees] = useState(LOT)
   const [terminees, setTerminees] = useState<ReadonlySet<string>>(() => new Set())
   const [delaiEcoulePour, setDelaiEcoulePour] = useState(0)
-  const [recherche, setRecherche] = useState('')
-  const [villeChoisie, setVilleChoisie] = useState('')
   const grille = useRef<HTMLDivElement>(null)
-  const villes = useMemo(() => [...new Set(boutiques.flatMap((boutique) =>
-    boutique.villes.split('·').map((ville) => ville.trim()).filter((ville) => ville && !ville.toLocaleLowerCase('fr').startsWith('livraison selon')),
-  ))].sort((a, b) => a.localeCompare(b, 'fr')), [boutiques])
-  const listeVisible = useMemo(() => {
-    const terme = normaliserRecherche(recherche)
-    return boutiques.filter((boutique) => {
-      const correspondRecherche = !terme || normaliserRecherche(`${boutique.nom} ${boutique.villes}`).includes(terme)
-      const correspondVille = !villeChoisie || boutique.villes.split('·').some((ville) => normaliserRecherche(ville) === normaliserRecherche(villeChoisie))
-      return correspondRecherche && correspondVille
-    })
-  }, [boutiques, recherche, villeChoisie])
-  const total = listeVisible.length
+  const total = boutiques.length
   const estPrete = (carte: CarteBoutique) => imagesDe(carte).every((url) => terminees.has(url))
-  const pretes = listeVisible.filter(estPrete).length
-  const enCours = total > 0 && !listeVisible.slice(0, autorisees).every(estPrete)
+  const pretes = boutiques.filter(estPrete).length
+  const enCours = total > 0 && !boutiques.slice(0, autorisees).every(estPrete)
   const lotLibere = !enCours || delaiEcoulePour === autorisees
-  const filtrerRecherche = (valeur: string) => {
-    setRecherche(valeur)
-    setAutorisees(LOT)
-    setDelaiEcoulePour(0)
-  }
-  const filtrerVille = (valeur: string) => {
-    setVilleChoisie(valeur)
-    setAutorisees(LOT)
-    setDelaiEcoulePour(0)
-  }
 
   useEffect(() => {
     if (!enCours || delaiEcoulePour === autorisees) return
@@ -150,13 +137,13 @@ export function GrilleBoutiques({ boutiques }: { boutiques: CarteBoutique[] }) {
   }, [enCours, autorisees, delaiEcoulePour])
 
   useEffect(() => {
-    const urls = listeVisible.slice(0, autorisees).flatMap(imagesDe)
+    const urls = boutiques.slice(0, autorisees).flatMap(imagesDe)
     const minuterie = window.setTimeout(() => setTerminees((avant) => {
       const manquantes = urls.filter((url) => !avant.has(url))
       return manquantes.length ? new Set([...avant, ...manquantes]) : avant
     }), ATTENTE_IMAGE_MS)
     return () => window.clearTimeout(minuterie)
-  }, [listeVisible, autorisees])
+  }, [boutiques, autorisees])
 
   useEffect(() => {
     const prochaine = grille.current?.children[autorisees]
@@ -174,24 +161,85 @@ export function GrilleBoutiques({ boutiques }: { boutiques: CarteBoutique[] }) {
     <div className={styles.zoneBarre}>
       {enCours ? <BarreChargement libelle="Chargement des boutiques" valeur={pretes} total={total} /> : null}
     </div>
+    <div className={styles.grid} ref={grille}>
+      {boutiques.map((carte, index) => (
+        <Carte key={carte.id} carte={carte} index={decalage + index} images={index < autorisees} prete={estPrete(carte)} onImage={marquer} />
+      ))}
+    </div>
+  </>
+}
+
+/**
+ * L'ANNUAIRE, TRENTE BOUTIQUES PAR PAGE.
+ *
+ * La recherche et la ville sont dans l'adresse et appliquees par le serveur :
+ * filtrer dans le navigateur ne chercherait que dans la page affichee. Changer
+ * de filtre revient a la premiere page.
+ */
+export function GrilleBoutiques({ boutiques, villes, pagination, recherche: rechercheInitiale, ville, indisponible }: {
+  boutiques: CarteBoutique[]
+  villes: string[]
+  pagination: PaginationBoutiques
+  recherche: string
+  ville: string
+  indisponible: boolean
+}) {
+  const router = useRouter()
+  const chemin = usePathname()
+  const [recherche, setRecherche] = useState(rechercheInitiale)
+  const [chargement, demarrer] = useTransition()
+  const { page, pages, total, taille } = pagination
+
+  const aller = (cible: { recherche?: string; ville?: string }) => demarrer(() => {
+    router.replace(adresseAnnuaire(chemin, { recherche: cible.recherche ?? recherche, ville: cible.ville ?? ville }), { scroll: false })
+  })
+
+  useEffect(() => {
+    if (recherche.trim() === rechercheInitiale.trim()) return
+    const minuterie = window.setTimeout(() => aller({ recherche }), DELAI_RECHERCHE_MS)
+    return () => window.clearTimeout(minuterie)
+    // `aller` change a chaque rendu ; seule la frappe doit relancer la minuterie.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recherche, rechercheInitiale])
+
+  const premier = total ? (page - 1) * taille + 1 : 0
+  const dernier = Math.min(page * taille, total)
+  const numeros = numerosDePage(page, pages)
+  const filtre = Boolean(rechercheInitiale || ville)
+  const lien = (numero: number) => adresseAnnuaire(chemin, { page: numero, recherche: rechercheInitiale, ville })
+
+  return <>
     <div className={styles.filters}>
       <label className={styles.search}>
         <ShopIcon name="search" />
-        <input aria-label="Rechercher une boutique ou une ville" type="search" value={recherche} onChange={(event) => filtrerRecherche(event.target.value)} placeholder="Rechercher une boutique ou une ville" />
+        <input aria-label="Rechercher une boutique ou une ville" type="search" value={recherche} onChange={(event) => setRecherche(event.target.value)} placeholder="Rechercher une boutique ou une ville" />
       </label>
       <label className={styles.cityFilter}>
         <ShopIcon name="pin" />
-        <select aria-label="Filtrer par ville" value={villeChoisie} onChange={(event) => filtrerVille(event.target.value)}>
+        <select aria-label="Filtrer par ville" value={ville} onChange={(event) => aller({ ville: event.target.value })}>
           <option value="">Toutes les villes</option>
-          {villes.map((ville) => <option key={ville} value={ville}>{ville}</option>)}
+          {villes.map((nom) => <option key={nom} value={nom}>{nom}</option>)}
         </select>
       </label>
-      <p className={styles.resultCount} aria-live="polite">{total} boutique{total > 1 ? 's' : ''}</p>
+      <p className={styles.resultCount} aria-live="polite">{chargement ? 'Recherche…' : `${total} boutique${total > 1 ? 's' : ''}`}</p>
     </div>
-    {listeVisible.length ? <div className={styles.grid} ref={grille}>
-      {listeVisible.map((carte, index) => (
-        <Carte key={carte.id} carte={carte} index={index} images={index < autorisees} prete={estPrete(carte)} onImage={marquer} />
-      ))}
-    </div> : <div className={styles.noResults} role="status"><ShopIcon name="search" /><strong>Aucune boutique trouvée</strong><span>Essayez un autre nom ou choisissez une autre ville.</span><button type="button" onClick={() => { setRecherche(''); setVilleChoisie('') }}>Effacer les filtres</button></div>}
+    {indisponible
+      ? <div className={styles.noResults} role="status"><ShopIcon name="info" /><strong>Les boutiques sont momentanément indisponibles</strong><span>Réessayez dans quelques instants.</span></div>
+      : boutiques.length
+        ? <>
+          <Grille key={`${page}|${rechercheInitiale}|${ville}`} boutiques={boutiques} decalage={premier ? premier - 1 : 0} />
+          {pages > 1 ? <div className={styles.bas}>
+            <nav className={styles.pagination} aria-label="Pagination des boutiques">
+              {page > 1 ? <Link href={lien(page - 1)} aria-label="Page précédente">‹</Link> : null}
+              {numeros.map((numero, index) => <span key={numero}>
+                {index && numero - (numeros[index - 1] ?? numero) > 1 ? <i>…</i> : null}
+                <Link aria-current={numero === page ? 'page' : undefined} href={lien(numero)}>{numero}</Link>
+              </span>)}
+              {page < pages ? <Link href={lien(page + 1)} aria-label="Page suivante">›</Link> : null}
+            </nav>
+            <p>{premier}–{dernier} sur {total} boutiques</p>
+          </div> : null}
+        </>
+        : <div className={styles.noResults} role="status"><ShopIcon name="search" /><strong>Aucune boutique trouvée</strong><span>Essayez un autre nom ou choisissez une autre ville.</span>{filtre ? <button type="button" onClick={() => { setRecherche(''); demarrer(() => router.replace(chemin, { scroll: false })) }}>Effacer les filtres</button> : null}</div>}
   </>
 }

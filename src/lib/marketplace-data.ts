@@ -109,6 +109,35 @@ export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
   }
 }
 
+/** Une page de l'annuaire des boutiques : trente au plus, avec les villes pour le filtre. */
+export interface AnnuaireBoutiques {
+  boutiques: BoutiqueMarketplace[]
+  villes: string[]
+  pagination: { page: number; taille: number; total: number; pages: number }
+  indisponible?: boolean
+}
+
+/**
+ * L'ANNUAIRE DES BOUTIQUES, PAR PAGES DE TRENTE.
+ *
+ * L'accueil s'arrete a vingt boutiques ; la page « Boutiques » lit cette route
+ * pour les montrer toutes, une page a la fois, filtrees par le serveur.
+ */
+export async function lireBoutiquesMarketplace(params: { page?: number; q?: string; ville?: string }): Promise<AnnuaireBoutiques> {
+  const vide: AnnuaireBoutiques = { boutiques: [], villes: [], pagination: { page: 1, taille: 30, total: 0, pages: 1 }, indisponible: true }
+  const query = new URLSearchParams()
+  if (params.page && params.page > 1) query.set('page', String(params.page))
+  if (params.q) query.set('q', params.q)
+  if (params.ville) query.set('ville', params.ville)
+  try {
+    const reponse = await fetch(`${BASE}/v1/marketplace/boutiques?${query}`, { headers: entetesLectureCommune(), next: { revalidate: 60 } })
+    if (!reponse.ok) return vide
+    return await reponse.json() as AnnuaireBoutiques
+  } catch {
+    return vide
+  }
+}
+
 /**
  * L'IDENTITE D'UNE BOUTIQUE, SANS SES OFFRES.
  *
