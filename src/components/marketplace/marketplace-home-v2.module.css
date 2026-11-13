@@ -231,3 +231,49 @@
 @media(max-width:560px){
   .centerStage>.hero .heroCopy{inset:0;min-height:0;background:linear-gradient(0deg,#061f4ff7 0%,#061f4fe6 34%,#061f4f99 62%,#061f4f33 84%,#061f4f00 100%)}
 }
+
+/* Le prix reste lisible au-dessus d'un appel a l'action explicite, comme sur
+   les rayons d'une boutique physique : toute la largeur sert a ouvrir l'offre. */
+.productBuy{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  align-items:stretch;
+  gap:8px;
+  margin-top:8px;
+}
+
+.productBuy>a{
+  display:flex;
+  width:100%;
+  min-height:34px;
+  align-items:center;
+  justify-content:center;
+  border-radius:5px;
+  background:var(--navy);
+  color:#fff;
+  font-size:.625rem;
+  font-weight:850;
+  letter-spacing:.035em;
+  transition:background .18s ease,transform .18s ease,box-shadow .18s ease;
+}
+
+.productBuy>a:hover,.productBuy>a:focus-visible{
+  background:#0b367b;
+  box-shadow:0 6px 16px #061f4f24;
+  outline:2px solid #ffb36d;
+  outline-offset:2px;
+  transform:translateY(-1px);
+}
+
+.rayonsCarte .productCard:hover .productBuy>a{
+  box-shadow:0 6px 16px #061f4f24;
+  transform:translateY(-1px);
+}
+
+@media(max-width:560px){
+  .productBuy>a{min-height:36px;font-size:.65rem}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .productBuy>a,.rayonsCarte .productCard:hover .productBuy>a{transition:none;transform:none}
+}

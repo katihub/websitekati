@@ -106,7 +106,7 @@ type Offer = {
   quantiteMinimale?: number
   verifieParKatiLe?: string | null
   produit: { id: string; nom: string; slug: string; statut: string; proposeParBoutiqueId: string | null; attributsVariante?: string[] }
-  stock: { quantite: number; quantiteReservee: number } | null
+  stock: { quantite: number; quantiteReservee: number; quantiteRenseignee?: boolean } | null
   statutStock?: StatutStock
   revisions: RevisionVariante[]
 }
@@ -437,14 +437,14 @@ export function SellerWorkspace() {
           {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} direct={space.vendeur.statut === 'actif'} livraison={space} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.products} /> : null}
           {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
           {panel === 'messages' ? <MessagerieKati shopId={space.id} /> : null}
-          {panel === 'offers' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.offers === 'allowed' ? <OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.offers} /> : null}
+          {panel === 'offers' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.offers === 'allowed' ? <div className={styles.inventoryStack}>{space.suiviStock ? <InventoryPanel shopId={space.id} offers={offers} onRefresh={() => refreshSections(['offers'])} /> : null}<OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /></div> : <SectionUnavailable access={access.offers} /> : null}
           {panel === 'orders' ? !loaded.orders ? <SectionLoading /> : access.orders === 'allowed' ? <OrdersPanel shopId={space.id} listing={orders} onRefresh={() => refreshSections(['orders'])} /> : <SectionUnavailable access={access.orders} /> : null}
           {panel === 'deliveries' ? !loaded.deliveries ? <SectionLoading /> : access.deliveries === 'allowed' ? <LivraisonsBoutique shopId={space.id} /> : <SectionUnavailable access={access.deliveries} /> : null}
           {panel === 'disputes' ? !loaded.disputes ? <SectionLoading /> : access.disputes === 'allowed' ? <DisputesPanel disputes={disputes} onRefresh={() => refreshSections(['disputes'])} /> : <SectionUnavailable access={access.disputes} /> : null}
           {panel === 'payments' ? !loaded.finance || !loaded.payments ? <SectionLoading /> : access.finance === 'allowed' && finance ? <PaymentsPanel shopId={space.id} finance={finance} listing={payments} canWithdraw={space.mesRoles.includes('proprietaire')} onRefresh={() => refreshSections(['finance', 'payments'])} /> : <SectionUnavailable access={access.finance} /> : null}
           {panel === 'reviews' ? !loaded.reviews ? <SectionLoading /> : access.reviews === 'allowed' ? <ReviewsPanel listing={reviews} onRefresh={() => refreshSections(['reviews'])} /> : <SectionUnavailable access={access.reviews} /> : null}
           {panel === 'customers' ? !loaded.customers ? <SectionLoading /> : access.customers === 'allowed' ? <CustomersPanel customers={customers.elements} /> : <SectionUnavailable access={access.customers} /> : null}
-          {panel === 'settings' ? space.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <SettingsPanel key={space.id} shop={space} onRefresh={() => load(space.id)} /> : <SectionUnavailable access="denied" /> : null}
+          {panel === 'settings' ? space.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <div className={styles.detailStack}><StockTrackingSetting shop={space} onRefresh={() => load(space.id)} /><SettingsPanel key={space.id} shop={space} onRefresh={() => load(space.id)} /></div> : <SectionUnavailable access="denied" /> : null}
           {panel === 'members' ? !loaded.members ? <SectionLoading /> : access.members === 'allowed' ? <MembersPanel shopId={space.id} members={members} canManage={space.mesRoles.includes('proprietaire')} onRefresh={() => refreshSections(['members'])} /> : <SectionUnavailable access={access.members} /> : null}
         </> : <EmptyShop />}
       </section>
@@ -743,6 +743,30 @@ function CustomersPanel({ customers }: { customers: ShopCustomer[] }) {
   return <div className={styles.detailStack}><section className={styles.detailIntro}><span>RELATION CLIENT</span><h2>Les personnes qui ont commandé chez vous</h2><p>Les 30 clients les plus récents. Seuls le nom renseigné et l’historique de commande agrégé sont affichés ; les coordonnées personnelles restent protégées.</p></section><section className={styles.featureList}><header><h2>Clients récents</h2><span>{customers.length} affiché(s)</span></header>{customers.length ? <ul>{customers.map((customer, index) => <li key={customer.id}><div><strong>{customer.nom || `Client n°${index + 1}`}</strong><small>{customer.sansCompte ? 'Commande sans compte' : 'Compte client'} · {customer.commandes} commande{customer.commandes > 1 ? 's' : ''}</small></div><small>{customer.derniereCommandeLe ? new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(customer.derniereCommandeLe)) : '—'}</small></li>)}</ul> : <p className={styles.blank}>Vos clients apparaîtront ici après leur première commande.</p>}</section></div>
 }
 
+function StockTrackingSetting({ shop, onRefresh }: { shop: ShopSpace; onRefresh: () => Promise<void> }) {
+  const [pending, setPending] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function toggle() {
+    setPending(true)
+    setMessage('')
+    try {
+      const actif = !shop.suiviStock
+      const resultat = await api<{ suiviStock: boolean; offresSansQuantite: number }>(`/vendeurs/mes-boutiques/${shop.id}/suivi-stock`, { methode: 'POST', corps: { actif } })
+      await onRefresh()
+      setMessage(actif
+        ? `Suivi activé. ${resultat.offresSansQuantite} offre(s) restent au statut manuel tant que leur quantité n’est pas renseignée.`
+        : 'Suivi arrêté. Les quantités sont conservées et les offres repassent au statut manuel.')
+    } catch (cause) {
+      setMessage(errorText(cause))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return <section className={`${styles.settingsCard} ${styles.stockTrackingSetting}`}><div><h3>Je suis mon stock</h3><p>Limite les commandes aux quantités disponibles et met automatiquement les offres hors stock à zéro. Les offres sans quantité gardent leur statut actuel.</p></div><button type="button" data-active={Boolean(shop.suiviStock)} disabled={pending} onClick={() => void toggle()}>{pending ? 'Mise à jour…' : shop.suiviStock ? 'Désactiver le suivi' : 'Activer le suivi'}</button>{message ? <p className={styles.feedback} role="status">{message}</p> : null}</section>
+}
+
 function SettingsPanel({ shop, onRefresh }: { shop: ShopSpace; onRefresh: () => Promise<void> }) {
   const [name, setName] = useState(shop.nom)
   const [description, setDescription] = useState(shop.description ?? '')
@@ -982,9 +1006,47 @@ export function ProductsPanel({ shopId, products, canPublish, onRefresh }: { sho
   return <div className={styles.featureGrid}><section className={styles.featureList}><header><h2>Vos propositions</h2><span>{products.length} produit(s)</span></header>{products.length ? <ul>{products.map((product) => <li key={product.id}><div><strong>{product.nom}</strong><small>{[product.marque, cheminCategorie(product.categorieDetail, product.categorie)].filter(Boolean).join(' · ')}{product.categorieDetail?.garantieMinimaleMois ? ` · garantie minimale ${product.categorieDetail.garantie}` : ''}</small></div><div className={styles.offerMeta}><b data-status={product.statut}>{STATUS_LABELS[product.statut] ?? product.statut}</b>{FICHE_EDITABLE.includes(product.statut) ? <button type="button" className={styles.lienAction} onClick={() => setFiche(product.id)}>Fiche et photos</button> : null}</div></li>)}</ul> : <p className={styles.blank}>Vous n’avez encore proposé aucun produit.</p>}</section><section className={styles.actionPanel}><h2>Proposer un produit</h2><p>{canPublish ? 'La proposition sera examinée avant de pouvoir recevoir une offre.' : 'Cette action sera disponible dès l’activation de votre boutique.'}</p><form onSubmit={submit}><label>Nom du produit<input required minLength={2} disabled={!canPublish} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} /></label><label>Marque<input disabled={!canPublish} value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} /></label><label>Catégorie<select required disabled={!canPublish || !categories} value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '' })}><option value="">{categories ? 'Sélectionner…' : 'Chargement…'}</option>{categories?.map(categorie => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label>Sous-catégorie<select required disabled={!canPublish} value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value })}><option value="">Sélectionner…</option>{racine.sousCategories.map(sous => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{garantie ? <p className={styles.feedback} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <b>{garantie.mois ? garantie.libelle : 'aucune'}</b>. Vos offres devront garantir au moins cette durée.</p> : null}{erreurCategories ? <p className={styles.feedback} role="alert">{erreurCategories}</p> : null}<p className={styles.hint}>Les catégories sont définies par KatiMarket. Si aucune ne convient, contactez l’équipe.</p><label>Description courte <small>Affichée sous le titre de la fiche, trois lignes au plus.</small><textarea rows={3} minLength={10} maxLength={300} disabled={!canPublish} value={values.descriptionCourte} onChange={(e) => setValues({ ...values, descriptionCourte: e.target.value })} placeholder="Ex. Smartphone endurant : batterie 5 000 mAh, 128 Go, double SIM." /></label><label>Description<textarea rows={5} disabled={!canPublish} value={values.description} onChange={(e) => setValues({ ...values, description: e.target.value })} /></label><label>Fiche technique <small>Une caractéristique par ligne, sous la forme « Écran : 6,5 pouces ».</small><textarea rows={6} maxLength={20000} disabled={!canPublish} value={values.ficheTechnique} onChange={(e) => setValues({ ...values, ficheTechnique: e.target.value })} placeholder={'Écran : 6,5 pouces\nBatterie : 5 000 mAh\nMémoire : 128 Go'} /></label><label>Fiche technique en PDF <small>Facultatif · PDF, 25 Mio au plus.</small><input type="file" accept="application/pdf" disabled={!canPublish} onChange={(e) => setPdf(e.target.files?.[0] ?? null)} /></label>{message ? <p className={styles.feedback}>{message}</p> : null}<button disabled={!canPublish || pending}>{pending ? 'Envoi…' : 'Envoyer à la modération'}</button></form></section></div>
 }
 
+type InventoryAction = 'ajouter' | 'retirer' | 'inventaire'
+
+function InventoryPanel({ shopId, offers, onRefresh }: { shopId: string; offers: Offer[]; onRefresh: () => Promise<void> }) {
+  const [actions, setActions] = useState<Record<string, InventoryAction>>({})
+  const [quantities, setQuantities] = useState<Record<string, string>>({})
+  const [reasons, setReasons] = useState<Record<string, string>>({})
+  const [pending, setPending] = useState('')
+  const [message, setMessage] = useState('')
+  const activeOffers = offers.filter(offer => offer.statut !== 'archivee')
+  const missing = activeOffers.filter(offer => !offer.stock?.quantiteRenseignee).length
+
+  async function adjust(event: FormEvent, offer: Offer) {
+    event.preventDefault()
+    const action = actions[offer.id] ?? 'inventaire'
+    const amount = Number(quantities[offer.id])
+    const reason = reasons[offer.id]?.trim() ?? ''
+    if (!Number.isInteger(amount) || amount < 0) return setMessage('Indiquez une quantité entière positive ou nulle.')
+    if (reason.length < 5) return setMessage('Précisez un motif d’au moins 5 caractères.')
+    const current = offer.stock?.quantite ?? 0
+    const quantity = action === 'ajouter' ? current + amount : action === 'retirer' ? current - amount : amount
+    if (quantity < (offer.stock?.quantiteReservee ?? 0)) return setMessage(`Impossible : ${offer.stock?.quantiteReservee ?? 0} unité(s) sont déjà réservées.`)
+    setPending(offer.id); setMessage('')
+    try {
+      await api(`/marketplace/boutiques/${shopId}/offres/${offer.id}/stock`, { methode: 'POST', corps: { quantite: quantity, motif: reason } })
+      setQuantities(previous => ({ ...previous, [offer.id]: '' }))
+      setReasons(previous => ({ ...previous, [offer.id]: '' }))
+      await onRefresh()
+      setMessage(`${offer.produit.nom} : stock mis à jour.`)
+    } catch (cause) {
+      setMessage(errorText(cause))
+    } finally {
+      setPending('')
+    }
+  }
+
+  return <section className={styles.inventoryPanel}><header><div><span>GESTION DU STOCK</span><h2>Quantités de la boutique</h2></div><b>{missing} offre(s) sans quantité</b></header><p>Le disponible correspond au stock physique moins les unités déjà réservées. « Inventaire » remplace la quantité ; « Ajouter » et « Retirer » appliquent un mouvement.</p>{message ? <p className={styles.feedback} role="status">{message}</p> : null}<div className={styles.inventoryTable}>{activeOffers.map(offer => <form key={offer.id} onSubmit={event => void adjust(event, offer)}><div className={styles.inventoryIdentity}><strong>{offer.produit.nom}{offer.libelleVariante ? ` — ${offer.libelleVariante}` : ''}</strong><small>{offer.referenceVendeur}</small></div><dl><div><dt>Physique</dt><dd>{offer.stock?.quantiteRenseignee ? offer.stock.quantite : 'Non renseigné'}</dd></div><div><dt>Réservé</dt><dd>{offer.stock?.quantiteReservee ?? 0}</dd></div><div><dt>Disponible</dt><dd>{offer.stock?.quantiteRenseignee ? Math.max(0, offer.stock.quantite - offer.stock.quantiteReservee) : '—'}</dd></div></dl><select aria-label={`Type d’ajustement de ${offer.produit.nom}`} value={actions[offer.id] ?? 'inventaire'} onChange={event => setActions(previous => ({ ...previous, [offer.id]: event.target.value as InventoryAction }))}><option value="inventaire">Inventaire</option><option value="ajouter">Ajouter</option><option value="retirer">Retirer</option></select><input aria-label={`Quantité de ${offer.produit.nom}`} required type="number" min="0" max="1000000" step="1" value={quantities[offer.id] ?? ''} onChange={event => setQuantities(previous => ({ ...previous, [offer.id]: event.target.value }))} placeholder="Quantité"/><input aria-label={`Motif pour ${offer.produit.nom}`} required minLength={5} maxLength={300} value={reasons[offer.id] ?? ''} onChange={event => setReasons(previous => ({ ...previous, [offer.id]: event.target.value }))} placeholder="Motif (réception, casse, inventaire…)"/><button disabled={pending === offer.id}>{pending === offer.id ? 'Enregistrement…' : 'Valider'}</button></form>)}</div></section>
+}
+
 function OffersPanel({ shop, products, offers, canPublish, onRefresh }: { shop: ShopSpace; products: ProductProposal[]; offers: Offer[]; canPublish: boolean; onRefresh: () => Promise<void> }) {
   const activeProducts = products.filter((product) => product.statut === 'actif')
-  const [values, setValues] = useState({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', quantiteInitiale: '0', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' })
+  const [values, setValues] = useState({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' })
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<Retour>(null)
   const [pendingStock, setPendingStock] = useState('')
@@ -1008,8 +1070,8 @@ function OffersPanel({ shop, products, offers, canPublish, onRefresh }: { shop: 
     if (Number(values.garantie) < garantieMinimale) return setMessage(erreur(`La garantie de cette catégorie est d’au moins ${libelleMois(garantieMinimale)}.`))
     setPending(true)
     try {
-      await api(`/marketplace/boutiques/${shop.id}/offres`, { methode: 'POST', corps: { produitId: values.produitId, ...(values.reference.trim() ? { referenceVendeur: values.reference.trim() } : {}), titre: values.titre.trim(), description: values.description.trim() || undefined, prixFcfa: Number(values.prix), prixReferenceFcfa: values.prixReference ? Number(values.prixReference) : undefined, quantiteInitiale: Number(values.quantiteInitiale), etat: values.etat, garantieMois: Number(values.garantie), modesLivraison: shop.modesLivraison, villesLivraison: shop.villesLivraison, delaiMaxJours: Number(values.delai), quantiteMinimale: Number(values.minimum) || 1 } })
-      setValues({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', quantiteInitiale: '0', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' }); setMessage(succes('Offre envoyée à la modération.')); await onRefresh()
+      await api(`/marketplace/boutiques/${shop.id}/offres`, { methode: 'POST', corps: { produitId: values.produitId, ...(values.reference.trim() ? { referenceVendeur: values.reference.trim() } : {}), titre: values.titre.trim(), description: values.description.trim() || undefined, prixFcfa: Number(values.prix), prixReferenceFcfa: values.prixReference ? Number(values.prixReference) : undefined, etat: values.etat, garantieMois: Number(values.garantie), modesLivraison: shop.modesLivraison, villesLivraison: shop.villesLivraison, delaiMaxJours: Number(values.delai), quantiteMinimale: Number(values.minimum) || 1 } })
+      setValues({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' }); setMessage(succes('Offre envoyée à la modération.')); await onRefresh()
     } catch (cause) { setMessage(erreur(errorText(cause))) } finally { setPending(false) }
   }
 

@@ -11,7 +11,7 @@ import { useOffresBoutique } from '@/lib/use-offres-boutique'
 import { BarreChargement } from '@/components/ui/BarreChargement'
 import { productCardSpecs } from '@/lib/product-card-specs'
 import { useCart } from '@/lib/cart'
-import { libelleStatutStock } from '@/lib/stock'
+import { libelleStatutStock, libelleStockFaible } from '@/lib/stock'
 import { AvisBoutique } from './AvisBoutique'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
 import styles from './shop-storefront.module.css'
@@ -57,7 +57,7 @@ function StoreProductCard({ offer, shop, compact = false }: { offer: OffreBoutiq
   const specs = productCardSpecs(offer, compact ? 2 : 3)
   function add() {
     if (!canAdd || offer.prixFcfa === null) return
-    cart.add({ slug: offer.produit.slug, name: offer.titre ?? offer.produit.nom, price: offer.prixFcfa, image: illustration, offerId: offer.id, boutiqueId: shop.id, boutiqueNom: shop.nom, modesLivraison: shop.modesLivraison.filter((mode): mode is 'vendeur' | 'katihub' => mode === 'vendeur' || mode === 'katihub'), villesLivraison: shop.villesLivraison })
+    cart.add({ slug: offer.produit.slug, name: offer.titre ?? offer.produit.nom, price: offer.prixFcfa, image: illustration, offerId: offer.id, boutiqueId: shop.id, boutiqueNom: shop.nom, modesLivraison: shop.modesLivraison.filter((mode): mode is 'vendeur' | 'katihub' => mode === 'vendeur' || mode === 'katihub'), villesLivraison: shop.villesLivraison, disponible: offer.disponible })
   }
   return <article className={`${styles.productCard} ${compact ? styles.compactCard : ''}`} data-shop-offer={offer.id}>
     <Link className={styles.productVisual} href={href} aria-label={`Voir ${offer.produit.nom}`}>
@@ -65,7 +65,7 @@ function StoreProductCard({ offer, shop, compact = false }: { offer: OffreBoutiq
       {discount ? <b className={styles.discount}>−{discount}%</b> : null}
       {!compact ? <small>{illustration ? 'Visuel illustratif' : 'Photo à venir'}</small> : null}
     </Link>
-    <div className={styles.productBody}><small className={styles.productCategory}>{offer.produit.categorie ?? 'Dans cette boutique'}</small><h3><Link href={href}>{offer.titre ?? offer.produit.nom}</Link></h3>{specs.length ? <ul className={styles.productSpecs} aria-label="Caractéristiques principales">{specs.map((spec) => <li key={spec}>{spec}</li>)}</ul> : null}<div className={styles.productPrice}><strong>{money(offer.prixFcfa)}</strong>{discount ? <del>{money(offer.prixReferenceFcfa)}</del> : null}</div>{!compact ? <><p className={styles.productStock} data-statut={offer.statutStock ?? 'en_stock'}><i/>{libelleStatutStock(offer.statutStock)}</p>{offer.prixFcfa === null ? <Link className={styles.cardAction} href={href}>Voir l’offre<ShopIcon name="arrow"/></Link> : <button className={styles.cardAction} onClick={add} disabled={!canAdd}><ShopIcon name="bag"/>{canAdd ? 'Ajouter au panier' : 'Quantité maximale'}</button>}</> : <Link className={styles.compactLink} href={href}>Voir l’offre<ShopIcon name="arrow"/></Link>}</div>
+    <div className={styles.productBody}><small className={styles.productCategory}>{offer.produit.categorie ?? 'Dans cette boutique'}</small><h3><Link href={href}>{offer.titre ?? offer.produit.nom}</Link></h3>{specs.length ? <ul className={styles.productSpecs} aria-label="Caractéristiques principales">{specs.map((spec) => <li key={spec}>{spec}</li>)}</ul> : null}<div className={styles.productPrice}><strong>{money(offer.prixFcfa)}</strong>{discount ? <del>{money(offer.prixReferenceFcfa)}</del> : null}</div>{!compact ? <><p className={styles.productStock} data-statut={offer.statutStock ?? 'en_stock'}><i/>{libelleStockFaible(offer.disponible) ?? libelleStatutStock(offer.statutStock)}</p>{offer.prixFcfa === null ? <Link className={styles.cardAction} href={href}>Voir l’offre<ShopIcon name="arrow"/></Link> : <button className={styles.cardAction} onClick={add} disabled={!canAdd}><ShopIcon name="bag"/>{canAdd ? 'Ajouter au panier' : 'Quantité maximale'}</button>}</> : <Link className={styles.compactLink} href={href}>Voir l’offre<ShopIcon name="arrow"/></Link>}</div>
   </article>
 }
 

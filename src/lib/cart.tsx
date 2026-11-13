@@ -50,6 +50,8 @@ export interface CartLine {
   readonly villesLivraison?: string[]
   /** MOQ de l'offre : la ligne ne descend pas en dessous. */
   readonly quantiteMinimale?: number
+  /** Disponible au dernier ajout ; le serveur le reverifie avant la commande. */
+  readonly disponible?: number
 }
 
 export const cartLineKey = (line: Pick<CartLine, 'slug' | 'offerId'>) => line.offerId ?? line.slug
@@ -146,7 +148,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const key = cartLineKey(line)
     const existing = current.find((l) => cartLineKey(l) === key)
     const minimum = Math.max(1, line.quantiteMinimale ?? 1)
-    const maximum = Math.max(MAX_QTY, minimum)
+    const maximum = Math.min(Math.max(MAX_QTY, minimum), line.disponible ?? Number.POSITIVE_INFINITY)
     writeRaw(
       existing
         ? current.map((l) =>
@@ -167,7 +169,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
             if (cartLineKey(l) !== slug) return l
             // Le MOQ est un plancher : on retire la ligne, on ne la passe pas en dessous.
             const minimum = Math.max(1, l.quantiteMinimale ?? 1)
-            return { ...l, qty: Math.min(Math.max(qty, minimum), Math.max(MAX_QTY, minimum)) }
+            const maximum = Math.min(Math.max(MAX_QTY, minimum), l.disponible ?? Number.POSITIVE_INFINITY)
+            return { ...l, qty: Math.min(Math.max(qty, minimum), maximum) }
           }),
     )
   }, [])

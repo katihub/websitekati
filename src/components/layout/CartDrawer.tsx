@@ -244,6 +244,7 @@ export function CartDrawer() {
                             <button
                               type="button"
                               onClick={() => setQty(cartLineKey(line), line.qty + 1)}
+                              disabled={line.disponible !== undefined && line.qty >= line.disponible}
                               aria-label={`Ajouter un ${line.name}`}
                               className="press grid size-11 place-items-center text-ink-2 hover:text-secondary md:size-8"
                             >

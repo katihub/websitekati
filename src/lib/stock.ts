@@ -7,6 +7,12 @@ export const STOCK_NON_SUIVI = 9999
 
 export const surCommande = (disponible: number | null | undefined) => (disponible ?? 0) >= STOCK_NON_SUIVI
 
+/** Message d'urgence discret, uniquement pour les quantites réellement suivies sous cinq unités. */
+export function libelleStockFaible(disponible: number | null | undefined, en = false): string | null {
+  if (!disponible || disponible >= 5 || surCommande(disponible)) return null
+  return en ? `Only ${disponible} left in stock` : `Plus que ${disponible} en stock`
+}
+
 /** La quantite minimale d'une offre (MOQ), 1 par defaut. */
 export const minimumDe = (offre: { quantiteMinimale?: number | null } | null | undefined) => Math.max(1, offre?.quantiteMinimale ?? 1)
 
