@@ -17,9 +17,13 @@ export function MarketplaceNav({ categories }: { categories: readonly CategorieA
         <ShopIcon name="grid" className={styles.navIcon} />{text('allCategories')}
       </Link>
       <MobileCategoriesMenu categories={categories} className={orderStyles.mobileCategories} />
-      <Link href="/boutiques" className={styles.navLink}><ShopIcon name="bag" className={styles.navIcon} />{text('shops')}</Link>
-      <Link href="/mon-budget" className={styles.navLink}><ShopIcon name="wallet" className={styles.navIcon} />Mon Budget</Link>
+      {/* TOUT CE QUI SUIT DEFILE AU DOIGT (13 novembre 2026). Boutiques et Mon Budget
+          etaient hors de la zone defilante : sur un telephone, ils ne laissaient aux
+          rayons que quelques pixels, et la barre semblait figee. Seul le menu des
+          categories reste fixe, pour que son panneau s'ouvre sans etre coupe. */}
       <div className={styles.navScroll}>
+        <Link href="/boutiques" className={styles.navLink}><ShopIcon name="bag" className={styles.navIcon} />{text('shops')}</Link>
+        <Link href="/mon-budget" className={styles.navLink}><ShopIcon name="wallet" className={styles.navIcon} />Mon Budget</Link>
         {UNIVERS_CATEGORIES.map((univers) => (
           <Link key={univers.slug} href={`/univers/${univers.slug}`} className={styles.navLink}>
             <ShopIcon name={univers.icone} className={styles.navIcon} />{univers.nom}
