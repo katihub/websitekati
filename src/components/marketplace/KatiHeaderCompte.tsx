@@ -8,7 +8,8 @@ import { api, ErreurApi } from '@/lib/api'
 import { BOITE_CLIENT, cheminInterne } from '@/lib/notifications'
 import { ClocheNotifications } from '@/components/notifications/ClocheNotifications'
 import { useSession } from '@/lib/session'
-import { DELAIS_NOUVEL_ESSAI_MS, profilApresErreur, profilDesBoutiques, type Profil } from '@/lib/profil-compte'
+import { DELAIS_NOUVEL_ESSAI_MS, profilApresErreur, profilDesBoutiques, sessionARenouveler, type Profil } from '@/lib/profil-compte'
+import { supabase } from '@/lib/supabase'
 import styles from './marketplace-shell-v2.module.css'
 import { useMarketplaceLanguage } from '@/lib/language'
 import { ShopIcon, type ShopIconName } from './ShopIcon'
@@ -65,10 +66,16 @@ function useProfil(userId: string | null): Profil | null {
         .then((boutiques) => { if (!controleur.signal.aborted) retenir(profilDesBoutiques(boutiques)) })
         .catch((cause: unknown) => {
           if (controleur.signal.aborted) return
-          const profil = profilApresErreur(cause instanceof ErreurApi ? cause.code : null)
+          const code = cause instanceof ErreurApi ? cause.code : null
+          const profil = profilApresErreur(code)
           if (profil) return retenir(profil)
           const delai = DELAIS_NOUVEL_ESSAI_MS[essai++]
-          if (delai !== undefined) minuterie = window.setTimeout(demander, delai)
+          if (delai === undefined) return
+          // Jeton refuse : on le renouvelle d'abord, puis on redemande.
+          const renouveler = sessionARenouveler(code) ? supabase()?.auth.refreshSession().catch(() => undefined) : undefined
+          void Promise.resolve(renouveler).then(() => {
+            if (!controleur.signal.aborted) minuterie = window.setTimeout(demander, delai)
+          })
         })
     }
     demander()
@@ -147,10 +154,11 @@ export function ActionsCompte() {
   }
   // Sur mobile, la cloche prend la place des « Mes commandes » du client (ils restent dans le
   // menu du compte) ; la boutique du marchand garde son raccourci, c'est son espace de travail.
+  // Profil encore inconnu : ni « Ma boutique » ni « Mes commandes », plutot qu'un client presume.
   return <>
     {profil === 'marchand'
       ? <Link href="/espace-vendeur" className={`${styles.actionLien} ${styles.actionContextuelle}`} aria-label={text('myShop')}><Icon>{ICONE_BOUTIQUE}</Icon><span>{text('myShop')}</span></Link>
-      : <Link href="/compte/commandes" className={`${styles.actionLien} ${styles.horsMobile}`} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
+      : profil === null ? null : <Link href="/compte/commandes" className={`${styles.actionLien} ${styles.horsMobile}`} aria-label={text('myOrders')}><Icon>{ICONE_COLIS}</Icon><span>{text('myOrders')}</span></Link>}
 
     <ClocheNotifications boite={BOITE_CLIENT} classeBouton={styles.actionLien} toutVoir="/compte/notifications"
       onOuvrir={(lien) => router.push(cheminInterne(lien) ?? '/compte/notifications')} />

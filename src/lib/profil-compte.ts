@@ -14,7 +14,20 @@ export function profilDesBoutiques(boutiques: unknown): Profil {
   return Array.isArray(boutiques) && boutiques.length ? 'marchand' : 'client'
 }
 
-/** Le profil que fixe une erreur, ou `null` quand il faut redemander. */
+/**
+ * Le profil que fixe une erreur, ou `null` quand il faut redemander.
+ *
+ * SEUL UN REFUS D'ACCES (403) DIT « CLIENT » (13 novembre 2026). Un 401 dit
+ * seulement que le jeton n'est plus accepte : telephone sorti de veille,
+ * rafraichissement manque sur un reseau instable, horloge en retard. Le classer
+ * client cachait « Ma boutique » a un vendeur pour toute la visite ; on
+ * renouvelle la session et on redemande.
+ */
 export function profilApresErreur(code: number | null): Profil | null {
-  return code === 401 || code === 403 ? 'client' : null
+  return code === 403 ? 'client' : null
+}
+
+/** Un 401 : la session doit etre renouvelee avant de redemander. */
+export function sessionARenouveler(code: number | null): boolean {
+  return code === 401
 }
