@@ -18,6 +18,12 @@
 .discovery>.discoveryPanel:only-child{grid-column:1/-1}
 @media(prefers-reduced-motion:reduce){.productCard{transition:none}}
 
+/* L'accueil garde exactement trois rangees. "Voir tout" retire cet attribut
+   et laisse le catalogue pagine afficher toutes les offres chargees. */
+@media(max-width:1400px){.productGrid[data-shop-home]>.productCard:nth-child(n+13){display:none}}
+@media(max-width:1050px){.productGrid[data-shop-home]>.productCard:nth-child(n+10){display:none}}
+@media(max-width:700px){.productGrid[data-shop-home]>.productCard:nth-child(n+7){display:none}}
+
 .productSpecs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px;padding:0;list-style:none}
 .productSpecs li{max-width:100%;overflow:hidden;border-radius:4px;background:#eef2f6;padding:3px 5px;color:#52627a;font-size:10px;font-weight:650;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
 .compactCard .productSpecs{margin-bottom:5px}

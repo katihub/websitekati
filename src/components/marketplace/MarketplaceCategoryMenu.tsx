@@ -1,52 +1,23 @@
 import Link from 'next/link'
 
+import { categoriesDuMenu } from '@/lib/menu-categories'
 import type { RayonAccueil } from './RayonsAccueil'
 import { iconeCategorieMarketplace, ShopIcon } from './ShopIcon'
 import styles from './marketplace-home-v2.module.css'
-
-const ENTREES = [
-  'Électronique',
-  'Mode & Style',
-  'Maison & Décoration',
-  'Beauté & Santé',
-  'Sports & Loisirs',
-  'Auto & Moto',
-  'Jardinage',
-  'Enfants & Jouets',
-  'Alimentation',
-  'High-Tech',
-  'Bricolage & Outillage',
-] as const
-
-const normaliser = (valeur: string) => valeur
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .toLocaleLowerCase('fr')
-  .replace(/[^a-z0-9]+/g, ' ')
-  .trim()
-
-function trouverRayon(rayons: RayonAccueil[], libelle: string) {
-  const recherche = normaliser(libelle)
-  const motPrincipal = recherche.split(' ')[0]
-  return rayons.find((rayon) => normaliser(rayon.nom) === recherche)
-    ?? rayons.find((rayon) => normaliser(rayon.nom).split(' ')[0] === motPrincipal)
-}
 
 export function MarketplaceCategoryMenu({ rayons }: { rayons: RayonAccueil[] }) {
   return <aside className={styles.categoryMenu} aria-label="Catégories de produits">
     <h2><span aria-hidden="true">☰</span>Toutes les catégories</h2>
     <ul className={styles.categoryList}>
-      {ENTREES.map((libelle) => {
-        const rayon = trouverRayon(rayons, libelle)
-        const href = rayon ? `/categories/${rayon.slug}` : `/recherche?q=${encodeURIComponent(libelle)}`
-        const sousCategories = rayon?.sousCategories ?? []
-        return <li className={styles.categoryItem} key={libelle}>
-          <Link className={styles.categoryLink} href={href} aria-haspopup={sousCategories.length ? 'true' : undefined}>
-            <ShopIcon name={iconeCategorieMarketplace(libelle)} />
-            <span>{rayon?.nom ?? libelle}</span>
+      {categoriesDuMenu(rayons).map((rayon) => {
+        const sousCategories = rayon.sousCategories
+        return <li className={styles.categoryItem} key={rayon.slug}>
+          <Link className={styles.categoryLink} href={`/categories/${rayon.slug}`} aria-haspopup={sousCategories.length ? 'true' : undefined}>
+            <ShopIcon name={iconeCategorieMarketplace(rayon.nom)} />
+            <span>{rayon.nom}</span>
             <b aria-hidden="true">›</b>
           </Link>
-          {rayon && sousCategories.length ? <section className={styles.categorySubmenu} aria-label={`Sous-catégories de ${rayon.nom}`}>
+          {sousCategories.length ? <section className={styles.categorySubmenu} aria-label={`Sous-catégories de ${rayon.nom}`}>
             <header>
               <div><small>Explorer le rayon</small><h3>{rayon.nom}</h3></div>
               <span>{sousCategories.length} sous-catégorie{sousCategories.length > 1 ? 's' : ''}</span>

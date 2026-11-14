@@ -1,4 +1,4 @@
-export type ShopIconName = 'bag' | 'cart' | 'trash' | 'pin' | 'search' | 'arrow' | 'shield' | 'truck' | 'clock' | 'bookmark' | 'tag' | 'grid' | 'package' | 'laptop' | 'phone' | 'headphones' | 'home' | 'info' | 'check' | 'close' | 'wallet' | 'star' | 'users' | 'settings' | 'plus' | 'message' | 'file' | 'receipt' | 'heart' | 'question' | 'mail' | 'lock' | 'cookie'
+export type ShopIconName = 'bag' | 'cart' | 'trash' | 'pin' | 'search' | 'arrow' | 'shield' | 'truck' | 'clock' | 'bookmark' | 'tag' | 'grid' | 'package' | 'food' | 'laptop' | 'phone' | 'headphones' | 'home' | 'info' | 'check' | 'close' | 'wallet' | 'star' | 'users' | 'settings' | 'plus' | 'message' | 'file' | 'receipt' | 'heart' | 'question' | 'mail' | 'lock' | 'cookie'
 
 export function ShopIcon({ name, className }: { name: ShopIconName; className?: string }) {
   const paths = {
@@ -28,6 +28,7 @@ export function ShopIcon({ name, className }: { name: ShopIconName; className?: 
     tag: <><path d="m3 3 8 0 10 10-8 8L3 11Z"/><circle cx="7" cy="7" r="1"/></>,
     grid: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
     package: <><path d="m12 2 9 5v10l-9 5-9-5V7Zm-9 5 9 5 9-5M12 12v10M7.5 4.5l9 5v4"/></>,
+    food: <><path d="M4 10h16l-1.5 10h-13Z"/><path d="m8 10 4-7 4 7M8 14v2M12 14v2M16 14v2"/></>,
     laptop: <><rect x="5" y="4" width="14" height="12" rx="1"/><path d="M3 20h18l-2-4H5Z"/></>,
     phone: <><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 5h2M11 19h2"/></>,
     headphones: <><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="12" width="4" height="8" rx="2"/><rect x="17" y="12" width="4" height="8" rx="2"/></>,
@@ -40,6 +41,7 @@ export function ShopIcon({ name, className }: { name: ShopIconName; className?: 
 }
 
 export function iconeCategorieMarketplace(nom: string): ShopIconName {
+  if (/aliment|agro|[eé]picerie/i.test(nom)) return 'food'
   if (/informatique|ordinateur|high.?tech/i.test(nom)) return 'laptop'
   if (/électronique|electronique|smartphone|téléphone|telephone/i.test(nom)) return 'phone'
   if (/audio|casque/i.test(nom)) return 'headphones'

@@ -42,6 +42,24 @@ const offre = {
   stock: { quantite: 5, quantiteReservee: 1 }, revisions: [revision],
 }
 
+test('alerte le vendeur et ouvre les produits lorsqu’une fiche est sans image', async ({ page }) => {
+  api = (await espaceVendeur(page, []))
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [{ ...produit, sansImage: true }])
+
+  await page.goto('/espace-vendeur')
+  const alerte = page.getByTestId('alerte-produits-sans-image')
+  await expect(alerte).toBeVisible()
+  await expect(alerte).toContainText('1 produit sans image dans votre boutique')
+  await expect(alerte).toContainText('masqués aux clients')
+
+  await alerte.getByRole('button', { name: 'Ajouter les images' }).click()
+  await expect(page.getByRole('heading', { name: 'Produits', exact: true })).toBeVisible()
+  await expect(page.getByText('Image obligatoire · invisible aux clients')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Ajouter une image' })).toBeVisible()
+  await expect(page.getByLabel(`Aucune image pour ${produit.nom}`)).toBeVisible()
+  expect(api.appelsVers('GET', new RegExp(`/produits/${PRODUIT}/contenu`))).toHaveLength(0)
+})
+
 test('le marchand ajoute une photo, écrit son référencement et soumet la fiche', async ({ page }) => {
   api = (await espaceVendeur(page, []))
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])

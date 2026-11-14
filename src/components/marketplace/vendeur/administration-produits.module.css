@@ -22,3 +22,7 @@
 
 /* Le bouton d'envoi sous le formulaire, pleine largeur sur telephone (9 novembre 2026). */
 .envoiFiche{display:grid;gap:10px;justify-items:end;padding-top:6px}.envoiFiche>.feedback{justify-self:stretch;margin:0}.envoiFiche>button{min-height:46px;padding:0 26px;border-radius:8px;font-weight:800;cursor:pointer}.envoiFiche>button:disabled{opacity:.55;cursor:default}@media(max-width:700px){.envoiFiche{justify-items:stretch}.envoiFiche>button{width:100%}}
+.missingImages{display:flex;align-items:center;gap:10px;margin-bottom:16px;border:1px solid #f59e0b;border-radius:9px;background:#fff7ed;padding:13px 15px;color:#9a3412;font-size:13px}
+.missingImages strong{color:#7c2d12}
+.productTable tr[data-sans-image]{background:#fffaf3}
+.imageRequired{color:#c2410c!important;font-weight:800}

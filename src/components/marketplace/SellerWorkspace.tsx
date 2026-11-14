@@ -91,6 +91,8 @@ type ProductProposal = {
   /** La categorie choisie dans la liste KatiMarket, avec la garantie minimale qu'elle impose. */
   categorieDetail?: CategorieProduit
   statut: 'soumis' | 'en_verification' | 'actif' | 'modification_demandee' | 'refuse' | 'archive'
+  /** Vrai tant qu'aucune image n'est publiee : la fiche reste invisible aux clients. */
+  sansImage?: boolean
   creeLe: string
 }
 
@@ -155,7 +157,7 @@ const estPanel = (valeur: string | null): valeur is Panel => PANELS.includes(val
 type Access = 'allowed' | 'denied' | 'error'
 const initialAccess: Record<Section, Access> = { documents: 'allowed', products: 'allowed', offers: 'allowed', orders: 'allowed', deliveries: 'allowed', payments: 'allowed', finance: 'allowed', reviews: 'allowed', customers: 'allowed', members: 'allowed', disputes: 'allowed' }
 const initialLoaded: Record<Section, boolean> = { documents: false, products: false, offers: false, orders: false, deliveries: false, payments: false, finance: false, reviews: false, customers: false, members: false, disputes: false }
-const overviewSections: Section[] = ['documents', 'orders', 'deliveries']
+const overviewSections: Section[] = ['documents', 'products', 'orders', 'deliveries']
 const SECTIONS_PAR_PANEL: Partial<Record<Panel, Section[]>> = {
   verification: ['documents'], products: ['products', 'offers'], offers: ['products', 'offers'],
   orders: ['orders'], deliveries: ['deliveries'], payments: ['payments', 'finance'], reviews: ['reviews'],
@@ -381,6 +383,7 @@ export function SellerWorkspace() {
   const canPublish = catalogueRole && space?.statut === 'active' && ['actif', 'sous_surveillance'].includes(space.vendeur.statut)
   const validatedDocuments = documents.filter((document) => document.statut === 'valide').length
   const progress = space?.vendeur.statutVerification === 'approuve' ? 100 : access.documents === 'allowed' ? Math.min(100, Math.round((validatedDocuments / 5) * 100)) : null
+  const produitsSansImage = products.filter(product => product.sansImage && !['refuse', 'archive'].includes(product.statut))
 
   return (
     <main className={styles.workspace} data-seller-workspace>
@@ -427,6 +430,11 @@ export function SellerWorkspace() {
             <div className={styles.headTools}><ClocheNotifications key={space.id} boite={boiteBoutique(space.id)} onOuvrir={(lien) => { const rubrique = rubriqueDe(lien); if (estPanel(rubrique)) openPanel(rubrique) }} /><span className={styles.shopStatus} data-tone={canPublish ? 'good' : 'waiting'}><ShopIcon name={canPublish ? 'check' : 'clock'} />{en ? ({brouillon:'Draft', soumis:'Submitted', en_verification:'Under review', approuve:'Verified shop', modification_demandee:'Changes requested', refuse:'Application rejected'}[space.vendeur.statutVerification] ?? space.vendeur.statutVerification) : STATUS_LABELS[space.vendeur.statutVerification] ?? space.vendeur.statutVerification}</span><Link href={`/boutiques/${space.slug}`} className={styles.viewShop}><ShopIcon name="bag" /> {en ? 'View my shop' : 'Voir ma boutique'}</Link></div>
           </header>
           <BandeauContrat key={space.id} shopId={space.id} />
+          {loaded.products && produitsSansImage.length ? <section className={styles.productImageAlert} role="alert" data-testid="alerte-produits-sans-image">
+            <ShopIcon name="info" />
+            <div><strong>{produitsSansImage.length} produit{produitsSansImage.length > 1 ? 's' : ''} sans image dans votre boutique</strong><p>Ces produits sont masqués aux clients. Ajoutez au moins une image à chaque fiche pour pouvoir les publier.</p></div>
+            <button type="button" onClick={() => openPanel('products')}>Ajouter les images</button>
+          </section> : null}
 
           {panel === 'overview' ? <Overview
             space={space} products={products} offers={offers} orders={orders} deliveries={deliveries} access={access}

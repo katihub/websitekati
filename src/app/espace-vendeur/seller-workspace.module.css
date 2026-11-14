@@ -105,6 +105,13 @@
 .workspace{--primary:#0b5dcc}
 .shopStatus[data-tone=good]{color:#0b5dcc}
 .statusBox span[data-tone=good],.documentSummary li b[data-status=valide],.featureList li>b[data-status=actif],.offerMeta b[data-status=publiee],.orderTable td span[data-status=acceptee],.orderTable td span[data-status=livree],.deliverySpotlight>span[data-status=livree],.memberControls>b,.verifie{background:#eaf2ff;color:#1458a6}
+
+.productImageAlert{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;margin-bottom:18px;border:1px solid #f59e0b;border-left:5px solid #e25f00;border-radius:10px;background:#fff7ed;padding:15px 17px;color:#7c2d12}
+.productImageAlert>svg{width:26px;height:26px;color:#e25f00}
+.productImageAlert strong{display:block;color:#7c2d12;font-size:15px}
+.productImageAlert p{margin:4px 0 0;color:#9a3412;font-size:13px;line-height:1.45}
+.productImageAlert button{border:0;border-radius:7px;background:#e25f00;padding:11px 15px;color:#fff;font-weight:800;cursor:pointer}
+@media(max-width:700px){.productImageAlert{grid-template-columns:auto 1fr}.productImageAlert button{grid-column:1/-1;width:100%}}
 .metricStrip button:nth-child(3) .metricIcon{background:#eaf2ff;color:#215eb7}
 
 /* L'etat du dossier en tete de la verification : une alerte par piece a fournir,

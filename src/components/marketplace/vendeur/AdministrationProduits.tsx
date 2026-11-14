@@ -31,6 +31,7 @@ type Produit = {
   statut: string
   creeLe: string
   motifDecision?: string | null
+  sansImage?: boolean
   images?: ImageFiche[]
 }
 
@@ -130,6 +131,9 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
         <button type="button" className={styles.primary} disabled={!canPublish} onClick={() => setMode('ajout')}>＋ Nouveau produit</button>
       </div>
     </header>
+    {produits.some(produit => produit.sansImage && !['refuse', 'archive'].includes(produit.statut)) ? <div className={styles.missingImages} role="alert">
+      <strong>Images obligatoires</strong><span>Les produits signalés ci-dessous restent invisibles sur votre boutique tant qu’ils n’ont pas au moins une image publiée.</span>
+    </div> : null}
     {notice ? <p role="status" className={styles.feedback}>{notice}</p> : null}
     {mode === 'ajout' ? <AjoutProduit boutiqueId={boutiqueId} nomBoutique={nomBoutique} canPublish={canPublish} onAnnuler={() => setMode('liste')} direct={direct} onCree={async (enLigne) => { await onRefresh(); setNotice(enLigne ? 'Produit en ligne : il est visible sur votre boutique.' : 'Produit envoyé à la validation de KatiMarket. Vous pouvez suivre son statut dans la liste.'); setMode('liste') }} /> : null}
     {mode === 'lot' ? <ModificationLot boutiqueId={boutiqueId} offres={offres} onRetour={() => setMode('liste')} onRefresh={onRefresh} /> : null}
@@ -168,6 +172,11 @@ function ApercuProduit({ boutiqueId, produit }: { boutiqueId: string; produit: P
   const [erreur, setErreur] = useState(false)
 
   useEffect(() => {
+    if (produit.sansImage) {
+      setUrl(null)
+      setErreur(false)
+      return
+    }
     let actif = true
     const controleur = new AbortController()
     const charger = () => {
@@ -190,10 +199,10 @@ function ApercuProduit({ boutiqueId, produit }: { boutiqueId: string; produit: P
     }, { rootMargin: '180px' })
     observateur.observe(cible)
     return () => { actif = false; observateur.disconnect(); controleur.abort() }
-  }, [boutiqueId, produit.id])
+  }, [boutiqueId, produit.id, produit.sansImage])
 
-  return <span ref={element} className={styles.productThumb} aria-label={url ? `Photo de ${produit.nom}` : erreur ? `Aperçu indisponible pour ${produit.nom}` : `Chargement de l’aperçu de ${produit.nom}`} title={erreur ? 'Aperçu momentanément indisponible' : undefined}>
-    {url ? <Image src={url} alt="" width={56} height={56} sizes="56px" /> : <span aria-hidden="true">{erreur ? '!' : '□'}</span>}
+  return <span ref={element} className={styles.productThumb} aria-label={produit.sansImage ? `Aucune image pour ${produit.nom}` : url ? `Photo de ${produit.nom}` : erreur ? `Aperçu indisponible pour ${produit.nom}` : `Chargement de l’aperçu de ${produit.nom}`} title={produit.sansImage ? 'Image obligatoire' : erreur ? 'Aperçu momentanément indisponible' : undefined}>
+    {url ? <Image src={url} alt="" width={56} height={56} sizes="56px" /> : <span aria-hidden="true">{produit.sansImage || erreur ? '!' : '□'}</span>}
   </span>
 }
 
@@ -224,7 +233,7 @@ function ListeProduits({ boutiqueId, produits, offres, canPublish, livraison, on
       const prix = liees.map((offre) => offre.prixFcfa ?? offre.revisions[0]?.prixFcfa).filter((value): value is number => typeof value === 'number').sort((a, b) => a - b)[0]
       const disponibles = liees.reduce((total, offre) => total + Math.max(0, (offre.stock?.quantite ?? 0) - (offre.stock?.quantiteReservee ?? 0)), 0)
       const stockLabel = liees.length ? liees.some((offre) => !offre.stock) ? 'Stock non renseigné' : `${disponibles} disponible(s)` : null
-      return <tr key={produit.id}><td><div className={styles.productIdentity}><ApercuProduit boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small></div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span>{produit.statut === 'suspendu' && produit.motifDecision ? <small className={styles.motif}>Motif : {produit.motifDecision}</small> : null}</td><td>{produitSansPrix(produit, liees) ? <AjouterPrix boutiqueId={boutiqueId} produit={produit} livraison={livraison} disabled={!canPublish} onEnregistre={async () => { await onRefresh(); onPrix(produit.nom) }} /> : <><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</>}</td><td>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>Modifier la fiche</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : '—'}</td></tr>
+      return <tr key={produit.id} data-sans-image={produit.sansImage || undefined}><td><div className={styles.productIdentity}><ApercuProduit boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small>{produit.sansImage ? <small className={styles.imageRequired}>Image obligatoire · invisible aux clients</small> : null}</div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span>{produit.statut === 'suspendu' && produit.motifDecision ? <small className={styles.motif}>Motif : {produit.motifDecision}</small> : null}</td><td>{produitSansPrix(produit, liees) ? <AjouterPrix boutiqueId={boutiqueId} produit={produit} livraison={livraison} disabled={!canPublish || Boolean(produit.sansImage)} onEnregistre={async () => { await onRefresh(); onPrix(produit.nom) }} /> : <><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</>}</td><td>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>{produit.sansImage ? 'Ajouter une image' : 'Modifier la fiche'}</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : '—'}</td></tr>
     })}</tbody></table></div>
       <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" aria-label="Page précédente" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>←</button><button type="button" aria-label="Page suivante" disabled={page === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>→</button></div></div>
     </> : <div className={styles.empty}><span aria-hidden>□</span><h3>{recherche || statut !== 'tous' ? 'Aucun résultat' : 'Votre catalogue est vide'}</h3><p>{recherche || statut !== 'tous' ? 'Modifiez la recherche ou le statut sélectionné.' : 'Créez votre première fiche avec un aperçu client en direct.'}</p>{!recherche && statut === 'tous' ? <button type="button" className={styles.primary} onClick={onAjouter}>Ajouter un produit</button> : null}</div>}
@@ -404,7 +413,9 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, onAnnuler, 
           ficheTechniquePdfCle: clePdf, images: images.map((photo, index) => ({ imageId: photo.id, texteAlternatif: `${values.nom.trim()}, photo ${index + 1}` })),
         } })
       }
-      const enLigne = produit.statut === 'actif'
+      // La revision de contenu active atomiquement le produit seulement apres
+      // la publication de sa premiere image pour un vendeur autorise en direct.
+      const enLigne = direct
       setMessage(succes(enLigne ? 'Produit, prix et médias en ligne.' : 'Produit, prix et médias envoyés à la validation de KatiMarket.')); await onCree(enLigne)
     } catch (cause) { setMessage(erreur(messageErreur(cause))) } finally { setPending(false) }
   }

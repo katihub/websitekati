@@ -163,10 +163,12 @@ export async function MarketplaceHome() {
   const [{ boutiques, offres }, bannieres, categories, comptes] = await Promise.all([
     lireAccueilMarketplace(), getBanners(), lireCategoriesMarketplace(), lireOffresMarketplace({ taille: 1 }),
   ])
-  // Les rayons, du mieux fourni au moins fourni ; la section s'ouvre sur le premier.
+  // Le menu garde strictement l'ordre editorial recu de l'administration.
+  // Les rayons marchands restent classes par offre pour alimenter les carrousels.
   const nombres = new Map((comptes.facettes?.categories ?? []).map((c) => [c.nom, c.nombre]))
-  const rayons: RayonAccueil[] = categories
+  const rayonsMenu: RayonAccueil[] = categories
     .map((c) => ({ nom: c.nom, slug: c.slug, nombre: nombres.get(c.nom) ?? 0, sousCategories: c.sousCategories.map((s) => ({ nom: s.nom, slug: s.slug })) }))
+  const rayons = [...rayonsMenu]
     .sort((a, b) => b.nombre - a.nombre || a.nom.localeCompare(b.nom, 'fr'))
   const premier = rayons.find((r) => r.nombre > 0) ?? rayons[0]
   const categoriesCarrousel = rayons.filter((rayon) => rayon.nombre > 0).slice(0, 5)
@@ -192,7 +194,7 @@ export async function MarketplaceHome() {
   ]
   return <div className={styles.page}>
     <div className={`${styles.shell} ${styles.commerceGrid}`}>
-      <MarketplaceCategoryMenu rayons={rayons} />
+      <MarketplaceCategoryMenu rayons={rayonsMenu} />
       <div className={styles.centerStage}>
         <MarketplaceHeroCarousel bannieres={piecesDuPanel(bannieres.principales)} />
         <PromosCarrousel promos={promosAccueil} afficherLibelles={!bannieres.promos.length} />
