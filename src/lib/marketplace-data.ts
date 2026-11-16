@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
 
 import { entetesLectureCommune, entetesPourVisiteur } from '@/lib/appel-backend'
+import { lireJsonMarketplaceAvecReprise } from '@/lib/marketplace-resilience'
 import { TAILLE_LOT_BOUTIQUE } from '@/lib/shop-catalogue'
 
 export interface BoutiqueMarketplace {
@@ -56,6 +57,8 @@ export type BoutiquePubliqueMarketplace = BoutiqueMarketplace & {
   offres: OffreBoutiqueMarketplace[]
   pagination?: ListeOffresMarketplace['pagination']
   facettes?: ListeOffresMarketplace['facettes']
+  /** Vrai uniquement sur un premier chargement sans copie valide : l'identite reste visible. */
+  catalogueIndisponible?: boolean
 }
 
 export interface AccueilMarketplace {
@@ -78,6 +81,49 @@ export interface ListeOffresMarketplace {
   categorie?: { nom: string; slug: string; parent: { nom: string; slug: string } | null } | null
 }
 
+interface ParametresOffresMarketplace {
+  marque?: string
+  prixMin?: number
+  prixMax?: number
+  q?: string
+  categorie?: string
+  categorieSlug?: string
+  boutique?: string
+  tri?: 'recent' | 'prix_asc' | 'prix_desc'
+  page?: number
+  taille?: number
+}
+
+function parametresOffresMarketplace(params: ParametresOffresMarketplace) {
+  const query = new URLSearchParams()
+  if (params.marque) query.set('marque', params.marque)
+  if (params.prixMin !== undefined) query.set('prixMin', String(params.prixMin))
+  if (params.prixMax !== undefined) query.set('prixMax', String(params.prixMax))
+  if (params.q) query.set('q', params.q)
+  if (params.categorie) query.set('categorie', params.categorie)
+  if (params.categorieSlug) query.set('categorieSlug', params.categorieSlug)
+  if (params.boutique) query.set('boutique', params.boutique)
+  if (params.tri) query.set('tri', params.tri)
+  query.set('page', String(params.page ?? 1))
+  query.set('taille', String(params.taille ?? 24))
+  return query
+}
+
+function sansCatalogueBoutique(boutique: BoutiquePubliqueMarketplace): BoutiqueMarketplace {
+  const identite = { ...boutique }
+  const champsOptionnels = identite as Partial<BoutiquePubliqueMarketplace>
+  delete champsOptionnels.offres
+  delete champsOptionnels.pagination
+  delete champsOptionnels.facettes
+  return identite
+}
+
+function sansBoutique(offre: OffreMarketplace): OffreBoutiqueMarketplace {
+  const copie = { ...offre }
+  delete (copie as Partial<OffreMarketplace>).boutique
+  return copie
+}
+
 /** L'arbre des categories KatiMarket actives, tel que le marchand et le client le voient. */
 export interface CategorieArbre {
   id: string
@@ -98,6 +144,16 @@ export async function lireCategoriesMarketplace(): Promise<CategorieArbre[]> {
 }
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3101'
+
+/** Cache complet des pages boutique, rafraichi sans retirer la derniere copie valide. */
+export const ETIQUETTE_BOUTIQUES_MARKETPLACE = 'marketplace-boutiques'
+
+class CatalogueBoutiquePartiel extends Error {
+  constructor(readonly boutique: BoutiqueMarketplace, cause: unknown) {
+    super(`les offres de la boutique ${boutique.slug} sont indisponibles`, { cause })
+    this.name = 'CatalogueBoutiquePartiel'
+  }
+}
 
 export async function lireAccueilMarketplace(): Promise<AccueilMarketplace> {
   try {
@@ -147,14 +203,6 @@ export async function lireBoutiquesMarketplace(params: { page?: number; q?: stri
  * NowTech) ; depuis le 7 novembre 2026, elle ne renvoie plus que l'identite. Les
  * champs d'offres restent ecartes ici tant qu'un ancien backend peut repondre.
  */
-const lireIdentiteBoutique = unstable_cache(async (slug: string): Promise<BoutiqueMarketplace | null> => {
-  const reponse = await fetch(`${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`, { headers: entetesLectureCommune(), cache: 'no-store' })
-  if (reponse.status === 404) return null
-  if (!reponse.ok) throw new Error(`le backend a répondu ${reponse.status}`)
-  const { offres: _offres, pagination: _pagination, facettes: _facettes, ...identite } = await reponse.json() as BoutiquePubliqueMarketplace
-  return identite
-}, ['boutique-identite'], { revalidate: 300, tags: ['catalogue'] })
-
 /**
  * La boutique et son PREMIER lot d'offres ; `useOffresBoutique` lit les suivants.
  *
@@ -162,46 +210,57 @@ const lireIdentiteBoutique = unstable_cache(async (slug: string): Promise<Boutiq
  * en cache : une regeneration qui leve laisse en place la derniere bonne copie,
  * alors qu'un `null` publierait une page 404 pendant la panne.
  */
-export const lireBoutiqueMarketplace = cache(async (slug: string): Promise<BoutiquePubliqueMarketplace | null> => {
-  const [identite, liste] = await Promise.all([
-    lireIdentiteBoutique(slug),
-    lireOffresMarketplace({ boutique: slug, taille: TAILLE_LOT_BOUTIQUE }),
+const lireBoutiqueMarketplaceCachee = unstable_cache(async (slug: string): Promise<BoutiquePubliqueMarketplace | null> => {
+  const query = parametresOffresMarketplace({ boutique: slug, taille: TAILLE_LOT_BOUTIQUE })
+  const [resultatIdentite, resultatListe] = await Promise.allSettled([
+    lireJsonMarketplaceAvecReprise<BoutiquePubliqueMarketplace>({
+      chemin: `${BASE}/v1/marketplace/boutiques/${encodeURIComponent(slug)}`,
+      entetes: entetesLectureCommune(),
+      absentSi404: true,
+    }),
+    lireJsonMarketplaceAvecReprise<ListeOffresMarketplace>({
+      chemin: `${BASE}/v1/marketplace/offres?${query}`,
+      entetes: entetesLectureCommune(),
+    }),
   ])
+  const brut = resultatIdentite.status === 'fulfilled' ? resultatIdentite.value : null
+  const liste = resultatListe.status === 'fulfilled' ? resultatListe.value : null
+  const identite = brut ? sansCatalogueBoutique(brut) : undefined
   const boutique = identite ?? (await lireAccueilMarketplace()).boutiques.find((item) => item.slug === slug)
-  if (!boutique) return null
-  if (liste.indisponible) throw new Error(`les offres de la boutique ${slug} sont indisponibles`)
+  if (!boutique) {
+    if (resultatIdentite.status === 'rejected') throw resultatIdentite.reason
+    return null
+  }
+  if (!liste) {
+    const cause = resultatListe.status === 'rejected' ? resultatListe.reason : 'reponse vide'
+    throw new CatalogueBoutiquePartiel(boutique, cause)
+  }
 
   return {
     ...boutique,
-    offres: liste.offres.map(({ boutique: _boutique, ...offre }) => offre),
+    offres: liste.offres.map(sansBoutique),
     pagination: liste.pagination,
     facettes: liste.facettes,
   }
+}, ['boutique-publique-resiliente-v1', BASE], { revalidate: 60, tags: [ETIQUETTE_BOUTIQUES_MARKETPLACE] })
+
+export const lireBoutiqueMarketplace = cache(async (slug: string) => {
+  try {
+    return await lireBoutiqueMarketplaceCachee(slug)
+  } catch (erreur) {
+    /* Une reponse partielle n'entre jamais dans le cache. Elle sert seulement
+       la toute premiere visite quand aucune ancienne copie n'existe encore. */
+    if (!(erreur instanceof CatalogueBoutiquePartiel)) throw erreur
+    return {
+      ...erreur.boutique,
+      offres: [],
+      catalogueIndisponible: true,
+    } satisfies BoutiquePubliqueMarketplace
+  }
 })
 
-export async function lireOffresMarketplace(params: {
-  marque?: string
-  prixMin?: number
-  prixMax?: number
-  q?: string
-  categorie?: string
-  categorieSlug?: string
-  boutique?: string
-  tri?: 'recent' | 'prix_asc' | 'prix_desc'
-  page?: number
-  taille?: number
-} = {}, visiteur?: string): Promise<ListeOffresMarketplace> {
-  const query = new URLSearchParams()
-  if (params.marque) query.set('marque', params.marque)
-  if (params.prixMin !== undefined) query.set('prixMin', String(params.prixMin))
-  if (params.prixMax !== undefined) query.set('prixMax', String(params.prixMax))
-  if (params.q) query.set('q', params.q)
-  if (params.categorie) query.set('categorie', params.categorie)
-  if (params.categorieSlug) query.set('categorieSlug', params.categorieSlug)
-  if (params.boutique) query.set('boutique', params.boutique)
-  if (params.tri) query.set('tri', params.tri)
-  query.set('page', String(params.page ?? 1))
-  query.set('taille', String(params.taille ?? 24))
+export async function lireOffresMarketplace(params: ParametresOffresMarketplace = {}, visiteur?: string): Promise<ListeOffresMarketplace> {
+  const query = parametresOffresMarketplace(params)
   const vide: ListeOffresMarketplace = {
     indisponible: true,
     offres: [],
@@ -210,9 +269,13 @@ export async function lireOffresMarketplace(params: {
   }
   try {
     const reponse = await fetch(`${BASE}/v1/marketplace/offres?${query}`, { headers: visiteur === undefined ? entetesLectureCommune() : entetesPourVisiteur(visiteur), next: { revalidate: 30 } })
-    if (!reponse.ok) return vide
+    if (!reponse.ok) {
+      console.error(`[marketplace] /v1/marketplace/offres : le backend a repondu ${reponse.status}`)
+      return vide
+    }
     return await reponse.json() as ListeOffresMarketplace
-  } catch {
+  } catch (erreur) {
+    console.error(`[marketplace] /v1/marketplace/offres : ${erreur instanceof Error ? erreur.message : String(erreur)}`)
     return vide
   }
 }

@@ -2,6 +2,7 @@ import { revalidateTag } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 import { ETIQUETTES_FIXES, etiquetteProduit } from '@/lib/catalogue-en-direct'
+import { ETIQUETTE_BOUTIQUES_MARKETPLACE } from '@/lib/marketplace-data'
 
 /**
  * LA PORTE PAR LAQUELLE LE COMPTOIR DIT A LA VITRINE QUE QUELQUE CHOSE A CHANGE.
@@ -126,6 +127,11 @@ export async function POST(request: Request) {
   const fixes = [...ETIQUETTES_FIXES]
   for (const etiquette of fixes) revalidateTag(etiquette, EXPIRER)
 
+  /* Une boutique publique prefere sa derniere copie valide a une page de panne.
+     La revalidation se fait derriere la copie existante ; si le backend
+     tousse pendant le rafraichissement, Next la conserve et retentera. */
+  revalidateTag(ETIQUETTE_BOUTIQUES_MARKETPLACE, 'max')
+
   /* PUIS LES FICHES NOMMEES. Leur etiquette est plus fine et ne coute rien a
      tirer en plus : le backend sait quel produit il vient d'ecrire. */
   const slugs = Array.isArray(demande.slugs)
@@ -134,5 +140,5 @@ export async function POST(request: Request) {
   const nommees = slugs.slice(0, 200).map(etiquetteProduit)
   for (const etiquette of nommees) revalidateTag(etiquette, EXPIRER)
 
-  return NextResponse.json({ revalide: [...fixes, ...nommees] })
+  return NextResponse.json({ revalide: [...fixes, ETIQUETTE_BOUTIQUES_MARKETPLACE, ...nommees] })
 }
