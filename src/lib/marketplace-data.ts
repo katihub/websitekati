@@ -34,6 +34,8 @@ export interface OffreMarketplace {
   /** La disponibilite decidee par l'equipe : hors `en_stock`, l'offre n'est plus commandable. */
   statutStock?: 'en_stock' | 'rupture' | 'reapprovisionnement'
   quantiteMinimale?: number
+  /** Le prix est public, mais seule une demande de devis peut initier la commande. */
+  devisUniquement?: boolean
   verifieParKatiLe?: string | null
   /** Les vrais avis « produit » publies (9 novembre 2026) ; null : produit encore sans avis. */
   avis?: { moyenne: number; nombre: number } | null

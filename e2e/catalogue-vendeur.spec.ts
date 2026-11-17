@@ -179,7 +179,7 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
   expect(api.appelsVers('POST', /produits-complets$/)[0]!.corps).toEqual({
     produit: { nom: 'Samsung Galaxy A25', slug: 'samsung-galaxy-a25', categorieId: '00000000-0000-4000-8000-000000000402' },
     vente: { etat: 'neuf', garantieMois: 12, delaiMaxJours: 2 },
-    variantes: [{ referenceVendeur: 'A25-128', prixFcfa: 189_000, quantiteMinimale: 1, statutStock: 'en_stock' }],
+    variantes: [{ referenceVendeur: 'A25-128', prixFcfa: 189_000, quantiteMinimale: 1, devisUniquement: false, statutStock: 'en_stock' }],
   })
 })
 
@@ -243,10 +243,24 @@ test('le marchand crée un produit complet : deux variantes avec leur prix, leur
   expect(api.appelsVers('POST', /produits-complets$/)[0]!.corps).toMatchObject({
     vente: { etat: 'neuf', garantieMois: 24, delaiMaxJours: 2 },
     variantes: [
-      { libelleVariante: '128 Go', referenceVendeur: 'A25-128', prixFcfa: 189_000, prixReferenceFcfa: 199_000, quantiteMinimale: 1, statutStock: 'en_stock' },
-      { libelleVariante: '256 Go', referenceVendeur: 'A25-256', prixFcfa: 219_000, quantiteMinimale: 1, statutStock: 'reapprovisionnement' },
+      { libelleVariante: '128 Go', referenceVendeur: 'A25-128', prixFcfa: 189_000, prixReferenceFcfa: 199_000, quantiteMinimale: 1, devisUniquement: false, statutStock: 'en_stock' },
+      { libelleVariante: '256 Go', referenceVendeur: 'A25-256', prixFcfa: 219_000, quantiteMinimale: 1, devisUniquement: false, statutStock: 'reapprovisionnement' },
     ],
   })
+})
+
+test('une boutique avec suivi de stock saisit la quantite et peut imposer le devis', async ({ page }) => {
+  api = (await espaceVendeur(page, []))
+    .quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${B}$`), { ...espaceBoutique(), suiviStock: true })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+
+  await expect(page.getByLabel('Quantité initiale de la variante 1')).toBeVisible()
+  await page.getByLabel('Quantité initiale de la variante 1').fill('7')
+  await page.getByLabel('Mode de commande de la variante 1').selectOption('devis')
+  await expect(page.getByText('Demander un devis', { exact: true })).toBeVisible()
 })
 
 test('la création reflète instantanément les données et la photo dans l’aperçu client', async ({ page }) => {

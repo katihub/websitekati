@@ -107,7 +107,7 @@ export function MarketplaceProductDetail({ product: item, recommendations = {}, 
   // Le MOQ est un plancher ; sans suivi de stock, seul le plafond de 99 (ou le MOQ s'il est plus haut) borne.
   const minimum = minimumDe(selected)
   const maximum = Math.min(selected?.disponible ?? 0, Math.max(99, minimum))
-  const available = Boolean(selected && selected.disponible >= minimum && selected.prixFcfa !== null)
+  const available = Boolean(selected && !selected.devisUniquement && selected.disponible >= minimum && selected.prixFcfa !== null)
   const quantity = Math.max(minimum, Math.min(qty, maximum))
   const choisir = (id: string) => { setOfferId(id); setQty(minimumDe(item.offres.find(offer => offer.id === id))); setNotice('') }
   const photos = item.images ?? []
@@ -147,7 +147,7 @@ export function MarketplaceProductDetail({ product: item, recommendations = {}, 
   }
 
   function addAccessory(offer: OffreMarketplace) {
-    if (offer.prixFcfa === null || offer.disponible <= 0 || !offer.modesLivraison?.length || !offer.boutique.id) return
+    if (offer.devisUniquement || offer.prixFcfa === null || offer.disponible <= 0 || !offer.modesLivraison?.length || !offer.boutique.id) return
     cart.add({ slug: offer.produit.slug, name: offer.titre ?? offer.produit.nom, price: offer.prixFcfa, image: offer.produit.images?.[0]?.url ?? null, offerId: offer.id, boutiqueId: offer.boutique.id, boutiqueNom: offer.boutique.nom, modesLivraison: offer.modesLivraison as never, villesLivraison: offer.villesLivraison ?? [], quantiteMinimale: offer.quantiteMinimale ?? 1, disponible: offer.disponible })
     setNotice(en ? `${offer.produit.nom} added to your cart.` : `${offer.produit.nom} ajouté au panier.`)
   }
@@ -163,7 +163,7 @@ export function MarketplaceProductDetail({ product: item, recommendations = {}, 
     router.push(`/marketplace/commande?articles=${encodeURIComponent(cle)}`)
   }
 
-  return <main className={styles.page}>
+  return <main className={styles.page} data-devis-uniquement={selected?.devisUniquement || undefined}>
       <nav className={styles.breadcrumb} aria-label={en ? 'Breadcrumb' : 'Fil d’Ariane'}><Link href="/">{en ? 'Home' : 'Accueil'}</Link><span>›</span><Link href="/catalogue">{en ? 'Catalogue' : 'Catalogue'}</Link>{item.categorieDetail ? <>{item.categorieDetail.parent ? <><span>›</span><Link href={`/categories/${item.categorieDetail.parent.slug}`}>{item.categorieDetail.parent.nom}</Link></> : null}<span>›</span><Link href={`/categories/${item.categorieDetail.slug}`}>{item.categorieDetail.nom}</Link></> : item.categorie ? <><span>›</span><Link href={`/recherche?q=${encodeURIComponent(item.categorie)}`}>{item.categorie}</Link></> : null}<span>›</span><span aria-current="page">{item.nom}</span></nav>
     <div className={styles.layout}>
       <section className={styles.gallery} aria-label={en ? 'Product images' : 'Visuel du produit'}><div className={styles.imageStage}>{illustration ? <Image src={illustration} alt={photoAlt} fill priority sizes="(max-width: 700px) 90vw, (max-width: 1200px) 40vw, 32vw" /> : <div className={styles.noImage}><span>{item.marque ?? item.categorie ?? 'KatiMarket'}</span><p>{en ? 'Photos coming soon' : 'Photos à venir'}</p></div>}{illustration ? <button className={styles.zoom} aria-label={en ? 'Enlarge image' : 'Agrandir le visuel'} onClick={() => zoom.current?.showModal()}><Icon name="zoom"/></button> : null}</div>{photos.length > 1 ? <ul className={styles.thumbs} aria-label={en ? 'More photos' : 'Autres photos'}>{photos.map((image, index) => <li key={image.id}><button type="button" aria-label={en ? `Show photo ${index + 1}` : `Afficher la photo ${index + 1}`} aria-current={index === photoIndex} onClick={() => setPhotoIndex(index)}><Image src={image.url} alt="" width={72} height={72} /></button></li>)}</ul> : null}<p className={styles.caption}>{photos.length ? (en ? 'Photos published by the shop and verified by KatiMarket.' : 'Photos publiées par la boutique et vérifiées par KatiMarket.') : illustration ? (en ? 'Illustrative image · confirm the model and colour with the seller.' : 'Visuel illustratif · confirmez le modèle et la couleur auprès du vendeur.') : (en ? 'The shop has not published photos for this product yet.' : 'La boutique n’a pas encore publié de photos pour ce produit.')}</p></section>

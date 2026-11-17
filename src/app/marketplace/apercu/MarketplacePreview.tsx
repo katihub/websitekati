@@ -78,6 +78,8 @@ export type MarketplaceProduct = {
     titre: string | null
     prixFcfa: number | null
     prixReferenceFcfa?: number | null
+    /** Prix visible, commande directe interdite : le client passe par un devis. */
+    devisUniquement?: boolean
     garantieMois?: number | null
     /** Le nom de la variante (« 128 Go / Noir ») ; null pour une offre sans variante. */
     libelleVariante?: string | null

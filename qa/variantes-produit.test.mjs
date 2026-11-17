@@ -21,6 +21,19 @@ test('deux references vides ne sont pas un doublon, deux references saisies iden
   assert.equal(problemes[1]?.champ, 'reference')
 })
 
+test('une boutique qui suit son stock doit saisir une quantite initiale, zero compris', () => {
+  assert.match(erreurVariantes([ligne({ prix: '5000' })], true), /quantité initiale/i)
+  assert.equal(erreurVariantes([ligne({ prix: '5000', quantite: '0' })], true), '')
+  assert.equal(erreurVariantes([ligne({ prix: '5000', quantite: '12' })], true), '')
+})
+
+test('la quantite n est envoyee que pour une boutique qui suit son stock', () => {
+  const saisie = ligne({ prix: '5000', quantite: '12', devisUniquement: true })
+  assert.equal('quantiteInitiale' in variantesPourApi([saisie], false)[0], false)
+  assert.equal(variantesPourApi([saisie], true)[0].quantiteInitiale, 12)
+  assert.equal(variantesPourApi([saisie], true)[0].devisUniquement, true)
+})
+
 test('le message dit quelle variante et quel champ sont en cause', () => {
   const lignes = [ligne({ libelle: 'A', prix: '1' }), ligne({ libelle: 'B', prix: 'abc' })]
   assert.equal(problemesVariantes(lignes)[1]?.champ, 'prix')
