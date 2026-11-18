@@ -64,7 +64,7 @@ function mesurerPhotos(fichiers: File[]): Promise<string[]> {
   }))).then((textes) => textes.filter((texte): texte is string => Boolean(texte)))
 }
 
-export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente, direct = true }: { boutiqueId: string; produitId: string; onFermer: () => void; vente?: ReactNode; direct?: boolean }) {
+export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente, direct = true, stockObligatoire = false }: { boutiqueId: string; produitId: string; onFermer: () => void; vente?: ReactNode; direct?: boolean; stockObligatoire?: boolean }) {
   const [avertissements, setAvertissements] = useState<string[]>([])
   const [contenu, setContenu] = useState<ContenuFiche | null>(null)
   const [nom, setNom] = useState('')
@@ -172,6 +172,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente, di
   }
 
   async function soumettre() {
+    if (stockObligatoire) return setMessage({ type: 'erreur', texte: 'La gestion du stock est obligatoire. Indiquez la quantité disponible de chaque variante avant de modifier cette fiche.' })
     // La fiche garde au moins une photo (9 novembre 2026).
     if (!galerie.length) return setMessage({ type: 'erreur', texte: MESSAGE_PHOTO_OBLIGATOIRE })
     setEnvoi(true); setMessage(null)
@@ -339,7 +340,7 @@ export function EditeurFicheProduit({ boutiqueId, produitId, onFermer, vente, di
       </section>
 
       <div className="flex flex-wrap justify-end gap-2 border-t border-rule pt-4">
-        <button type="button" onClick={() => void soumettre()} disabled={verrouille || !titreValide || !descriptionValide || !altValides || !courteValide}
+        <button type="button" onClick={() => void soumettre()} disabled={verrouille || stockObligatoire || !titreValide || !descriptionValide || !altValides || !courteValide}
           className="min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Envoi…' : direct ? 'Enregistrer et mettre en ligne' : 'Soumettre le contenu à validation'}</button>
       </div>
     </section>

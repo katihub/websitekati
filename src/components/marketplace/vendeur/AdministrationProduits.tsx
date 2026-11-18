@@ -68,7 +68,7 @@ type Offre = {
   libelleVariante: string | null
   attributsVariante: Record<string, string> | null
   produit: { id: string; nom: string; slug: string; statut: string }
-  stock: { quantite: number; quantiteReservee: number } | null
+  stock: { quantite: number; quantiteReservee: number; quantiteRenseignee?: boolean } | null
   statutStock?: 'en_stock' | 'reapprovisionnement' | 'rupture'
   revisions: Revision[]
 }
@@ -102,7 +102,7 @@ function identique(a: BrouillonLot, b: BrouillonLot) {
   return a.prix === b.prix && a.prixReference === b.prixReference && a.stock === b.stock && a.minimum === b.minimum && a.delai === b.delai
 }
 
-export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offres, canPublish, direct = true, suiviStock = false, livraison, onRefresh }: {
+export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offres, canPublish, direct = true, suiviStock = true, livraison, onRefresh }: {
   boutiqueId: string
   nomBoutique: string
   produits: Produit[]
@@ -121,8 +121,10 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
 
   // La fiche complete (6 novembre 2026) : le contenu valide, et entre deux, ce qui se publie tout de suite.
   const produitOuvert = fiche ? produits.find((produit) => produit.id === fiche) : undefined
-  if (fiche) return <EditeurFicheProduit key={fiche} boutiqueId={boutiqueId} produitId={fiche} direct={direct} onFermer={() => setFiche(null)}
-    vente={produitOuvert ? <VenteDuProduit boutiqueId={boutiqueId} direct={direct} produit={produitOuvert} offres={offres.filter((offre) => offre.produit.id === fiche) as unknown as OffreDuProduit[]} onRefresh={onRefresh} /> : null} />
+  const offresOuvertes = fiche ? offres.filter((offre) => offre.produit.id === fiche) : []
+  const stockObligatoire = offresOuvertes.some((offre) => !offre.stock?.quantiteRenseignee)
+  if (fiche) return <EditeurFicheProduit key={fiche} boutiqueId={boutiqueId} produitId={fiche} direct={direct} stockObligatoire={stockObligatoire} onFermer={() => setFiche(null)}
+    vente={produitOuvert ? <VenteDuProduit boutiqueId={boutiqueId} direct={direct} produit={produitOuvert} offres={offresOuvertes as unknown as OffreDuProduit[]} onRefresh={onRefresh} /> : null} />
 
   return <section className={styles.shell} aria-label="Administration des produits">
     <header className={styles.header}>
@@ -138,7 +140,7 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
     {notice ? <p role="status" className={styles.feedback}>{notice}</p> : null}
     {mode === 'ajout' ? <AjoutProduit boutiqueId={boutiqueId} nomBoutique={nomBoutique} canPublish={canPublish} suiviStock={suiviStock} onAnnuler={() => setMode('liste')} direct={direct} onCree={async (enLigne) => { await onRefresh(); setNotice(enLigne ? 'Produit en ligne : il est visible sur votre boutique.' : 'Produit envoyé à la validation de KatiMarket. Vous pouvez suivre son statut dans la liste.'); setMode('liste') }} /> : null}
     {mode === 'lot' ? <ModificationLot boutiqueId={boutiqueId} offres={offres} onRetour={() => setMode('liste')} onRefresh={onRefresh} /> : null}
-    {mode === 'liste' ? <ListeProduits boutiqueId={boutiqueId} produits={produits} offres={offres} canPublish={canPublish} livraison={livraison} onRefresh={onRefresh} onPrix={(nom) => setNotice(`Prix enregistré : « ${nom} » est en ligne.`)} onFiche={setFiche} onCategories={setRangement} onAjouter={() => setMode('ajout')} onLot={() => setMode('lot')} /> : null}
+    {mode === 'liste' ? <ListeProduits boutiqueId={boutiqueId} produits={produits} offres={offres} canPublish={canPublish} livraison={livraison} onRefresh={onRefresh} onPrix={(nom) => setNotice(`Prix enregistré : « ${nom} » est en ligne.`)} onSupprime={(nom) => setNotice(`« ${nom} » a été supprimé de votre catalogue.`)} onFiche={setFiche} onCategories={setRangement} onAjouter={() => setMode('ajout')} onLot={() => setMode('lot')} /> : null}
     {rangement ? <FenetreCategories key={rangement.id} boutiqueId={boutiqueId} produit={rangement} onFermer={() => setRangement(null)}
       onEnregistre={async () => { await onRefresh(); setRangement(null); setNotice('Catégories enregistrées et publiées.') }} /> : null}
   </section>
@@ -203,10 +205,12 @@ function ApercuProduit({ boutiqueId, produit }: { boutiqueId: string; produit: P
   </span>
 }
 
-function ListeProduits({ boutiqueId, produits, offres, canPublish, livraison, onRefresh, onPrix, onFiche, onCategories, onAjouter, onLot }: { boutiqueId: string; produits: Produit[]; offres: Offre[]; canPublish: boolean; livraison?: Livraison; onRefresh: () => Promise<void>; onPrix: (nom: string) => void; onFiche: (id: string) => void; onCategories: (produit: Produit) => void; onAjouter: () => void; onLot: () => void }) {
+function ListeProduits({ boutiqueId, produits, offres, canPublish, livraison, onRefresh, onPrix, onSupprime, onFiche, onCategories, onAjouter, onLot }: { boutiqueId: string; produits: Produit[]; offres: Offre[]; canPublish: boolean; livraison?: Livraison; onRefresh: () => Promise<void>; onPrix: (nom: string) => void; onSupprime: (nom: string) => void; onFiche: (id: string) => void; onCategories: (produit: Produit) => void; onAjouter: () => void; onLot: () => void }) {
   const [recherche, setRecherche] = useState('')
   const [statut, setStatut] = useState('tous')
   const [page, setPage] = useState(1)
+  const [suppression, setSuppression] = useState<string | null>(null)
+  const [erreurSuppression, setErreurSuppression] = useState('')
   const offresParProduit = useMemo(() => {
     const index = new Map<string, Offre[]>()
     offres.forEach((offre) => index.set(offre.produit.id, [...(index.get(offre.produit.id) ?? []), offre]))
@@ -221,16 +225,34 @@ function ListeProduits({ boutiqueId, produits, offres, canPublish, livraison, on
   }, [produits, recherche, statut])
   const totalPages = Math.max(1, Math.ceil(filtres.length / TAILLE_PAGE_PRODUITS))
   const visibles = filtres.slice((page - 1) * TAILLE_PAGE_PRODUITS, page * TAILLE_PAGE_PRODUITS)
+
+  async function supprimer(produit: Produit) {
+    const confirme = window.confirm(`Supprimer « ${produit.nom} » de votre catalogue ?\n\nLa suppression sera impossible si ce produit figure déjà dans une commande.`)
+    if (!confirme) return
+    setErreurSuppression('')
+    setSuppression(produit.id)
+    try {
+      await api(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}`, { methode: 'DELETE' })
+      onSupprime(produit.nom)
+      await onRefresh()
+    } catch (cause) {
+      setErreurSuppression(messageErreur(cause))
+    } finally {
+      setSuppression(null)
+    }
+  }
+
   return <>
     <div className={styles.toolbar}><label className={styles.search}><span aria-hidden>⌕</span><input aria-label="Rechercher un produit" value={recherche} onChange={(event) => { setRecherche(event.target.value); setPage(1) }} placeholder="Rechercher un produit, une marque…" /></label><label className={styles.statusFilter}>Statut<select aria-label="Filtrer par statut" value={statut} onChange={(event) => { setStatut(event.target.value); setPage(1) }}><option value="tous">Tous les statuts</option>{[...new Set(produits.map((produit) => produit.statut))].map((value) => <option key={value} value={value}>{STATUTS[value] ?? value}</option>)}</select></label><button type="button" onClick={onLot} disabled={!offres.length}>Modifier prix, disponibilité et stock</button></div>
+    {erreurSuppression ? <p role="alert" className={styles.errorText}>{erreurSuppression}</p> : null}
     {filtres.length ? <>
       <p className={styles.listSummary}>{filtres.length} produit(s) · page {page} sur {totalPages}</p>
       <div className={styles.listWrap}><table className={styles.productTable}><thead><tr><th>Produit</th><th>Catégorie</th><th>Statut</th><th>Offres / stock</th><th>Action</th></tr></thead><tbody>{visibles.map((produit) => {
       const liees = offresParProduit.get(produit.id) ?? []
       const prix = liees.map((offre) => offre.prixFcfa ?? offre.revisions[0]?.prixFcfa).filter((value): value is number => typeof value === 'number').sort((a, b) => a - b)[0]
       const disponibles = liees.reduce((total, offre) => total + Math.max(0, (offre.stock?.quantite ?? 0) - (offre.stock?.quantiteReservee ?? 0)), 0)
-      const stockLabel = liees.length ? liees.some((offre) => !offre.stock) ? 'Stock non renseigné' : `${disponibles} disponible(s)` : null
-      return <tr key={produit.id} data-sans-image={produit.sansImage || undefined}><td><div className={styles.productIdentity}><ApercuProduit key={`${produit.id}:${Boolean(produit.sansImage)}`} boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small>{produit.sansImage ? <small className={styles.imageRequired}>Image obligatoire · invisible aux clients</small> : null}</div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span>{produit.statut === 'suspendu' && produit.motifDecision ? <small className={styles.motif}>Motif : {produit.motifDecision}</small> : null}</td><td>{produitSansPrix(produit, liees) ? <AjouterPrix boutiqueId={boutiqueId} produit={produit} livraison={livraison} disabled={!canPublish || Boolean(produit.sansImage)} onEnregistre={async () => { await onRefresh(); onPrix(produit.nom) }} /> : <><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</>}</td><td>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>{produit.sansImage ? 'Ajouter une image' : 'Modifier la fiche'}</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : '—'}</td></tr>
+      const stockLabel = liees.length ? liees.some((offre) => !offre.stock?.quantiteRenseignee) ? 'Stock non renseigné' : `${disponibles} disponible(s)` : null
+      return <tr key={produit.id} data-sans-image={produit.sansImage || undefined}><td><div className={styles.productIdentity}><ApercuProduit key={`${produit.id}:${Boolean(produit.sansImage)}`} boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small>{produit.sansImage ? <small className={styles.imageRequired}>Image obligatoire · invisible aux clients</small> : null}</div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span>{produit.statut === 'suspendu' && produit.motifDecision ? <small className={styles.motif}>Motif : {produit.motifDecision}</small> : null}</td><td>{produitSansPrix(produit, liees) ? <AjouterPrix boutiqueId={boutiqueId} produit={produit} livraison={livraison} disabled={!canPublish || Boolean(produit.sansImage)} onEnregistre={async () => { await onRefresh(); onPrix(produit.nom) }} /> : <><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</>}</td><td><div className={styles.rowActions}>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)} disabled={Boolean(suppression)}>{produit.sansImage ? 'Ajouter une image' : 'Modifier la fiche'}</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} disabled={Boolean(suppression)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : null}<button type="button" className={styles.deleteButton} onClick={() => void supprimer(produit)} disabled={Boolean(suppression)} aria-label={`Supprimer ${produit.nom}`}>{suppression === produit.id ? 'Suppression…' : 'Supprimer'}</button></div></td></tr>
     })}</tbody></table></div>
       <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" aria-label="Page précédente" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>←</button><button type="button" aria-label="Page suivante" disabled={page === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>→</button></div></div>
     </> : <div className={styles.empty}><span aria-hidden>□</span><h3>{recherche || statut !== 'tous' ? 'Aucun résultat' : 'Votre catalogue est vide'}</h3><p>{recherche || statut !== 'tous' ? 'Modifiez la recherche ou le statut sélectionné.' : 'Créez votre première fiche avec un aperçu client en direct.'}</p>{!recherche && statut === 'tous' ? <button type="button" className={styles.primary} onClick={onAjouter}>Ajouter un produit</button> : null}</div>}
@@ -240,23 +262,26 @@ function ListeProduits({ boutiqueId, produits, offres, canPublish, livraison, on
 /** SANS PRIX, PAS EN VITRINE (7 novembre 2026) : le vendeur ajoute son prix sur la ligne du produit. */
 function AjouterPrix({ boutiqueId, produit, livraison, disabled, onEnregistre }: { boutiqueId: string; produit: Produit; livraison?: Livraison; disabled: boolean; onEnregistre: () => Promise<void> }) {
   const [saisie, setSaisie] = useState('')
+  const [quantite, setQuantite] = useState('')
   const [pending, setPending] = useState(false)
   const [erreur, setErreur] = useState('')
   async function enregistrer(event: FormEvent) {
     event.preventDefault(); setErreur('')
     const prix = lirePrix(saisie)
     if (prix === null) return setErreur('Indiquez un prix en FCFA.')
+    const stock = Number(quantite)
+    if (!Number.isInteger(stock) || stock < 0 || stock > 1_000_000) return setErreur('Indiquez la quantité disponible, de 0 à 1 000 000.')
     if (!livraison?.modesLivraison.length || !livraison.villesLivraison.length) return setErreur('Renseignez d’abord vos modes et villes de livraison dans Paramètres.')
     setPending(true)
     try {
-      await api(`/marketplace/boutiques/${boutiqueId}/offres`, { methode: 'POST', corps: offreDuPrix({ ...produit, garantieMinimaleMois: produit.categorieDetail?.garantieMinimaleMois }, prix, livraison) })
-      setSaisie(''); await onEnregistre()
+      await api(`/marketplace/boutiques/${boutiqueId}/offres`, { methode: 'POST', corps: offreDuPrix({ ...produit, garantieMinimaleMois: produit.categorieDetail?.garantieMinimaleMois }, prix, stock, livraison) })
+      setSaisie(''); setQuantite(''); await onEnregistre()
     } catch (cause) { setErreur(messageErreur(cause)) } finally { setPending(false) }
   }
   return <form className={styles.ajoutPrix} onSubmit={enregistrer} data-testid={`ajouter-prix-${produit.slug}`}>
     <strong className={styles.sansPrix}>Sans prix : ajoutez un prix</strong>
     <small>Sans prix, ce produit ne s’affiche pas sur votre boutique.</small>
-    <span><input inputMode="numeric" aria-label={`Prix de ${produit.nom} en FCFA`} placeholder="Prix FCFA" value={saisie} disabled={disabled || pending} onChange={(event) => setSaisie(event.target.value)} /><button type="submit" disabled={disabled || pending || !saisie.trim()}>{pending ? '…' : 'Mettre en vente'}</button></span>
+    <span><input inputMode="numeric" aria-label={`Prix de ${produit.nom} en FCFA`} placeholder="Prix FCFA" value={saisie} disabled={disabled || pending} onChange={(event) => setSaisie(event.target.value)} /><input type="number" min="0" max="1000000" step="1" aria-label={`Quantité initiale de ${produit.nom}`} placeholder="Quantité" value={quantite} disabled={disabled || pending} onChange={(event) => setQuantite(event.target.value)} /><button type="submit" disabled={disabled || pending || !saisie.trim() || !quantite.trim()}>{pending ? '…' : 'Mettre en vente'}</button></span>
     {erreur ? <small role="alert" className={styles.erreurPrix}>{erreur}</small> : null}
   </form>
 }

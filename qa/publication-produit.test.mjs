@@ -12,12 +12,12 @@ test('a live product without a published or pending price is flagged', () => {
 })
 
 test('the offer of an added price takes the shop delivery and the category warranty', () => {
-  const offre = offreDuPrix({ id: 'p1', nom: 'Cintres à linges', slug: 'cintres-a-linges', garantieMinimaleMois: 3 }, 2500, {
+  const offre = offreDuPrix({ id: 'p1', nom: 'Cintres à linges', slug: 'cintres-a-linges', garantieMinimaleMois: 3 }, 2500, 12, {
     modesLivraison: ['katihub', 'vendeur', 'retrait'],
     villesLivraison: ['Douala'],
   })
   assert.deepEqual(offre, {
-    produitId: 'p1', referenceVendeur: 'cintres-a-linges', titre: 'Cintres à linges', prixFcfa: 2500, etat: 'neuf',
+    produitId: 'p1', referenceVendeur: 'cintres-a-linges', titre: 'Cintres à linges', prixFcfa: 2500, quantiteInitiale: 12, etat: 'neuf',
     garantieMois: 3, modesLivraison: ['katihub', 'vendeur'], villesLivraison: ['Douala'], delaiMaxJours: 2, quantiteMinimale: 1,
   })
 })

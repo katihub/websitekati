@@ -31,7 +31,7 @@ export {
  * `afficherErreurs` : apres un envoi refuse, toutes les lignes fautives se montrent ;
  * avant, une ligne ne se signale que des que le vendeur a commence a la remplir.
  */
-export function PrixEtVariantes({ lignes, onChange, suiviStock = false, disabled = false, afficherErreurs = false }: { lignes: LigneVariante[]; onChange: (lignes: LigneVariante[]) => void; suiviStock?: boolean; disabled?: boolean; afficherErreurs?: boolean }) {
+export function PrixEtVariantes({ lignes, onChange, suiviStock = true, disabled = false, afficherErreurs = false }: { lignes: LigneVariante[]; onChange: (lignes: LigneVariante[]) => void; suiviStock?: boolean; disabled?: boolean; afficherErreurs?: boolean }) {
   const changer = (rang: number, champ: keyof LigneVariante, valeur: string | boolean) => onChange(lignes.map((ligne, i) => (i === rang ? { ...ligne, [champ]: valeur } : ligne)))
   const plusieurs = lignes.length > 1
   const problemes = problemesVariantes(lignes, suiviStock)

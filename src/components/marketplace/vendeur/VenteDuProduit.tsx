@@ -21,6 +21,7 @@ export type OffreDuProduit = OffreVariante & {
   delaiMaxJours?: number | null
   etat?: string | null
   garantieMois?: number | null
+  stock?: { quantite: number; quantiteReservee: number; quantiteRenseignee: boolean } | null
 }
 
 type Brouillon = { prix: string; prixBarre: string; minimum: string; statut: StatutStock }
@@ -57,16 +58,28 @@ export function VenteDuProduit({ boutiqueId, produit, offres, onRefresh, direct 
   const [occupe, setOccupe] = useState('')
   const [message, setMessage] = useState<{ type: 'succes' | 'erreur'; texte: string } | null>(null)
   const [origineVariante, setOrigineVariante] = useState<OffreDuProduit | null>(null)
+  const [quantitesInitiales, setQuantitesInitiales] = useState<Record<string, string>>({})
   const base = offres[0]?.revisions[0]
   const [delai, setDelai] = useState(String(offres[0]?.delaiMaxJours ?? base?.delaiMaxJours ?? 2))
   const [etat, setEtat] = useState(offres[0]?.etat ?? base?.etat ?? 'neuf')
   const [garantie, setGarantie] = useState(String(offres[0]?.garantieMois ?? base?.garantieMois ?? 0))
   const options = categoriesRangeables(categories)
+  const offresSansQuantite = offres.filter((offre) => !offre.stock?.quantiteRenseignee)
+  const stockObligatoire = offresSansQuantite.length > 0
 
   async function agir(cle: string, action: () => Promise<void>, succes: string) {
     setOccupe(cle); setMessage(null)
     try { await action(); setMessage({ type: 'succes', texte: succes }); await onRefresh() } catch (cause) { setMessage({ type: 'erreur', texte: erreur(cause) }) } finally { setOccupe('') }
   }
+
+  const enregistrerStockInitial = () => agir('stock-initial', async () => {
+    for (const offre of offresSansQuantite) {
+      const quantite = Number(quantitesInitiales[offre.id])
+      if (!Number.isInteger(quantite) || quantite < 0 || quantite > 1_000_000) throw new Error(`Indiquez une quantité valide pour ${offre.libelleVariante ?? produit.nom}.`)
+      if (quantite < (offre.stock?.quantiteReservee ?? 0)) throw new Error(`${offre.libelleVariante ?? produit.nom} : ${offre.stock?.quantiteReservee ?? 0} unité(s) sont déjà réservées.`)
+      await api(`/marketplace/boutiques/${boutiqueId}/offres/${offre.id}/stock`, { methode: 'POST', corps: { quantite, motif: 'Initialisation du stock obligatoire' } })
+    }
+  }, 'Quantités enregistrées. Vous pouvez maintenant modifier ce produit.')
 
   const enregistrerCategories = () => agir('categories', async () => {
     if (!principale) throw new Error('Choisissez la catégorie principale.')
@@ -111,6 +124,13 @@ export function VenteDuProduit({ boutiqueId, produit, offres, onRefresh, direct 
   return <div className={styles.fiche}>
     {message ? <p role={message.type === 'erreur' ? 'alert' : 'status'} className={message.type === 'erreur' ? styles.erreur : styles.succes}>{message.texte}</p> : null}
 
+    {stockObligatoire ? <section className={styles.bloc} aria-labelledby="stock-obligatoire">
+      <header><h3 id="stock-obligatoire">Quantités obligatoires avant modification</h3></header>
+      <p className={styles.aide}>Ce produit existait avant la gestion obligatoire du stock. Indiquez la quantité disponible de chaque variante ; 0 signifie hors stock. Aucun autre changement ne sera enregistré avant cette étape.</p>
+      <div className={styles.champs}>{offresSansQuantite.map((offre) => <label key={offre.id}>{offre.libelleVariante ?? produit.nom}<input required type="number" min="0" max="1000000" step="1" value={quantitesInitiales[offre.id] ?? ''} onChange={(event) => setQuantitesInitiales((actuelles) => ({ ...actuelles, [offre.id]: event.target.value }))} /></label>)}</div>
+      <button type="button" className={styles.enregistrer} disabled={occupe === 'stock-initial'} onClick={() => void enregistrerStockInitial()}>{occupe === 'stock-initial' ? 'Enregistrement…' : 'Enregistrer les quantités'}</button>
+    </section> : null}
+
     <section className={styles.bloc} aria-labelledby="fiche-categories">
       <header><h3 id="fiche-categories">Catégories</h3><Badge direct /></header>
       <p className={styles.aide}>Jusqu’à 3 catégories. Le produit apparaît dans chacune ; la première garde les règles (garantie minimale, variantes).</p>
@@ -118,7 +138,7 @@ export function VenteDuProduit({ boutiqueId, produit, offres, onRefresh, direct 
         <label>Catégorie principale<select value={principale} onChange={(e) => { setPrincipale(e.target.value); setAutres((liste) => liste.filter((id) => id !== e.target.value)) }} data-testid="fiche-categorie-principale"><option value="">Sélectionner…</option>{options.map((option) => <option key={option.id} value={option.id}>{option.libelle}</option>)}</select></label>
         <AutresCategories arbre={categories} principale={principale || undefined} valeur={autres} onChange={setAutres} />
       </div>
-      <button type="button" className={styles.enregistrer} disabled={occupe === 'categories'} onClick={() => void enregistrerCategories()}>Enregistrer les catégories</button>
+      <button type="button" className={styles.enregistrer} disabled={stockObligatoire || occupe === 'categories'} onClick={() => void enregistrerCategories()}>Enregistrer les catégories</button>
     </section>
 
     <section className={styles.bloc} aria-labelledby="fiche-variantes">

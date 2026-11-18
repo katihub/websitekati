@@ -94,6 +94,7 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
     const libelle = String(donnees.get('libelle') ?? '').trim() || (attributs ? Object.values(attributs).join(' / ') : '')
     if (!libelle) throw new Error('Donnez un nom à la variante, ou au moins un attribut.')
     const prixFcfa = entier(donnees, 'prix')!
+    const quantiteInitiale = entier(donnees, 'quantite')!
     const prixReferenceFcfa = entier(donnees, 'prix-reference', false)
     if (prixReferenceFcfa !== undefined && prixReferenceFcfa <= prixFcfa) throw new Error('Le prix barré doit être supérieur au prix de vente.')
     await api(`/marketplace/boutiques/${boutiqueId}/offres/${origine.id}/variantes`, {
@@ -104,6 +105,7 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         // Vide : KatiMarket compose la reference (prefixe boutique, nom du produit, numerotation).
         ...(String(donnees.get('reference') ?? '').trim() ? { referenceVendeur: String(donnees.get('reference')).trim() } : {}),
         prixFcfa,
+        quantiteInitiale,
         prixReferenceFcfa,
       },
     })
@@ -136,6 +138,7 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         <ChampTexte nom="prix" libelle="Prix FCFA" required inputMode="numeric" pattern="[0-9]+" />
         <ChampTexte nom="prix-reference" libelle="Prix barré" inputMode="numeric" pattern="[0-9]*" />
       </div>
+      <ChampTexte nom="quantite" libelle="Quantité initiale" aide="Obligatoire. Saisissez 0 si la variante est actuellement hors stock." required inputMode="numeric" pattern="[0-9]+" />
     </FenetreAction>
   )
 }

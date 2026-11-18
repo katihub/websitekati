@@ -442,17 +442,17 @@ export function SellerWorkspace() {
             onPanel={openPanel}
           /> : null}
           {panel === 'verification' ? !loaded.documents ? <SectionLoading /> : access.documents === 'allowed' ? <VerificationPanel shopId={space.id} documents={documents} onRefresh={() => refreshSections(['documents'])} /> : <SectionUnavailable access={access.documents} /> : null}
-          {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} direct={space.vendeur.statut === 'actif'} suiviStock={Boolean(space.suiviStock)} livraison={space} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.products} /> : null}
+          {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} direct={space.vendeur.statut === 'actif'} livraison={space} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.products} /> : null}
           {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
           {panel === 'messages' ? <MessagerieKati shopId={space.id} /> : null}
-          {panel === 'offers' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.offers === 'allowed' ? <div className={styles.inventoryStack}>{space.suiviStock ? <InventoryPanel shopId={space.id} offers={offers} onRefresh={() => refreshSections(['offers'])} /> : null}<OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /></div> : <SectionUnavailable access={access.offers} /> : null}
+          {panel === 'offers' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.offers === 'allowed' ? <div className={styles.inventoryStack}><InventoryPanel shopId={space.id} offers={offers} onRefresh={() => refreshSections(['offers'])} /><OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /></div> : <SectionUnavailable access={access.offers} /> : null}
           {panel === 'orders' ? !loaded.orders ? <SectionLoading /> : access.orders === 'allowed' ? <OrdersPanel shopId={space.id} listing={orders} onRefresh={() => refreshSections(['orders'])} /> : <SectionUnavailable access={access.orders} /> : null}
           {panel === 'deliveries' ? !loaded.deliveries ? <SectionLoading /> : access.deliveries === 'allowed' ? <LivraisonsBoutique shopId={space.id} /> : <SectionUnavailable access={access.deliveries} /> : null}
           {panel === 'disputes' ? !loaded.disputes ? <SectionLoading /> : access.disputes === 'allowed' ? <DisputesPanel disputes={disputes} onRefresh={() => refreshSections(['disputes'])} /> : <SectionUnavailable access={access.disputes} /> : null}
           {panel === 'payments' ? !loaded.finance || !loaded.payments ? <SectionLoading /> : access.finance === 'allowed' && finance ? <PaymentsPanel shopId={space.id} finance={finance} listing={payments} canWithdraw={space.mesRoles.includes('proprietaire')} onRefresh={() => refreshSections(['finance', 'payments'])} /> : <SectionUnavailable access={access.finance} /> : null}
           {panel === 'reviews' ? !loaded.reviews ? <SectionLoading /> : access.reviews === 'allowed' ? <ReviewsPanel listing={reviews} onRefresh={() => refreshSections(['reviews'])} /> : <SectionUnavailable access={access.reviews} /> : null}
           {panel === 'customers' ? !loaded.customers ? <SectionLoading /> : access.customers === 'allowed' ? <CustomersPanel customers={customers.elements} /> : <SectionUnavailable access={access.customers} /> : null}
-          {panel === 'settings' ? space.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <div className={styles.detailStack}><StockTrackingSetting shop={space} onRefresh={() => load(space.id)} /><SettingsPanel key={space.id} shop={space} onRefresh={() => load(space.id)} /></div> : <SectionUnavailable access="denied" /> : null}
+          {panel === 'settings' ? space.mesRoles.some(role => ['proprietaire', 'gestionnaire'].includes(role)) ? <div className={styles.detailStack}><SettingsPanel key={space.id} shop={space} onRefresh={() => load(space.id)} /></div> : <SectionUnavailable access="denied" /> : null}
           {panel === 'members' ? !loaded.members ? <SectionLoading /> : access.members === 'allowed' ? <MembersPanel shopId={space.id} members={members} canManage={space.mesRoles.includes('proprietaire')} onRefresh={() => refreshSections(['members'])} /> : <SectionUnavailable access={access.members} /> : null}
         </> : <EmptyShop />}
       </section>
@@ -749,30 +749,6 @@ function ReviewsPanel({ listing, onRefresh }: { listing: Listing<ShopReview>; on
 
 function CustomersPanel({ customers }: { customers: ShopCustomer[] }) {
   return <div className={styles.detailStack}><section className={styles.detailIntro}><span>RELATION CLIENT</span><h2>Les personnes qui ont commandé chez vous</h2><p>Les 30 clients les plus récents. Seuls le nom renseigné et l’historique de commande agrégé sont affichés ; les coordonnées personnelles restent protégées.</p></section><section className={styles.featureList}><header><h2>Clients récents</h2><span>{customers.length} affiché(s)</span></header>{customers.length ? <ul>{customers.map((customer, index) => <li key={customer.id}><div><strong>{customer.nom || `Client n°${index + 1}`}</strong><small>{customer.sansCompte ? 'Commande sans compte' : 'Compte client'} · {customer.commandes} commande{customer.commandes > 1 ? 's' : ''}</small></div><small>{customer.derniereCommandeLe ? new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium' }).format(new Date(customer.derniereCommandeLe)) : '—'}</small></li>)}</ul> : <p className={styles.blank}>Vos clients apparaîtront ici après leur première commande.</p>}</section></div>
-}
-
-function StockTrackingSetting({ shop, onRefresh }: { shop: ShopSpace; onRefresh: () => Promise<void> }) {
-  const [pending, setPending] = useState(false)
-  const [message, setMessage] = useState('')
-
-  async function toggle() {
-    setPending(true)
-    setMessage('')
-    try {
-      const actif = !shop.suiviStock
-      const resultat = await api<{ suiviStock: boolean; offresSansQuantite: number }>(`/vendeurs/mes-boutiques/${shop.id}/suivi-stock`, { methode: 'POST', corps: { actif } })
-      await onRefresh()
-      setMessage(actif
-        ? `Suivi activé. ${resultat.offresSansQuantite} offre(s) restent au statut manuel tant que leur quantité n’est pas renseignée.`
-        : 'Suivi arrêté. Les quantités sont conservées et les offres repassent au statut manuel.')
-    } catch (cause) {
-      setMessage(errorText(cause))
-    } finally {
-      setPending(false)
-    }
-  }
-
-  return <section className={`${styles.settingsCard} ${styles.stockTrackingSetting}`}><div><h3>Je suis mon stock</h3><p>Limite les commandes aux quantités disponibles et met automatiquement les offres hors stock à zéro. Les offres sans quantité gardent leur statut actuel.</p></div><button type="button" data-active={Boolean(shop.suiviStock)} disabled={pending} onClick={() => void toggle()}>{pending ? 'Mise à jour…' : shop.suiviStock ? 'Désactiver le suivi' : 'Activer le suivi'}</button>{message ? <p className={styles.feedback} role="status">{message}</p> : null}</section>
 }
 
 function SettingsPanel({ shop, onRefresh }: { shop: ShopSpace; onRefresh: () => Promise<void> }) {
@@ -1123,7 +1099,7 @@ function InventoryPanel({ shopId, offers, onRefresh }: { shopId: string; offers:
 
 function OffersPanel({ shop, products, offers, canPublish, onRefresh }: { shop: ShopSpace; products: ProductProposal[]; offers: Offer[]; canPublish: boolean; onRefresh: () => Promise<void> }) {
   const activeProducts = products.filter((product) => product.statut === 'actif')
-  const [values, setValues] = useState({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' })
+  const [values, setValues] = useState({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', quantite: '', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' })
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<Retour>(null)
   const [pendingStock, setPendingStock] = useState('')
@@ -1145,10 +1121,13 @@ function OffersPanel({ shop, products, offers, canPublish, onRefresh }: { shop: 
   async function submit(event: FormEvent) {
     event.preventDefault(); setMessage(null)
     if (Number(values.garantie) < garantieMinimale) return setMessage(erreur(`La garantie de cette catégorie est d’au moins ${libelleMois(garantieMinimale)}.`))
+    const quantiteDemandee = values.quantite.trim() || window.prompt('Quantité initiale disponible (0 si le produit est hors stock) :')?.trim() || ''
+    const quantiteInitiale = Number(quantiteDemandee)
+    if (!quantiteDemandee || !Number.isInteger(quantiteInitiale) || quantiteInitiale < 0 || quantiteInitiale > 1_000_000) return setMessage(erreur('Indiquez une quantité initiale de 0 à 1 000 000.'))
     setPending(true)
     try {
-      await api(`/marketplace/boutiques/${shop.id}/offres`, { methode: 'POST', corps: { produitId: values.produitId, ...(values.reference.trim() ? { referenceVendeur: values.reference.trim() } : {}), titre: values.titre.trim(), description: values.description.trim() || undefined, prixFcfa: Number(values.prix), prixReferenceFcfa: values.prixReference ? Number(values.prixReference) : undefined, etat: values.etat, garantieMois: Number(values.garantie), modesLivraison: shop.modesLivraison, villesLivraison: shop.villesLivraison, delaiMaxJours: Number(values.delai), quantiteMinimale: Number(values.minimum) || 1 } })
-      setValues({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' }); setMessage(succes('Offre envoyée à la modération.')); await onRefresh()
+      await api(`/marketplace/boutiques/${shop.id}/offres`, { methode: 'POST', corps: { produitId: values.produitId, ...(values.reference.trim() ? { referenceVendeur: values.reference.trim() } : {}), titre: values.titre.trim(), description: values.description.trim() || undefined, prixFcfa: Number(values.prix), prixReferenceFcfa: values.prixReference ? Number(values.prixReference) : undefined, quantiteInitiale, etat: values.etat, garantieMois: Number(values.garantie), modesLivraison: shop.modesLivraison, villesLivraison: shop.villesLivraison, delaiMaxJours: Number(values.delai), quantiteMinimale: Number(values.minimum) || 1 } })
+      setValues({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', quantite: '', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' }); setMessage(succes('Offre envoyée à la modération.')); await onRefresh()
     } catch (cause) { setMessage(erreur(errorText(cause))) } finally { setPending(false) }
   }
 

@@ -26,6 +26,7 @@ export type Livraison = { modesLivraison: readonly string[]; villesLivraison: re
 export function offreDuPrix(
   produit: { id: string; nom: string; slug: string; garantieMinimaleMois?: number | null },
   prixFcfa: number,
+  quantiteInitiale: number,
   livraison: Livraison,
 ) {
   return {
@@ -33,6 +34,7 @@ export function offreDuPrix(
     referenceVendeur: produit.slug.slice(0, 80),
     titre: produit.nom.slice(0, 240),
     prixFcfa,
+    quantiteInitiale,
     etat: 'neuf',
     garantieMois: produit.garantieMinimaleMois ?? 0,
     modesLivraison: livraison.modesLivraison.slice(0, 2),

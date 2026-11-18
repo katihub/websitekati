@@ -26,3 +26,4 @@
 .missingImages strong{color:#7c2d12}
 .productTable tr[data-sans-image]{background:#fffaf3}
 .imageRequired{color:#c2410c!important;font-weight:800}
+.rowActions{display:grid;justify-items:start;gap:2px}.rowActions button:disabled{cursor:not-allowed;opacity:.45}.deleteButton{border:0;background:none;padding:4px 0;color:#b42318;font:750 11px inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
