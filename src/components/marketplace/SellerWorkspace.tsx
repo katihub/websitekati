@@ -805,6 +805,9 @@ function MembersPanel({ shopId, members, canManage, onRefresh }: {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'gestionnaire' | 'magasinier'>('magasinier')
+  const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
   const [showRevoked, setShowRevoked] = useState(false)
@@ -812,20 +815,59 @@ function MembersPanel({ shopId, members, canManage, onRefresh }: {
   const revokedCount = members.length - members.filter(member => member.actif).length
 
   async function invite(event: FormEvent) {
-    event.preventDefault(); setPending(true); setMessage('')
+    event.preventDefault()
+    setMessage('')
+    if (password && password.length < 8) {
+      setMessage('Le mot de passe doit contenir au moins 8 caractères.')
+      return
+    }
+    if (password !== passwordConfirmation) {
+      setMessage('Les deux mots de passe ne correspondent pas.')
+      return
+    }
+    setPending(true)
     try {
-      const result = await api<{ courrielEnvoye: boolean }>(`/vendeurs/mes-boutiques/${shopId}/membres`, {
-        methode: 'POST', corps: { nom: name.trim(), courriel: email.trim().toLowerCase(), role },
+      const result = await api<{ courrielEnvoye: boolean; motDePasseDefini?: boolean }>(`/vendeurs/mes-boutiques/${shopId}/membres`, {
+        methode: 'POST',
+        corps: {
+          nom: name.trim(),
+          courriel: email.trim().toLowerCase(),
+          role,
+          ...(password ? { motDePasse: password } : {}),
+        },
       })
-      setName(''); setEmail(''); await onRefresh()
-      setMessage(result.courrielEnvoye
-        ? 'Invitation enregistrée et envoyée par e-mail.'
-        : 'Accès préparé, mais aucun e-mail n’a été envoyé. Demandez à cette personne de créer un compte avec la même adresse, puis de se connecter à l’espace vendeur.')
+      setName('')
+      setEmail('')
+      setPassword('')
+      setPasswordConfirmation('')
+      await onRefresh()
+      if (password) {
+        setMessage(result.motDePasseDefini
+          ? 'Compte créé. Cette personne peut se connecter immédiatement avec le mot de passe défini.'
+          : 'Le membre a été ajouté, mais son mot de passe n’a pas pu être défini. Utilisez « Mot de passe » dans la liste pour réessayer.')
+      } else {
+        setMessage(result.courrielEnvoye
+          ? 'Invitation enregistrée et envoyée par e-mail.'
+          : 'Accès préparé, mais aucun e-mail n’a été envoyé. Définissez son mot de passe depuis la liste des membres.')
+      }
     } catch (cause) { setMessage(errorText(cause)) } finally { setPending(false) }
   }
 
   return <div className={styles.detailStack}><section className={styles.detailIntro}><span>VOTRE ÉQUIPE</span><h2>Chacun sa place dans la boutique</h2><p>Le gestionnaire suit l’activité et consulte les paiements, sans pouvoir demander de retrait. Le magasinier s’occupe du catalogue et des échanges avec les clients. Seul le propriétaire attribue les accès.</p></section>
-    {canManage ? <section className={styles.settingsCard}><h3>Inviter une personne</h3><p className={styles.memberHint}>Utilisez l’adresse avec laquelle elle se connectera à KatiMarket. Si elle n’a pas encore de compte, elle pourra en créer un avec cette même adresse.</p><form className={styles.memberInvite} onSubmit={event => void invite(event)}><label>Nom complet<input required minLength={2} maxLength={80} autoComplete="name" value={name} onChange={event => setName(event.target.value)} placeholder="Ex. Marie Nguema" /></label><label>Adresse e-mail<input required type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="marie@exemple.cm" /></label><label>Rôle<select value={role} onChange={event => setRole(event.target.value as 'gestionnaire' | 'magasinier')}><option value="magasinier">Magasinier · produits et avis</option><option value="gestionnaire">Gestionnaire · gestion courante</option></select></label><button disabled={pending}>{pending ? 'Invitation en cours…' : 'Inviter dans la boutique'}</button></form>{message ? <p className={styles.feedback} role="status">{message}</p> : null}</section> : null}
+    {canManage ? <section className={styles.settingsCard}>
+      <h3>Ajouter une personne</h3>
+      <p className={styles.memberHint}>Définissez directement son mot de passe pour lui donner accès sans e-mail. Si vous laissez les deux champs vides, KatiMarket enverra l’invitation habituelle.</p>
+      <form className={styles.memberInvite} onSubmit={event => void invite(event)}>
+        <label>Nom complet<input required minLength={2} maxLength={80} autoComplete="name" value={name} onChange={event => setName(event.target.value)} placeholder="Ex. Marie Nguema" /></label>
+        <label>Adresse e-mail<input required type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="marie@exemple.cm" /></label>
+        <label>Rôle<select value={role} onChange={event => setRole(event.target.value as 'gestionnaire' | 'magasinier')}><option value="magasinier">Magasinier · produits et avis</option><option value="gestionnaire">Gestionnaire · gestion courante</option></select></label>
+        <label>Mot de passe <small>Facultatif · 8 caractères minimum</small><input type={showPassword ? 'text' : 'password'} minLength={8} maxLength={200} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></label>
+        <label>Confirmer le mot de passe<input type={showPassword ? 'text' : 'password'} minLength={8} maxLength={200} required={Boolean(password)} autoComplete="new-password" value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} /></label>
+        <label className={styles.passwordVisibility}><input type="checkbox" checked={showPassword} onChange={event => setShowPassword(event.target.checked)} /> Afficher les mots de passe</label>
+        <button disabled={pending}>{pending ? 'Création en cours…' : password ? 'Créer le compte' : 'Envoyer l’invitation'}</button>
+      </form>
+      {message ? <p className={styles.feedback} role="status">{message}</p> : null}
+    </section> : null}
     <section className={styles.featureList}><header><h2>Membres de la boutique</h2><span>{members.filter(member => member.actif).length} actif(s)</span></header>{visibleMembers.length ? <ul>{visibleMembers.map(member => <MemberRow key={member.id} shopId={shopId} member={member} canManage={canManage} onRefresh={onRefresh} />)}</ul> : <p className={styles.blank}>Aucun membre pour le moment.</p>}{revokedCount ? <button className={styles.revokedToggle} onClick={() => setShowRevoked(value => !value)}>{showRevoked ? 'Masquer les accès révoqués' : `Voir les accès révoqués (${revokedCount})`}</button> : null}</section>
   </div>
 }
@@ -837,6 +879,10 @@ function MemberRow({ shopId, member, canManage, onRefresh }: {
   const [role, setRole] = useState(currentRole === 'gestionnaire' ? 'gestionnaire' : 'magasinier')
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const isOwner = member.roles.includes('proprietaire')
   async function changeRole() {
     setPending(true); setMessage('')
@@ -851,7 +897,30 @@ function MemberRow({ shopId, member, canManage, onRefresh }: {
       await onRefresh()
     } catch (cause) { setMessage(errorText(cause)) } finally { setPending(false) }
   }
-  return <li className={styles.memberRow}><div><strong>{member.nom}</strong><small>{member.courriel}</small><small>{member.premiereConnexionLe ? `Première connexion le ${new Intl.DateTimeFormat('fr-CM').format(new Date(member.premiereConnexionLe))}` : 'En attente de première connexion'}</small>{message ? <small role="status">{message}</small> : null}</div><div className={styles.memberControls}><b data-status={member.actif ? 'active' : 'suspendue'}>{member.actif ? MEMBER_ROLES[currentRole] ?? currentRole : 'Accès révoqué'}</b>{canManage && !isOwner ? <div className={styles.memberActions}>{member.actif ? <><label><span className={styles.srOnly}>Rôle de {member.nom}</span><select aria-label={`Rôle de ${member.nom}`} value={role} onChange={event => setRole(event.target.value)}><option value="magasinier">Magasinier</option><option value="gestionnaire">Gestionnaire</option></select></label><button disabled={pending || role === currentRole} onClick={() => void changeRole()}>Enregistrer</button></> : null}<button className={styles.memberRevoke} disabled={pending} onClick={() => void toggleAccess()}>{member.actif ? 'Révoquer' : 'Réactiver'}</button></div> : null}</div></li>
+  async function changePassword(event: FormEvent) {
+    event.preventDefault()
+    setMessage('')
+    if (password.length < 8) {
+      setMessage('Le mot de passe doit contenir au moins 8 caractères.')
+      return
+    }
+    if (password !== passwordConfirmation) {
+      setMessage('Les deux mots de passe ne correspondent pas.')
+      return
+    }
+    setPending(true)
+    try {
+      await api(`/vendeurs/mes-boutiques/${shopId}/membres/${member.id}/mot-de-passe`, {
+        methode: 'PUT',
+        corps: { motDePasse: password },
+      })
+      setPassword('')
+      setPasswordConfirmation('')
+      setPasswordOpen(false)
+      setMessage('Mot de passe modifié. Le membre peut l’utiliser dès maintenant.')
+    } catch (cause) { setMessage(errorText(cause)) } finally { setPending(false) }
+  }
+  return <li className={styles.memberRow}><div><strong>{member.nom}</strong><small>{member.courriel}</small><small>{member.premiereConnexionLe ? `Première connexion le ${new Intl.DateTimeFormat('fr-CM').format(new Date(member.premiereConnexionLe))}` : 'En attente de première connexion'}</small>{message ? <small role="status">{message}</small> : null}</div><div className={styles.memberControls}><b data-status={member.actif ? 'active' : 'suspendue'}>{member.actif ? MEMBER_ROLES[currentRole] ?? currentRole : 'Accès révoqué'}</b>{canManage && !isOwner ? <><div className={styles.memberActions}>{member.actif ? <><label><span className={styles.srOnly}>Rôle de {member.nom}</span><select aria-label={`Rôle de ${member.nom}`} value={role} onChange={event => setRole(event.target.value)}><option value="magasinier">Magasinier</option><option value="gestionnaire">Gestionnaire</option></select></label><button disabled={pending || role === currentRole} onClick={() => void changeRole()}>Enregistrer</button><button disabled={pending} aria-expanded={passwordOpen} onClick={() => setPasswordOpen(value => !value)}>Mot de passe</button></> : null}<button className={styles.memberRevoke} disabled={pending} onClick={() => void toggleAccess()}>{member.actif ? 'Révoquer' : 'Réactiver'}</button></div>{member.actif && passwordOpen ? <form className={styles.memberPasswordForm} onSubmit={event => void changePassword(event)}><label>Nouveau mot de passe<input required type={showPassword ? 'text' : 'password'} minLength={8} maxLength={200} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></label><label>Confirmer<input required type={showPassword ? 'text' : 'password'} minLength={8} maxLength={200} autoComplete="new-password" value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} /></label><label className={styles.passwordVisibility}><input type="checkbox" checked={showPassword} onChange={event => setShowPassword(event.target.checked)} /> Afficher</label><button disabled={pending}>{pending ? 'Enregistrement…' : 'Enregistrer le mot de passe'}</button></form> : null}</> : null}</div></li>
 }
 
 type EtatPiece = 'valide' | 'en_attente' | 'refuse' | 'expire' | 'manquant'
