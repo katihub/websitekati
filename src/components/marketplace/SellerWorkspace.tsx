@@ -4,7 +4,7 @@ import { erreur, MessageRetour, succes, type Retour } from './vendeur/MessageRet
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { api, ErreurApi, telechargerApi } from '@/lib/api'
+import { api, ErreurApi, EVENEMENT_SESSION_INVALIDE, telechargerApi } from '@/lib/api'
 import {
   connexionLocaleActive,
   seDeconnecterLocalement,
@@ -348,6 +348,17 @@ export function SellerWorkspace() {
       unsubscribe?.()
     }
   }, [load])
+
+  useEffect(() => {
+    const invalider = () => {
+      setAuthenticated(false)
+      setLoading(false)
+      activeShop.current = ''
+      resetShopData()
+    }
+    window.addEventListener(EVENEMENT_SESSION_INVALIDE, invalider)
+    return () => window.removeEventListener(EVENEMENT_SESSION_INVALIDE, invalider)
+  }, [resetShopData])
 
   async function selectShop(id: string) {
     setSelectedId(id)
@@ -1121,12 +1132,12 @@ function OffersPanel({ shop, products, offers, canPublish, onRefresh }: { shop: 
   async function submit(event: FormEvent) {
     event.preventDefault(); setMessage(null)
     if (Number(values.garantie) < garantieMinimale) return setMessage(erreur(`La garantie de cette catégorie est d’au moins ${libelleMois(garantieMinimale)}.`))
-    const quantiteDemandee = values.quantite.trim() || window.prompt('Quantité initiale disponible (0 si le produit est hors stock) :')?.trim() || ''
-    const quantiteInitiale = Number(quantiteDemandee)
-    if (!quantiteDemandee || !Number.isInteger(quantiteInitiale) || quantiteInitiale < 0 || quantiteInitiale > 1_000_000) return setMessage(erreur('Indiquez une quantité initiale de 0 à 1 000 000.'))
+    const quantiteDemandee = values.quantite.trim()
+    const quantiteInitiale = quantiteDemandee ? Number(quantiteDemandee) : undefined
+    if (quantiteInitiale !== undefined && (!Number.isInteger(quantiteInitiale) || quantiteInitiale < 0 || quantiteInitiale > 1_000_000)) return setMessage(erreur('La quantité doit être comprise entre 0 et 1 000 000.'))
     setPending(true)
     try {
-      await api(`/marketplace/boutiques/${shop.id}/offres`, { methode: 'POST', corps: { produitId: values.produitId, ...(values.reference.trim() ? { referenceVendeur: values.reference.trim() } : {}), titre: values.titre.trim(), description: values.description.trim() || undefined, prixFcfa: Number(values.prix), prixReferenceFcfa: values.prixReference ? Number(values.prixReference) : undefined, quantiteInitiale, etat: values.etat, garantieMois: Number(values.garantie), modesLivraison: shop.modesLivraison, villesLivraison: shop.villesLivraison, delaiMaxJours: Number(values.delai), quantiteMinimale: Number(values.minimum) || 1 } })
+      await api(`/marketplace/boutiques/${shop.id}/offres`, { methode: 'POST', corps: { produitId: values.produitId, ...(values.reference.trim() ? { referenceVendeur: values.reference.trim() } : {}), titre: values.titre.trim(), description: values.description.trim() || undefined, prixFcfa: Number(values.prix), prixReferenceFcfa: values.prixReference ? Number(values.prixReference) : undefined, ...(quantiteInitiale === undefined ? {} : { quantiteInitiale }), etat: values.etat, garantieMois: Number(values.garantie), modesLivraison: shop.modesLivraison, villesLivraison: shop.villesLivraison, delaiMaxJours: Number(values.delai), quantiteMinimale: Number(values.minimum) || 1 } })
       setValues({ produitId: '', reference: '', titre: '', description: '', prix: '', prixReference: '', quantite: '', etat: 'neuf', garantie: '0', delai: '2', minimum: '1' }); setMessage(succes('Offre envoyée à la modération.')); await onRefresh()
     } catch (cause) { setMessage(erreur(errorText(cause))) } finally { setPending(false) }
   }

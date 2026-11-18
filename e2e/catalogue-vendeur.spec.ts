@@ -160,6 +160,8 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
   await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
   await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
   await ajouterPhoto(page)
+  await expect(page.getByLabel('Nom de la variante 1')).toHaveCount(0)
+  await expect(page.getByText('Quantité initiale', { exact: false }).first()).toContainText('facultatif')
   // Le prix part avec la fiche (6 novembre 2026).
   await page.getByLabel('Référence de la variante 1').fill('A25-128')
   await page.getByLabel('Prix de la variante 1').fill('189000')

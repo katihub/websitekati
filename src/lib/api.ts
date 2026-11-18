@@ -23,6 +23,7 @@ import { supabase } from './supabase'
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 export const apiDisponible = Boolean(BASE)
+export const EVENEMENT_SESSION_INVALIDE = 'katimarket:session-invalide'
 
 export class ErreurApi extends Error {
   constructor(
@@ -86,27 +87,44 @@ export async function api<T>(chemin: string, options: Options = {}): Promise<T> 
   }
 
   const sansSession = options.anonyme || Boolean(options.jetonSuivi)
-  const entetes: Record<string, string> = {
-    Accept: 'application/json',
-    ...(sansSession ? {} : await enteteAutorisation()),
-  }
-
   const formulaire = typeof FormData !== 'undefined' && options.corps instanceof FormData
-  if (options.corps !== undefined && !formulaire) entetes['Content-Type'] = 'application/json'
-  if (options.cleIdempotence) entetes['Cle-Idempotence'] = options.cleIdempotence
-  if (options.jetonSuivi) entetes['X-Jeton-Suivi'] = options.jetonSuivi
   const corpsRequete: BodyInit | undefined = options.corps === undefined
     ? undefined
     : formulaire
       ? options.corps as FormData
       : JSON.stringify(options.corps)
 
-  const reponse = await fetch(`${BASE}/v1${chemin}`, {
+  const construireEntetes = (autorisation: Record<string, string>): Record<string, string> => ({
+    Accept: 'application/json',
+    ...autorisation,
+    ...(options.corps !== undefined && !formulaire ? { 'Content-Type': 'application/json' } : {}),
+    ...(options.cleIdempotence ? { 'Cle-Idempotence': options.cleIdempotence } : {}),
+    ...(options.jetonSuivi ? { 'X-Jeton-Suivi': options.jetonSuivi } : {}),
+  })
+  const envoyer = (autorisation: Record<string, string>) => fetch(`${BASE}/v1${chemin}`, {
     method: options.methode ?? 'GET',
-    headers: entetes,
+    headers: construireEntetes(autorisation),
     body: corpsRequete,
     signal: options.signal,
   })
+
+  let reponse = await envoyer(sansSession ? {} : await enteteAutorisation())
+  // Une session peut expirer pendant que l'espace vendeur reste ouvert. Un seul
+  // renouvellement, puis une seule nouvelle tentative : jamais de boucle ni de
+  // double mutation, puisque le backend refuse le premier appel avant son action.
+  if (reponse.status === 401 && !sansSession && !options.signal?.aborted) {
+    const client = supabase()
+    if (client) {
+      try {
+        const { data, error } = await client.auth.refreshSession()
+        const jeton = data.session?.access_token
+        if (!error && jeton) reponse = await envoyer({ Authorization: `Bearer ${jeton}` })
+      } catch {
+        // Le 401 d'origine reste la reponse utile ; l'interface revient a la connexion.
+      }
+    }
+    if (reponse.status === 401 && typeof window !== 'undefined') window.dispatchEvent(new Event(EVENEMENT_SESSION_INVALIDE))
+  }
 
   const texte = await reponse.text()
   const donnees = texte ? safeJson(texte) : null

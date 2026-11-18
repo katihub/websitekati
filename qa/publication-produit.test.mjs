@@ -22,6 +22,14 @@ test('the offer of an added price takes the shop delivery and the category warra
   })
 })
 
+test('an added price omits an initial quantity left blank', () => {
+  const offre = offreDuPrix({ id: 'p1', nom: 'Cintres', slug: 'cintres', garantieMinimaleMois: 0 }, 2500, undefined, {
+    modesLivraison: ['katihub'],
+    villesLivraison: ['Douala'],
+  })
+  assert.equal('quantiteInitiale' in offre, false)
+})
+
 test('reads a price typed with spaces, refuses anything else', () => {
   assert.equal(lirePrix('15 000'), 15000)
   assert.equal(lirePrix('0'), null)

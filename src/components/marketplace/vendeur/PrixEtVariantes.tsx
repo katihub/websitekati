@@ -36,11 +36,12 @@ export function PrixEtVariantes({ lignes, onChange, suiviStock = true, disabled 
   const plusieurs = lignes.length > 1
   const problemes = problemesVariantes(lignes, suiviStock)
   const entamee = (ligne: LigneVariante) => Boolean(ligne.prix.trim() || ligne.reference.trim() || ligne.libelle.trim())
+  const nombreColonnes = (plusieurs ? 1 : 0) + (suiviStock ? 8 : 7)
   return <div className={styles.variantes}>
     <div className={styles.scroll}>
       <table className={styles.table}>
         <thead><tr>
-          <th>Variante {plusieurs ? <b>*</b> : <small>(facultatif)</small>}</th><th>Référence <small>(automatique si vide)</small></th><th>Prix FCFA <b>*</b></th><th>Prix barré</th><th>Minimum commandable</th>{suiviStock ? <th>Quantité initiale <b>*</b></th> : null}<th>Statut du stock</th><th>Mode de commande</th><th><span className={styles.sr}>Retirer</span></th>
+          {plusieurs ? <th>Variante <b>*</b></th> : null}<th>Référence <small>(automatique si vide)</small></th><th>Prix FCFA <b>*</b></th><th>Prix barré</th><th>Minimum commandable</th>{suiviStock ? <th>Quantité initiale <small>(facultatif)</small></th> : null}<th>Statut du stock</th><th>Mode de commande</th><th><span className={styles.sr}>Retirer</span></th>
         </tr></thead>
         <tbody>{lignes.map((ligne, rang) => {
           const probleme = afficherErreurs || entamee(ligne) ? problemes[rang] : null
@@ -49,17 +50,17 @@ export function PrixEtVariantes({ lignes, onChange, suiviStock = true, disabled 
           const decrit = (champ: keyof LigneVariante) => (probleme?.champ === champ ? idErreur : undefined)
           return <Fragment key={rang}>
             <tr data-error={probleme ? true : undefined}>
-              <td><input aria-label={`Nom de la variante ${rang + 1}`} aria-invalid={fautif('libelle')} aria-describedby={decrit('libelle')} value={ligne.libelle} maxLength={120} disabled={disabled} placeholder={plusieurs ? 'Ex. 128 Go / Noir' : 'Sans variante'} onChange={(e) => changer(rang, 'libelle', e.target.value)} /></td>
+              {plusieurs ? <td><input aria-label={`Nom de la variante ${rang + 1}`} aria-invalid={fautif('libelle')} aria-describedby={decrit('libelle')} value={ligne.libelle} maxLength={120} disabled={disabled} placeholder="Ex. 128 Go / Noir" onChange={(e) => changer(rang, 'libelle', e.target.value)} /></td> : null}
               <td><input aria-label={`Référence de la variante ${rang + 1}`} aria-invalid={fautif('reference')} aria-describedby={decrit('reference')} value={ligne.reference} maxLength={120} disabled={disabled} placeholder="Automatique" onChange={(e) => changer(rang, 'reference', e.target.value)} /></td>
               <td><input aria-label={`Prix de la variante ${rang + 1}`} aria-invalid={fautif('prix')} aria-describedby={decrit('prix')} value={ligne.prix} inputMode="numeric" disabled={disabled} placeholder="149000" onChange={(e) => changer(rang, 'prix', e.target.value)} /></td>
               <td><input aria-label={`Prix barré de la variante ${rang + 1}`} aria-invalid={fautif('prixBarre')} aria-describedby={decrit('prixBarre')} value={ligne.prixBarre} inputMode="numeric" disabled={disabled} placeholder="Facultatif" onChange={(e) => changer(rang, 'prixBarre', e.target.value)} /></td>
               <td><input aria-label={`Minimum commandable de la variante ${rang + 1}`} aria-invalid={fautif('minimum')} aria-describedby={decrit('minimum')} value={ligne.minimum} inputMode="numeric" disabled={disabled} onChange={(e) => changer(rang, 'minimum', e.target.value)} /></td>
-              {suiviStock ? <td><input aria-label={`Quantité initiale de la variante ${rang + 1}`} aria-invalid={fautif('quantite')} aria-describedby={decrit('quantite')} value={ligne.quantite} inputMode="numeric" disabled={disabled} placeholder="0" onChange={(e) => changer(rang, 'quantite', e.target.value)} /></td> : null}
+              {suiviStock ? <td><input aria-label={`Quantité initiale de la variante ${rang + 1}`} aria-invalid={fautif('quantite')} aria-describedby={decrit('quantite')} value={ligne.quantite} inputMode="numeric" disabled={disabled} placeholder="Facultatif" onChange={(e) => changer(rang, 'quantite', e.target.value)} /></td> : null}
               <td><select aria-label={`Statut du stock de la variante ${rang + 1}`} value={ligne.statut} disabled={disabled} onChange={(e) => changer(rang, 'statut', e.target.value)}>{STATUTS_STOCK.map((statut) => <option key={statut} value={statut}>{libelleStatutStock(statut)}</option>)}</select></td>
               <td><select aria-label={`Mode de commande de la variante ${rang + 1}`} value={ligne.devisUniquement ? 'devis' : 'direct'} disabled={disabled} onChange={(e) => changer(rang, 'devisUniquement', e.target.value === 'devis')}><option value="direct">Achat direct</option><option value="devis">Uniquement sur devis</option></select></td>
               <td>{plusieurs ? <button type="button" className={styles.retirer} aria-label={`Retirer la variante ${rang + 1}`} disabled={disabled} onClick={() => onChange(lignes.filter((_, i) => i !== rang))}>✕</button> : null}</td>
             </tr>
-            {probleme ? <tr className={styles.ligneErreur}><td colSpan={suiviStock ? 9 : 8} id={idErreur} role="alert" data-testid={`variante-erreur-${rang}`}>⚠ {plusieurs ? `Variante ${rang + 1} : ` : ''}{probleme.message}</td></tr> : null}
+            {probleme ? <tr className={styles.ligneErreur}><td colSpan={nombreColonnes} id={idErreur} role="alert" data-testid={`variante-erreur-${rang}`}>⚠ {plusieurs ? `Variante ${rang + 1} : ` : ''}{probleme.message}</td></tr> : null}
           </Fragment>
         })}</tbody>
       </table>
