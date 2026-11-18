@@ -221,7 +221,7 @@ export async function MarketplaceHome() {
 
     <section className={`${styles.shell} ${styles.fashionBanner}`}><Image src="/home-banner-mode-createurs.png" alt="Trois jeunes Camerounais portent des tenues de créateurs locaux" fill sizes="(max-width: 800px) 100vw, 1480px" /><div><h2><MarketplaceText id="fashionBannerTitle" /><br /><strong><MarketplaceText id="daily" /></strong></h2><p><MarketplaceText id="localFashionText" /></p><Link href="/recherche?q=Mode"><MarketplaceText id="discoverFashion" /> <span>→</span></Link></div></section>
 
-    <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="newArrivals" />} href="/catalogue?tri=recent" />{fresh.length ? <div className={styles.productGrid}>{fresh.map((offre) => <ProductCard key={offre.id} offre={offre} fresh />)}</div> : <p className={styles.empty}><MarketplaceText id="newArrivalsEmpty" /></p>}</section>
+    <section className={`${styles.shell} ${styles.section}`}><SectionHead title={<MarketplaceText id="newArrivals" />} href="/catalogue?tri=recent" />{fresh.length ? <div className={styles.productGrid}>{fresh.map((offre) => <ProductCard key={offre.id} offre={offre} />)}</div> : <p className={styles.empty}><MarketplaceText id="newArrivalsEmpty" /></p>}</section>
     <VendreSurKatihub />
     <NewsletterKatihub />
   </div>

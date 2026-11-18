@@ -97,7 +97,7 @@ function texteSortie(response: Record<string, unknown>): string {
   }).join('')
 }
 
-export async function POST(requete: Request) {
+export async function traiterAssistantProduit(requete: Request, valeur: unknown) {
   const requestId = randomUUID()
   if (!API || !OPENAI_API_KEY) {
     console.error(`[assistant-produit:${requestId}] configuration serveur incomplète`)
@@ -105,8 +105,7 @@ export async function POST(requete: Request) {
   }
   const authorization = requete.headers.get('authorization')?.trim() ?? ''
   if (!authorization.toLowerCase().startsWith('bearer ')) return NextResponse.json({ message: 'Connexion vendeur requise.' }, { status: 401 })
-  let body: Corps | null = null
-  try { body = lireCorps(await requete.json()) } catch { /* réponse commune ci-dessous */ }
+  const body = lireCorps(valeur)
   if (!body) return NextResponse.json({ message: 'Indiquez le nom, la référence ou des caractéristiques vérifiables du produit.' }, { status: 400 })
   const lease = prendreGeneration(cleLimite(authorization, body.boutiqueId))
   if (!lease.ok) return NextResponse.json({ message: lease.message }, { status: lease.status })
@@ -151,4 +150,10 @@ export async function POST(requete: Request) {
     console.error(`[assistant-produit:${requestId}] échec contrôlé (${message})`)
     return NextResponse.json({ message: 'L’assistant produit est momentanément indisponible.' }, { status: 502 })
   } finally { lease.release() }
+}
+
+export async function POST(requete: Request) {
+  let valeur: unknown = null
+  try { valeur = await requete.json() } catch { /* réponse commune dans le gestionnaire */ }
+  return traiterAssistantProduit(requete, valeur)
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { entetesVisiteur } from '@/lib/appel-backend'
+import { traiterAssistantProduit } from '../marchand/assistant-produit/route'
 
 /**
  * THE ASSISTANT'S DOOR, AND NOTHING ELSE.
@@ -89,18 +90,22 @@ function entetesRelayees(requete: Request): Record<string, string> {
 }
 
 export async function POST(requete: Request) {
-  if (!API) {
-    /* The variable is missing on the host. Saying so in the server log is the
-       only way anyone finds out: the page itself must not leak configuration. */
-    console.error('[assistant] NEXT_PUBLIC_API_URL absente : aucune question ne peut aboutir.')
-    return horsLigne()
-  }
-
   let corps: unknown
   try {
     corps = await requete.json()
   } catch {
     return NextResponse.json({ message: 'Corps JSON attendu.' }, { status: 400 })
+  }
+
+  if (corps && typeof corps === 'object' && !Array.isArray(corps) && (corps as { type?: unknown }).type === 'fiche_produit') {
+    return traiterAssistantProduit(requete, corps)
+  }
+
+  if (!API) {
+    /* The variable is missing on the host. Saying so in the server log is the
+       only way anyone finds out: the page itself must not leak configuration. */
+    console.error('[assistant] NEXT_PUBLIC_API_URL absente : aucune question ne peut aboutir.')
+    return horsLigne()
   }
 
   const { question, fil, choix } = (corps ?? {}) as {

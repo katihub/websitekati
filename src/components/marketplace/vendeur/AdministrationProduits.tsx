@@ -173,11 +173,7 @@ function ApercuProduit({ boutiqueId, produit }: { boutiqueId: string; produit: P
   const [erreur, setErreur] = useState(false)
 
   useEffect(() => {
-    if (produit.sansImage) {
-      setUrl(null)
-      setErreur(false)
-      return
-    }
+    if (produit.sansImage) return
     let actif = true
     const controleur = new AbortController()
     const charger = () => {
@@ -234,7 +230,7 @@ function ListeProduits({ boutiqueId, produits, offres, canPublish, livraison, on
       const prix = liees.map((offre) => offre.prixFcfa ?? offre.revisions[0]?.prixFcfa).filter((value): value is number => typeof value === 'number').sort((a, b) => a - b)[0]
       const disponibles = liees.reduce((total, offre) => total + Math.max(0, (offre.stock?.quantite ?? 0) - (offre.stock?.quantiteReservee ?? 0)), 0)
       const stockLabel = liees.length ? liees.some((offre) => !offre.stock) ? 'Stock non renseigné' : `${disponibles} disponible(s)` : null
-      return <tr key={produit.id} data-sans-image={produit.sansImage || undefined}><td><div className={styles.productIdentity}><ApercuProduit boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small>{produit.sansImage ? <small className={styles.imageRequired}>Image obligatoire · invisible aux clients</small> : null}</div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span>{produit.statut === 'suspendu' && produit.motifDecision ? <small className={styles.motif}>Motif : {produit.motifDecision}</small> : null}</td><td>{produitSansPrix(produit, liees) ? <AjouterPrix boutiqueId={boutiqueId} produit={produit} livraison={livraison} disabled={!canPublish || Boolean(produit.sansImage)} onEnregistre={async () => { await onRefresh(); onPrix(produit.nom) }} /> : <><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</>}</td><td>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>{produit.sansImage ? 'Ajouter une image' : 'Modifier la fiche'}</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : '—'}</td></tr>
+      return <tr key={produit.id} data-sans-image={produit.sansImage || undefined}><td><div className={styles.productIdentity}><ApercuProduit key={`${produit.id}:${Boolean(produit.sansImage)}`} boutiqueId={boutiqueId} produit={produit} /><div><strong>{produit.nom}</strong><small>{produit.marque || 'Marque non renseignée'}</small>{produit.sansImage ? <small className={styles.imageRequired}>Image obligatoire · invisible aux clients</small> : null}</div></div></td><td>{cheminCategorie(produit.categorieDetail, produit.categorie) || 'À classer'}</td><td><span className={styles.status} data-status={produit.statut}>{STATUTS[produit.statut] ?? produit.statut}</span>{produit.statut === 'suspendu' && produit.motifDecision ? <small className={styles.motif}>Motif : {produit.motifDecision}</small> : null}</td><td>{produitSansPrix(produit, liees) ? <AjouterPrix boutiqueId={boutiqueId} produit={produit} livraison={livraison} disabled={!canPublish || Boolean(produit.sansImage)} onEnregistre={async () => { await onRefresh(); onPrix(produit.nom) }} /> : <><b>{liees.length}</b>{prix ? <small>dès {money(prix)}</small> : <small>Aucun prix publié</small>}{stockLabel ? <small>{stockLabel}</small> : null}</>}</td><td>{EDITABLE.includes(produit.statut) ? <><button type="button" className={styles.linkButton} onClick={() => onFiche(produit.id)}>{produit.sansImage ? 'Ajouter une image' : 'Modifier la fiche'}</button><button type="button" className={styles.linkButton} onClick={() => onCategories(produit)} data-testid={`categories-${produit.slug}`}>Catégories{produit.categoriesSupplementaires?.length ? ` (${produit.categoriesSupplementaires.length + 1})` : ''}</button></> : '—'}</td></tr>
     })}</tbody></table></div>
       <div className={styles.pagination}><span>Page {page} sur {totalPages}</span><div><button type="button" aria-label="Page précédente" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>←</button><button type="button" aria-label="Page suivante" disabled={page === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>→</button></div></div>
     </> : <div className={styles.empty}><span aria-hidden>□</span><h3>{recherche || statut !== 'tous' ? 'Aucun résultat' : 'Votre catalogue est vide'}</h3><p>{recherche || statut !== 'tous' ? 'Modifiez la recherche ou le statut sélectionné.' : 'Créez votre première fiche avec un aperçu client en direct.'}</p>{!recherche && statut === 'tous' ? <button type="button" className={styles.primary} onClick={onAjouter}>Ajouter un produit</button> : null}</div>}
@@ -327,12 +323,16 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
     }
     setGenerationIa(true)
     try {
-      const reponse = await fetch('/api/marchand/assistant-produit', {
+      const reponse = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...await enteteAutorisation() },
-        body: JSON.stringify({ boutiqueId, contexte: contexteIa, draft: values }),
+        body: JSON.stringify({ type: 'fiche_produit', boutiqueId, contexte: contexteIa, draft: values }),
       })
-      const donnees = await reponse.json() as { suggestion?: unknown; message?: unknown }
+      const texte = await reponse.text()
+      let donnees: { suggestion?: unknown; message?: unknown } = {}
+      try { donnees = JSON.parse(texte) as { suggestion?: unknown; message?: unknown } } catch {
+        throw new Error('Le service de génération a renvoyé une réponse illisible. Réessayez dans un instant.')
+      }
       if (!reponse.ok) throw new Error(typeof donnees.message === 'string' ? donnees.message : 'La génération n’a pas abouti.')
       const suggestion = lireSuggestionProduit(donnees.suggestion)
       if (!suggestion) throw new Error('La proposition reçue est incomplète. Relancez la génération.')
@@ -341,7 +341,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
             ...(categorie.id === suggestion.categorieId && !categorie.sousCategories.length ? [{ categorie: categorie.id, sousCategorie: '', accessoireCategorie: '' }] : []),
             ...categorie.sousCategories.flatMap((sous) => [
               ...(sous.id === suggestion.categorieId ? [{ categorie: categorie.id, sousCategorie: sous.id, accessoireCategorie: '' }] : []),
-              ...sous.sousCategories.filter((accessoire) => accessoire.id === suggestion.categorieId).map((accessoire) => ({ categorie: categorie.id, sousCategorie: sous.id, accessoireCategorie: accessoire.id })),
+              ...(sous.sousCategories ?? []).filter((accessoire) => accessoire.id === suggestion.categorieId).map((accessoire) => ({ categorie: categorie.id, sousCategorie: sous.id, accessoireCategorie: accessoire.id })),
             ]),
           ])[0]
         : undefined

@@ -285,7 +285,10 @@ test('la création reflète instantanément les données et la photo dans l’ap
 
 test('le copilote KatiHub génère toute la fiche, signale les faits à vérifier et permet de revenir en arrière', async ({ page }) => {
   api = await espaceVendeur(page, [])
-  await page.route('**/api/marchand/assistant-produit', async (route) => {
+  await page.route('**/api/assistant', async (route) => {
+    const request = route.request()
+    if (request.method() !== 'POST' || request.postDataJSON()?.type !== 'fiche_produit') return route.fallback()
+    expect(request.postDataJSON()).toMatchObject({ type: 'fiche_produit' })
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -318,6 +321,28 @@ test('le copilote KatiHub génère toute la fiche, signale les faits à vérifie
   await page.getByRole('button', { name: 'Annuler l’application' }).click()
   await expect(page.getByLabel('Nom du produit')).toHaveValue('')
   await expect(page.getByTestId('assistant-produit-resultat')).toHaveCount(0)
+})
+
+test('le copilote traduit une page HTML de protection en erreur lisible', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+  await page.route('**/api/assistant', (route) => {
+    const request = route.request()
+    if (request.method() !== 'POST' || request.postDataJSON()?.type !== 'fiche_produit') return route.fallback()
+    return route.fulfill({
+      status: 403,
+      contentType: 'text/html',
+      body: '<!doctype html><title>Just a moment...</title>',
+    })
+  })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Informations source à respecter').fill('HP Omen 16-an0008tx, mémoire 16 Go, stockage SSD 1 To.')
+  await page.getByRole('button', { name: 'Générer toute la fiche' }).click()
+
+  await expect(page.getByText('Le service de génération a renvoyé une réponse illisible. Réessayez dans un instant.')).toBeVisible()
+  await expect(page.getByText(/Unexpected token/)).toHaveCount(0)
 })
 
 test('le marchand modifie prix, statut du stock et minimum en lot depuis Produits', async ({ page }) => {

@@ -93,7 +93,6 @@ export function CategoriesProducts({
               <ProductCard
                 key={`${active}-${offre.id}`}
                 offre={offre}
-                fresh={active === 'nouveautes'}
               />
             ))
           ) : (

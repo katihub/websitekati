@@ -221,7 +221,7 @@
 .pubPoints{position:absolute;top:10px;left:10px;z-index:2;display:flex;gap:6px}
 .pubPoints button{width:8px;height:8px;padding:0;border:0;border-radius:50%;background:#fff9;cursor:pointer}
 .pubPoints button[aria-current=true]{background:var(--orange)}
-.heroCopyPanel{pointer-events:none}
+.heroCopyPanel{pointer-events:none;background:none}
 .heroCopyPanel>a{pointer-events:auto}
 .heroCopyPanel h1{overflow-wrap:anywhere}
 .pubDescription{color:#fff;font-size:.68rem;line-height:1.35}
@@ -230,7 +230,7 @@
    des fleches. Il part du bas, sous le texte, et s'efface jusqu'au transparent en haut. */
 @media(max-width:560px){
   .centerStage>.hero .heroCopy{inset:0;min-height:0;background:linear-gradient(0deg,#061f4ff7 0%,#061f4fe6 34%,#061f4f99 62%,#061f4f33 84%,#061f4f00 100%)}
-}
+  .centerStage>.hero .heroCopyPanel{background:none}}
 
 /* Le prix reste lisible au-dessus d'un appel a l'action explicite, comme sur
    les rayons d'une boutique physique : toute la largeur sert a ouvrir l'offre. */

@@ -76,8 +76,13 @@ export async function simulerApi(page: Page): Promise<ApiSimulee> {
 
   page.on('pageerror', (erreur) => erreursNavigateur.push(erreur.message))
   page.on('console', (message) => {
+    // Les scripts de mesure sont bloques dans le bac a sable. Next transforme
+    // aussi leur `error` de chargement en un `console.error(Event)` depuis son
+    // propre bootstrap : ces deux messages racontent la meme absence de reseau.
+    const ressourceBloquee = /Failed to load resource/.test(message.text())
+      || (message.text() === 'Event' && message.location().url.includes('/_next/static/chunks/'))
     // Une requete simulee en erreur (409, 422) est un cas teste, pas un defaut.
-    if (message.type() === 'error' && !/Failed to load resource/.test(message.text())) erreursNavigateur.push(message.text())
+    if (message.type() === 'error' && !ressourceBloquee) erreursNavigateur.push(message.text())
   })
 
   await page.route(/\/v1\//, async (route) => {
