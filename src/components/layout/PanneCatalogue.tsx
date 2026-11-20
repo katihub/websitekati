@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState, useTransition } from 'react'
 
 import { dialable } from '@/constants/site'
 import { useAccount } from '@/lib/account'
@@ -29,6 +30,11 @@ import { shopPhone, shopWhatsapp, whatsappHref } from '@/lib/comptoirs'
  * ni l'un ni l'autre ne s'adresse a un client. Le detail part dans les journaux
  * du serveur.
  *
+ * LE MESSAGE DISTINGUE CE QUE LE NAVIGATEUR SAIT VRAIMENT. `navigator.onLine`
+ * sait constater l'absence de reseau, mais ne prouve pas que l'API repond :
+ * en ligne, le texte garde donc les deux explications possibles au lieu
+ * d'accuser le serveur ou le telephone sans preuve.
+ *
  * LE COMPTOIR EST PROPOSE A COTE DU BOUTON. Une panne du VPS peut durer plus
  * longtemps que la patience d'un acheteur ; le telephone et WhatsApp, eux,
  * repondent quand le site ne repond pas. Les numeros sont ceux des comptoirs que
@@ -42,9 +48,31 @@ import { shopPhone, shopWhatsapp, whatsappHref } from '@/lib/comptoirs'
  */
 export function PanneCatalogue({ retry }: { retry?: () => void }) {
   const router = useRouter()
+  const [connexion, setConnexion] = useState<'inconnue' | 'en_ligne' | 'hors_ligne'>('inconnue')
+  const [verification, demarrerVerification] = useTransition()
   const { pointsVente } = useAccount()
   const whatsapp = shopWhatsapp(pointsVente)
   const phone = shopPhone(pointsVente)
+
+  useEffect(() => {
+    const actualiser = () => setConnexion(navigator.onLine ? 'en_ligne' : 'hors_ligne')
+    actualiser()
+    window.addEventListener('online', actualiser)
+    window.addEventListener('offline', actualiser)
+    return () => {
+      window.removeEventListener('online', actualiser)
+      window.removeEventListener('offline', actualiser)
+    }
+  }, [])
+
+  const reessayer = () => {
+    if (!navigator.onLine) {
+      setConnexion('hors_ligne')
+      return
+    }
+    setConnexion('en_ligne')
+    demarrerVerification(() => (retry ? retry() : router.refresh()))
+  }
 
   return (
     /* Une `div` et non un `main` : le layout en pose deja un autour de chaque page. */
@@ -53,40 +81,66 @@ export function PanneCatalogue({ retry }: { retry?: () => void }) {
           dont les metadonnees ont ete lues avant la panne : /rayon/<slug> garde
           alors son titre, et un robot ne doit pas indexer ce message a sa place. */}
       <meta name="robots" content="noindex" />
-      <p className="t-label text-ink-3">Catalogue indisponible</p>
+      <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-space text-secondary" aria-hidden="true">
+        <svg viewBox="0 0 24 24" className="size-7 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round">
+          <path d="M4.5 9.5a11 11 0 0 1 15 0M7.5 13a6.5 6.5 0 0 1 9 0M10.5 16.5a2.3 2.3 0 0 1 3 0" />
+          <circle cx="12" cy="19" r="1" className="fill-current stroke-none" />
+        </svg>
+      </span>
+      <p className="t-label mt-5 text-ink-3">Connexion au catalogue</p>
       <h1 className="mt-2 text-h3 font-semibold tracking-[-0.01em] text-ink text-balance">
-        Le catalogue ne répond pas
+        Impossible de charger le catalogue
       </h1>
-      <p className="mx-auto mt-3 max-w-[44ch] text-small text-ink-2">
-        Les références, les prix et les stocks n’ont pas pu être chargés. C’est souvent passager :
-        réessayez dans un instant. Le comptoir, lui, reste joignable.
+      <p
+        className="mx-auto mt-3 max-w-[46ch] text-small leading-[1.6] text-ink-2"
+        role={connexion === 'hors_ligne' ? 'alert' : undefined}
+      >
+        {connexion === 'hors_ligne'
+          ? 'Vous n’êtes pas connecté à Internet. Activez vos données mobiles ou le Wi-Fi, puis réessayez.'
+          : 'Vérifiez que vos données mobiles ou votre Wi-Fi sont activés, puis réessayez. Si vous êtes déjà connecté, le service est peut-être momentanément indisponible.'}
       </p>
+      {verification ? <p className="mt-3 text-micro text-ink-3" role="status">Vérification de la connexion…</p> : null}
       <div className="mt-7 flex flex-wrap justify-center gap-3">
         <button
           type="button"
-          onClick={() => (retry ? retry() : router.refresh())}
-          className="press inline-flex min-h-11 items-center rounded-control bg-secondary px-5 text-small font-semibold text-on-surface transition-colors duration-[var(--t-fast)] hover:bg-secondary"
+          onClick={reessayer}
+          disabled={verification}
+          className="press inline-flex min-h-12 items-center rounded-control bg-secondary px-6 text-small font-semibold text-on-surface transition-colors duration-[var(--t-fast)] hover:bg-secondary disabled:cursor-wait disabled:opacity-70"
         >
-          Réessayer
+          {verification ? 'Vérification…' : 'Réessayer maintenant'}
         </button>
         {whatsapp ? (
           <a
             href={whatsappHref(
               whatsapp,
-              'Bonjour, le site nowtechcenter.com ne charge pas le catalogue. Pouvez-vous me renseigner ?',
+              'Bonjour, le catalogue de katimarket.com ne se charge pas. Pouvez-vous m’aider ?',
             )}
             target="_blank"
             rel="noopener noreferrer"
-            className="press inline-flex min-h-11 items-center rounded-control border border-rule px-5 text-small text-ink-2 transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
+            className="press inline-flex min-h-12 items-center rounded-control border border-rule px-5 text-small text-ink-2 transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
           >
-            Écrire sur WhatsApp
+            Contacter l’assistance
           </a>
-        ) : null}
+        ) : phone ? (
+          <a
+            href={`tel:${dialable(phone)}`}
+            className="press inline-flex min-h-12 items-center rounded-control border border-rule px-5 text-small text-ink-2 transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
+          >
+            Contacter l’assistance
+          </a>
+        ) : (
+          <Link
+            href="/contact"
+            className="press inline-flex min-h-12 items-center rounded-control border border-rule px-5 text-small text-ink-2 transition-colors duration-[var(--t-fast)] hover:bg-space hover:text-secondary"
+          >
+            Contacter l’assistance
+          </Link>
+        )}
       </div>
       <p className="mt-6 text-micro text-ink-3">
-        {phone ? (
+        {phone && whatsapp ? (
           <>
-            Ou appelez le{' '}
+            Appelez le{' '}
             <a href={`tel:${dialable(phone)}`} className="t-num text-ink-2 underline underline-offset-4">
               {phone}
             </a>
@@ -94,7 +148,7 @@ export function PanneCatalogue({ retry }: { retry?: () => void }) {
           </>
         ) : null}
         <Link href="/" className="underline underline-offset-4">
-          Accueil
+          Retour à l’accueil
         </Link>
       </p>
     </div>
