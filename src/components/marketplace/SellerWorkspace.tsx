@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { api, ErreurApi, EVENEMENT_SESSION_INVALIDE, telechargerApi } from '@/lib/api'
+import { erreurActionnable } from '@/lib/erreur-actionnable'
 import {
   connexionLocaleActive,
   seDeconnecterLocalement,
@@ -215,7 +216,7 @@ const offerPrice = (offer: Offer) => offer.prixFcfa ?? offer.revisions[0]?.prixF
 const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 function errorText(cause: unknown) {
-  return cause instanceof Error ? cause.message : 'Une erreur inattendue est survenue.'
+  return erreurActionnable(cause)
 }
 
 export function SellerWorkspace() {
@@ -453,7 +454,7 @@ export function SellerWorkspace() {
             onPanel={openPanel}
           /> : null}
           {panel === 'verification' ? !loaded.documents ? <SectionLoading /> : access.documents === 'allowed' ? <VerificationPanel shopId={space.id} documents={documents} onRefresh={() => refreshSections(['documents'])} /> : <SectionUnavailable access={access.documents} /> : null}
-          {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} direct={space.vendeur.statut === 'actif'} livraison={space} onRefresh={() => refreshSections(['products', 'offers'])} /> : <SectionUnavailable access={access.products} /> : null}
+          {panel === 'products' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.products === 'allowed' ? <AdministrationProduits boutiqueId={space.id} nomBoutique={space.nom} produits={products} offres={offers} canPublish={canPublish} direct={space.vendeur.statut === 'actif'} livraison={space} onRefresh={() => refreshSections(['products', 'offers'])} onVerification={() => openPanel('verification')} /> : <SectionUnavailable access={access.products} /> : null}
           {panel === 'quotes' ? <DevisBoutique shopId={space.id} /> : null}
           {panel === 'messages' ? <MessagerieKati shopId={space.id} /> : null}
           {panel === 'offers' ? !loaded.products || !loaded.offers ? <SectionLoading /> : access.offers === 'allowed' ? <div className={styles.inventoryStack}><InventoryPanel shopId={space.id} offers={offers} onRefresh={() => refreshSections(['offers'])} /><OffersPanel shop={space} products={products} offers={offers} canPublish={canPublish} onRefresh={() => refreshSections(['products', 'offers'])} /></div> : <SectionUnavailable access={access.offers} /> : null}
@@ -941,6 +942,8 @@ function VerificationPanel({ shopId, documents, onRefresh }: { shopId: string; d
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
   const [exigences, setExigences] = useState<ExigencesDossier | null>(null)
+  const [erreurExigences, setErreurExigences] = useState('')
+  const [essaiExigences, setEssaiExigences] = useState(0)
   const champ = useRef<HTMLInputElement>(null)
   const formulaire = useRef<HTMLFormElement>(null)
   const verification = useMemo<VerificationPieces>(() => ({ acceptees: fichiers, refus: [] }), [fichiers])
@@ -954,10 +957,10 @@ function VerificationPanel({ shopId, documents, onRefresh }: { shopId: string; d
   useEffect(() => {
     let actif = true
     api<ExigencesDossier>(`/vendeurs/mes-boutiques/${shopId}/documents/exigences`)
-      .then((lu) => { if (actif) setExigences(lu) })
-      .catch(() => { if (actif) setExigences(null) })
+      .then((lu) => { if (actif) { setExigences(lu); setErreurExigences('') } })
+      .catch((cause) => { if (actif) { setExigences(null); setErreurExigences(erreurActionnable(cause, 'Cliquez sur « Réessayer » pour connaître les documents encore nécessaires.')) } })
     return () => { actif = false }
-  }, [shopId, documents])
+  }, [shopId, documents, essaiExigences])
 
   function preparer(prochain: string) {
     setType(prochain); setFichiers([]); setRefus(''); setMessage('')
@@ -987,12 +990,16 @@ function VerificationPanel({ shopId, documents, onRefresh }: { shopId: string; d
     setPending(true); setMessage('')
     let envoyes = 0
     try {
-      for (const fichier of fichiers) {
+      for (const [index, fichier] of fichiers.entries()) {
         const corps = new FormData()
         corps.append('fichier', fichier)
         corps.append('type', type)
         if (expiry && !photos) corps.append('expireLe', expiry)
-        await api(`/vendeurs/mes-boutiques/${shopId}/documents/fichier`, { methode: 'POST', corps })
+        try {
+          await api(`/vendeurs/mes-boutiques/${shopId}/documents/fichier`, { methode: 'POST', corps })
+        } catch (cause) {
+          throw new Error(`Le fichier « ${fichier.name} » (${index + 1} sur ${fichiers.length}) n’a pas été transmis. ${erreurActionnable(cause, 'Corrigez le fichier ou votre connexion, puis réessayez.')}`)
+        }
         envoyes += 1
       }
       setFichiers([]); setExpiry(''); if (champ.current) champ.current.value = ''
@@ -1015,6 +1022,7 @@ function VerificationPanel({ shopId, documents, onRefresh }: { shopId: string; d
     ?? Object.entries(DOCUMENT_LABELS).map(([value, label]) => ({ value, label }))
 
   return <>
+    {erreurExigences ? <section className={styles.alertesDossier} role="alert"><div className={styles.alertePiece} data-etat="refuse"><span aria-hidden="true">!</span><div><strong>Liste des documents indisponible</strong><small>{erreurExigences}</small></div><button type="button" onClick={() => setEssaiExigences((valeur) => valeur + 1)}>Réessayer</button></div></section> : null}
     {exigences ? <section className={styles.alertesDossier} aria-label="État du dossier" data-testid="alertes-dossier">
       {aFournir.length ? aFournir.map((p) => <div key={p.type} className={styles.alertePiece} data-etat={p.etat} role="alert">
         <span aria-hidden="true">!</span>

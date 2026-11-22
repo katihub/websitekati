@@ -3,7 +3,8 @@
 /* eslint-disable @next/next/no-img-element -- l'aperçu montre le fichier tel qu'il vient d'être déposé, avant le CDN d'images */
 import { useRef, useState } from 'react'
 
-import { api, ErreurApi } from '@/lib/api'
+import { api } from '@/lib/api'
+import { erreurActionnable } from '@/lib/erreur-actionnable'
 import { ANCRE_VISUELS } from '@/lib/raccourcis-vendeur'
 import styles from '@/app/espace-vendeur/seller-workspace.module.css'
 
@@ -41,13 +42,16 @@ function Visuel({ shopId, type, url, onRefresh }: { shopId: string; type: TypeVi
   const champ = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
+  const [urlEnErreur, setUrlEnErreur] = useState<string | null>(null)
   const texte = TEXTES[type]
+  const erreurApercu = Boolean(url && urlEnErreur === url)
 
   async function envoyer(fichier: File | undefined) {
     if (!fichier) return
     setMessage('')
-    if (!TYPES_ACCEPTES.includes(fichier.type)) return setMessage('Choisissez une image JPEG, PNG ou WebP.')
-    if (fichier.size > TAILLE_MAX) return setMessage('Cette image dépasse 5 Mio.')
+    if (!TYPES_ACCEPTES.includes(fichier.type)) return setMessage(`« ${fichier.name} » n’est pas une image acceptée. Choisissez un fichier JPEG, PNG ou WebP.`)
+    if (fichier.size === 0) return setMessage(`« ${fichier.name} » est vide. Choisissez une autre image.`)
+    if (fichier.size > TAILLE_MAX) return setMessage(`« ${fichier.name} » dépasse 5 Mo. Réduisez sa taille, puis sélectionnez-le de nouveau.`)
     const corps = new FormData()
     corps.append('fichier', fichier)
     setPending(true)
@@ -56,7 +60,7 @@ function Visuel({ shopId, type, url, onRefresh }: { shopId: string; type: TypeVi
       await onRefresh()
       setMessage(`${texte.titre} mis${type === 'banniere' ? 'e' : ''} à jour.`)
     } catch (cause) {
-      setMessage(cause instanceof ErreurApi ? cause.message : 'L’envoi a échoué. Réessayez.')
+      setMessage(`${texte.titre} « ${fichier.name} » non envoyé${type === 'banniere' ? 'e' : ''}. ${erreurActionnable(cause, 'Corrigez le fichier ou votre connexion, puis réessayez.')}`)
     } finally {
       setPending(false)
       if (champ.current) champ.current.value = ''
@@ -70,7 +74,7 @@ function Visuel({ shopId, type, url, onRefresh }: { shopId: string; type: TypeVi
       await onRefresh()
       setMessage(`${texte.titre} retiré${type === 'banniere' ? 'e' : ''}.`)
     } catch (cause) {
-      setMessage(cause instanceof ErreurApi ? cause.message : 'Le retrait a échoué. Réessayez.')
+      setMessage(`${texte.titre} non retiré${type === 'banniere' ? 'e' : ''}. ${erreurActionnable(cause, 'Réessayez ; le visuel actuel reste affiché.')}`)
     } finally {
       setPending(false)
     }
@@ -79,7 +83,7 @@ function Visuel({ shopId, type, url, onRefresh }: { shopId: string; type: TypeVi
   return (
     <div className={styles.visuel} data-testid={`visuel-${type}`}>
       <div className={type === 'logo' ? styles.visuelLogo : styles.visuelBanniere}>
-        {url ? <img src={url} alt={`${texte.titre} actuel`} /> : <span>Aucun{type === 'banniere' ? 'e' : ''} {texte.titre.toLowerCase()}</span>}
+        {url && !erreurApercu ? <img src={url} alt={`${texte.titre} actuel`} onError={() => setUrlEnErreur(url)} /> : <span>{erreurApercu ? `${texte.titre} impossible à afficher · réimportez le fichier` : `Aucun${type === 'banniere' ? 'e' : ''} ${texte.titre.toLowerCase()}`}</span>}
       </div>
       <div className={styles.visuelActions}>
         <strong>{texte.titre}</strong>

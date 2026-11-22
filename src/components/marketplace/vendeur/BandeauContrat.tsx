@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-import { api, ErreurApi } from '@/lib/api'
+import { api } from '@/lib/api'
+import { erreurActionnable } from '@/lib/erreur-actionnable'
 import styles from '@/app/espace-vendeur/seller-workspace.module.css'
 
 type EtatContrat = { aLire: boolean; version: { numero: number; publieLe: string; resume: string | null } | null }
@@ -17,14 +18,17 @@ export function BandeauContrat({ shopId }: { shopId: string }) {
   const [etat, setEtat] = useState<EtatContrat | null>(null)
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState('')
+  const [erreurChargement, setErreurChargement] = useState('')
+  const [essai, setEssai] = useState(0)
   useEffect(() => {
     const controleur = new AbortController()
     api<EtatContrat>(`/contenus/boutiques/${shopId}/contrat-vendeur`, { signal: controleur.signal })
-      .then((valeur) => { if (!controleur.signal.aborted) setEtat(valeur) })
-      .catch(() => { if (!controleur.signal.aborted) setEtat(null) })
+      .then((valeur) => { if (!controleur.signal.aborted) { setEtat(valeur); setErreurChargement('') } })
+      .catch((cause) => { if (!controleur.signal.aborted) { setEtat(null); setErreurChargement(erreurActionnable(cause, 'Cliquez sur « Réessayer » pour vérifier si un nouveau contrat doit être lu.')) } })
     return () => controleur.abort()
-  }, [shopId])
+  }, [shopId, essai])
 
+  if (erreurChargement) return <div className={styles.bandeauContrat} role="alert"><div><strong>Contrat vendeur non vérifié</strong><p>{erreurChargement}</p></div><button type="button" onClick={() => setEssai((valeur) => valeur + 1)}>Réessayer</button></div>
   if (!etat?.aLire || !etat.version) return null
   const date = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(etat.version.publieLe))
 
@@ -33,7 +37,7 @@ export function BandeauContrat({ shopId }: { shopId: string }) {
     try {
       setEtat(await api<EtatContrat>(`/contenus/boutiques/${shopId}/contrat-vendeur/lu`, { methode: 'POST' }))
     } catch (cause) {
-      setErreur(cause instanceof ErreurApi ? cause.message : 'La confirmation n’a pas pu être enregistrée.')
+      setErreur(erreurActionnable(cause, 'La confirmation n’a pas été enregistrée. Réessayez.'))
     } finally {
       setEnvoi(false)
     }

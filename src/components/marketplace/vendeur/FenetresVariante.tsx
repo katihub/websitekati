@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 
 import { api } from '@/lib/api'
@@ -40,8 +41,9 @@ export type OffreVariante = {
   libelleVariante: string | null
   attributsVariante: Record<string, string> | null
   quantiteMinimale?: number
+  imageIdsVariante?: string[]
   /** `attributsVariante` : ceux que la categorie du produit propose (« Capacite », « Couleur »). */
-  produit: { id: string; nom: string; attributsVariante?: string[] }
+  produit: { id: string; nom: string; attributsVariante?: string[]; images?: Array<{ id: string; url: string; texteAlternatif: string | null }> }
   revisions: RevisionVariante[]
 }
 
@@ -53,11 +55,15 @@ const REVISION_OUVERTE = ['soumise', 'en_verification']
 /** Les paires nom/valeur saisies, sans les lignes vides ; null si aucune. */
 export function attributsDepuisFormulaire(donnees: FormData): Record<string, string> | null {
   const attributs: Record<string, string> = {}
+  const noms = new Set<string>()
   for (let i = 0; i < LIGNES_ATTRIBUTS; i++) {
     const nom = String(donnees.get(`attribut-nom-${i}`) ?? '').trim()
     const valeur = String(donnees.get(`attribut-valeur-${i}`) ?? '').trim()
     if (!nom && !valeur) continue
     if (!nom || !valeur) throw new Error('Chaque attribut a besoin d’un nom et d’une valeur (ex. Couleur : Noir).')
+    const cle = nom.toLocaleLowerCase('fr')
+    if (noms.has(cle)) throw new Error(`L’attribut « ${nom} » est présent deux fois.`)
+    noms.add(cle)
     attributs[nom] = valeur
   }
   return Object.keys(attributs).length ? attributs : null
@@ -79,15 +85,35 @@ export function revisionOuverte(offre: OffreVariante) {
   return derniere && REVISION_OUVERTE.includes(derniere.statut) ? derniere : null
 }
 
-export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee }: {
+type FenetreNouvelleVarianteProps = {
   boutiqueId: string
   origine: OffreVariante | null
   onFermer: () => void
   onCreee: () => Promise<void>
-}) {
+}
+
+export function FenetreNouvelleVariante(props: FenetreNouvelleVarianteProps) {
+  return <FenetreNouvelleVarianteContenu key={props.origine?.id ?? 'fermee'} {...props} />
+}
+
+function FenetreNouvelleVarianteContenu({ boutiqueId, origine, onFermer, onCreee }: FenetreNouvelleVarianteProps) {
   // Les attributs de la categorie sont proposes d'office ; le marchand peut en ajouter.
   const proposes = (origine?.produit.attributsVariante ?? []).slice(0, LIGNES_ATTRIBUTS)
   const [lignes, setLignes] = useState(Math.max(LIGNES_VISIBLES, proposes.length))
+  const [imageIds, setImageIds] = useState<string[]>([])
+  const [imagePrincipaleId, setImagePrincipaleId] = useState<string | null>(null)
+  function basculerImage(imageId: string) {
+    setImageIds((actuelles) => {
+      if (actuelles.includes(imageId)) {
+        const suivantes = actuelles.filter((id) => id !== imageId)
+        if (imagePrincipaleId === imageId) setImagePrincipaleId(suivantes[0] ?? null)
+        return suivantes
+      }
+      const suivantes = [...actuelles, imageId]
+      if (!imagePrincipaleId) setImagePrincipaleId(imageId)
+      return suivantes
+    })
+  }
   async function valider(donnees: FormData) {
     if (!origine) return
     const attributs = attributsDepuisFormulaire(donnees)
@@ -107,6 +133,7 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         prixFcfa,
         ...(quantiteInitiale === undefined ? {} : { quantiteInitiale }),
         prixReferenceFcfa,
+        ...(imageIds.length ? { imageIds, imagePrincipaleId: imagePrincipaleId ?? imageIds[0] } : {}),
       },
     })
     await onCreee()
@@ -139,6 +166,21 @@ export function FenetreNouvelleVariante({ boutiqueId, origine, onFermer, onCreee
         <ChampTexte nom="prix-reference" libelle="Prix barré" inputMode="numeric" pattern="[0-9]*" />
       </div>
       <ChampTexte nom="quantite" libelle="Quantité initiale (facultatif)" aide="Si elle reste vide, le statut du stock décide de la disponibilité." inputMode="numeric" pattern="[0-9]*" />
+      {origine?.produit.images?.length ? <fieldset className="grid gap-2">
+        <legend className="text-small font-semibold">Images de la variante <span className="font-normal text-ink-3">(facultatif)</span></legend>
+        <p className="text-micro text-ink-3">Sélectionnez les photos correspondantes, puis choisissez celle qui deviendra principale.</p>
+        <div className="flex flex-wrap gap-2">{origine.produit.images.map((image) => {
+          const selectionnee = imageIds.includes(image.id)
+          const principale = imagePrincipaleId === image.id
+          return <div key={image.id} className={`grid gap-1 rounded-control border p-1 ${principale ? 'border-secondary' : selectionnee ? 'border-primary' : 'border-rule'}`}>
+            <button type="button" aria-pressed={selectionnee} onClick={() => basculerImage(image.id)} className="relative h-20 w-20 overflow-hidden rounded-control bg-space">
+              <Image src={image.url} alt={image.texteAlternatif || `Photo de ${origine.produit.nom}`} fill sizes="80px" className="object-cover" />
+              <span className="absolute bottom-1 right-1 rounded-full bg-primary px-1.5 py-0.5 text-micro font-bold text-white">{selectionnee ? imageIds.indexOf(image.id) + 1 : '+'}</span>
+            </button>
+            {selectionnee ? <button type="button" onClick={() => setImagePrincipaleId(image.id)} className="text-micro font-semibold text-primary">{principale ? 'Principale' : 'Définir principale'}</button> : null}
+          </div>
+        })}</div>
+      </fieldset> : null}
     </FenetreAction>
   )
 }

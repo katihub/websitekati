@@ -21,7 +21,9 @@ test.afterEach(() => {
 const B = IDS.boutique
 const PRODUIT = '00000000-0000-4000-8000-000000000201'
 const OFFRE = '00000000-0000-4000-8000-000000000202'
+const OFFRE_B = '00000000-0000-4000-8000-000000000203'
 const PHOTO = '00000000-0000-4000-8000-00000000000a'
+const PHOTO_B = '00000000-0000-4000-8000-00000000000b'
 // Un PNG d'un pixel : l'apercu s'affiche sans aucun appel reseau.
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII='
 
@@ -38,7 +40,7 @@ const revision = {
 }
 const offre = {
   id: OFFRE, referenceVendeur: 'A15-128', statut: 'publiee', prixFcfa: 149_000, libelleVariante: '128 Go', attributsVariante: { Capacité: '128 Go' }, ordreVariante: 0,
-  produit: { id: PRODUIT, nom: 'Samsung Galaxy A15', slug: 'galaxy-a15', statut: 'actif', proposeParBoutiqueId: B },
+  produit: { id: PRODUIT, nom: 'Samsung Galaxy A15', slug: 'galaxy-a15', statut: 'actif', proposeParBoutiqueId: B, images: [IMAGE_PUBLIEE] },
   stock: { quantite: 5, quantiteReservee: 1 }, revisions: [revision],
 }
 
@@ -98,6 +100,49 @@ test('le marchand ajoute une photo, écrit son référencement et soumet la fich
   })
 })
 
+test('le marchand associe chaque photo à sa variante et choisit son image principale', async ({ page }) => {
+  const secondeOffre = {
+    ...offre,
+    id: OFFRE_B,
+    referenceVendeur: 'A15-256',
+    libelleVariante: '256 Go',
+    attributsVariante: { Capacité: '256 Go' },
+    ordreVariante: 1,
+    revisions: [{ ...revision, id: 'rev-2', libelleVariante: '256 Go', attributsVariante: { Capacité: '256 Go' } }],
+  }
+  api = (await espaceVendeur(page, []))
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/offres$`), [offre, secondeOffre])
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu$`), {
+      produit: { id: PRODUIT, nom: produit.nom, slug: produit.slug, marque: 'Samsung', description: null, metaTitre: null, metaDescription: null },
+      images: [
+        { ...IMAGE_PUBLIEE, variantes: [{ offreId: OFFRE, ordre: 0 }] },
+        { ...IMAGE_PUBLIEE, id: PHOTO_B, ordre: 1, texteAlternatif: 'Vue arrière', variantes: [] },
+      ],
+      offres: [
+        { id: OFFRE, libelleVariante: '128 Go', attributsVariante: { Capacité: '128 Go' }, ordreVariante: 0 },
+        { id: OFFRE_B, libelleVariante: '256 Go', attributsVariante: { Capacité: '256 Go' }, ordreVariante: 1 },
+      ],
+      revisionOuverte: null,
+      revisions: [],
+    })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/${PRODUIT}/contenu/revisions$`), { id: 'rc-images', numero: 2, statut: 'approuvee' })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: 'Modifier la fiche' }).click()
+  const photoArriere = page.getByTestId(`fiche-photo-${PHOTO_B}`)
+  await photoArriere.getByLabel('256 Go').check()
+  await expect(photoArriere.getByRole('button', { name: 'Principale' })).toBeVisible()
+  await page.getByRole('button', { name: 'Enregistrer et mettre en ligne' }).click()
+  await expect(page.getByText('Fiche enregistrée : elle est en ligne.')).toBeVisible()
+
+  expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toMatchObject({ images: [
+    { imageId: PHOTO, offreIds: [OFFRE], principalePourOffreIds: [OFFRE] },
+    { imageId: PHOTO_B, offreIds: [OFFRE_B], principalePourOffreIds: [OFFRE_B] },
+  ] })
+})
+
 test('le marchand peut revenir à la liste après avoir ouvert une fiche produit', async ({ page }) => {
   api = (await espaceVendeur(page, []))
     .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/propositions-produits$`), [produit])
@@ -140,12 +185,13 @@ test('le marchand crée une variante depuis la fiche produit, sans onglet Offres
   await variante.getByLabel('Valeur de l’attribut 2').fill('Bleu')
   await variante.getByLabel('Référence vendeur').fill('A15-256-BLEU')
   await variante.getByLabel('Prix FCFA').fill('179000')
+  await variante.getByRole('button', { name: /Vue de face/ }).click()
   await variante.getByRole('button', { name: 'Soumettre la variante' }).click()
   await expect(variante).toBeHidden()
 
   expect(api.appelsVers('POST', /\/variantes$/)[0]!.corps).toMatchObject({
     libelleVariante: '256 Go / Bleu', attributsVariante: { Capacité: '256 Go', Couleur: 'Bleu' },
-    referenceVendeur: 'A15-256-BLEU', prixFcfa: 179_000,
+    referenceVendeur: 'A15-256-BLEU', prixFcfa: 179_000, imageIds: [PHOTO], imagePrincipaleId: PHOTO,
   })
 })
 
@@ -161,7 +207,7 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
   await page.getByLabel('Nom du produit').fill('Samsung Galaxy A25')
   await ajouterPhoto(page)
   await expect(page.getByLabel('Nom de la variante 1')).toHaveCount(0)
-  await expect(page.getByText('Quantité initiale', { exact: false }).first()).toContainText('facultatif')
+  await expect(page.getByRole('columnheader', { name: /Quantité initiale.*facultatif/i })).toBeVisible()
   // Le prix part avec la fiche (6 novembre 2026).
   await page.getByLabel('Référence de la variante 1').fill('A25-128')
   await page.getByLabel('Prix de la variante 1').fill('189000')
@@ -178,11 +224,12 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
   await page.getByRole('button', { name: 'Mettre en ligne' }).click()
   await expect(page.getByText('Produit en ligne : il est visible sur votre boutique.')).toBeVisible()
 
-  expect(api.appelsVers('POST', /produits-complets$/)[0]!.corps).toEqual({
+  expect(api.appelsVers('POST', /produits-complets$/)[0]!.corps).toMatchObject({
     produit: { nom: 'Samsung Galaxy A25', slug: 'samsung-galaxy-a25', categorieId: '00000000-0000-4000-8000-000000000402' },
     vente: { etat: 'neuf', garantieMois: 12, delaiMaxJours: 2 },
     variantes: [{ referenceVendeur: 'A25-128', prixFcfa: 189_000, quantiteMinimale: 1, devisUniquement: false, statutStock: 'en_stock' }],
   })
+  expect(api.appelsVers('POST', /produits-complets$/)[0]!.corps).toEqual(expect.objectContaining({ cleCreation: expect.stringMatching(/^[0-9a-f-]{36}$/) }))
 })
 
 test('sans photo, le produit ne part pas et le vendeur sait pourquoi (9 novembre 2026)', async ({ page }) => {
@@ -204,9 +251,178 @@ test('sans photo, le produit ne part pas et le vendeur sait pourquoi (9 novembre
   expect(api.appelsVers('POST', /produits-complets$/)).toHaveLength(0)
 })
 
+test('une photo refusée indique son nom et la correction attendue', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.locator('main[data-seller-workspace] input[type=file][accept^="image"]').setInputFiles({
+    name: 'catalogue.pdf', mimeType: 'application/pdf', buffer: Buffer.from('pas une image'),
+  })
+
+  await expect(page.getByRole('alert').filter({ hasText: 'catalogue.pdf' })).toContainText('format non accepté')
+  await expect(page.getByText('Au moins une photo')).toBeVisible()
+})
+
+test('une image endommagée est identifiée avant la publication', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.locator('main[data-seller-workspace] input[type=file][accept^="image"]').setInputFiles({ name: 'face-endommagee.png', mimeType: 'image/png', buffer: Buffer.from('image cassée') })
+  await expect(page.getByRole('alert').filter({ hasText: 'face-endommagee.png' })).toContainText('illisible ou endommagée')
+})
+
+test('un échec pendant une série nomme la photo et confirme celles déjà conservées', async ({ page }) => {
+  let depots = 0
+  api = (await espaceVendeur(page, []))
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'soumis' }, offres: [{ id: 'offre-nouvelle' }] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), () => {
+      depots += 1
+      return depots === 1 ? IMAGE_DEPOSEE : { status: 500, body: {} }
+    })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Nom du produit').fill('Produit avec deux photos')
+  const octets = Buffer.from(PIXEL.split(',')[1]!, 'base64')
+  await page.locator('main[data-seller-workspace] input[type=file][accept^="image"]').setInputFiles([
+    { name: 'face.png', mimeType: 'image/png', buffer: octets },
+    { name: 'dos.png', mimeType: 'image/png', buffer: octets },
+  ])
+  await page.getByLabel('Prix de la variante 1').fill('25000')
+  await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
+  await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléphones' })
+  await page.getByRole('button', { name: 'Mettre en ligne' }).click()
+
+  const message = page.getByTestId('message-erreur')
+  await expect(message).toContainText('dos.png')
+  await expect(message).toContainText('2 sur 2')
+  await expect(message).toContainText('La première photo est déjà conservée')
+  await expect(message).not.toContainText('Le service a répondu 500')
+  await expect(page.getByText('Envoyée ✓')).toBeVisible()
+  await expect(page.getByText('Échec', { exact: true })).toBeVisible()
+})
+
+test('un PDF invalide explique le fichier et la correction avant tout envoi', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel(/Fiche technique PDF/).setInputFiles({ name: 'fiche-technique.txt', mimeType: 'text/plain', buffer: Buffer.from('texte') })
+  await expect(page.getByRole('alert').filter({ hasText: 'fiche-technique.txt' })).toContainText('n’est pas un PDF')
+})
+
+test('un stockage local bloqué avertit que le brouillon ne peut pas être sauvegardé', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = function (cle: string, valeur: string) {
+      if (cle.startsWith('katimarket:produit:brouillon:')) throw new DOMException('Quota dépassé', 'QuotaExceededError')
+      return original.call(this, cle, valeur)
+    }
+  })
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Nom du produit').fill('Brouillon non stockable')
+  await expect(page.getByRole('alert').filter({ hasText: 'empêche l’enregistrement automatique' })).toBeVisible()
+})
+
+test('le brouillon est restauré après un rechargement de la page', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Nom du produit').fill('Téléviseur brouillon sauvegardé')
+  await expect(page.getByText(/Brouillon enregistré à/)).toBeVisible()
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await expect(page.getByLabel('Nom du produit')).toHaveValue('Téléviseur brouillon sauvegardé')
+})
+
+test('un échec des catégories propose une relance utilisable', async ({ page }) => {
+  let tentatives = 0
+  api = (await espaceVendeur(page, [])).quand('GET', /^\/marketplace\/categories$/, () => {
+    tentatives += 1
+    return { status: 503, body: { message: 'indisponible' } }
+  })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  const bouton = page.getByRole('button', { name: 'Réessayer le chargement' })
+  await expect(bouton).toBeVisible({ timeout: 10_000 })
+  const avantRelance = tentatives
+  await bouton.click()
+  await expect.poll(() => tentatives).toBeGreaterThan(avantRelance)
+})
+
+test('une publication bloquée explique la cause et mène à la vérification', async ({ page }) => {
+  const espace = espaceBoutique()
+  api = (await espaceVendeur(page, [])).quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${B}$`), {
+    ...espace, vendeur: { ...espace.vendeur, statut: 'suspendu', statutVerification: 'modification_demandee' },
+  }).quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${B}/documents/exigences$`), { pieces: [], manquantes: 0, photosMax: 5 })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Création momentanément indisponible' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Nouveau produit' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Voir la vérification' }).click()
+  await expect(page.getByRole('heading', { name: 'Vérification de votre boutique' })).toBeVisible()
+})
+
+test('les informations secondaires en erreur restent visibles avec une action', async ({ page }) => {
+  let lecturesContrat = 0
+  let lecturesExigences = 0
+  api = (await espaceVendeur(page, []))
+    .quand('GET', new RegExp(`^/contenus/boutiques/${B}/contrat-vendeur$`), () => { lecturesContrat += 1; return { status: 503, body: {} } })
+    .quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${B}/documents/exigences$`), () => { lecturesExigences += 1; return { status: 503, body: {} } })
+
+  await page.goto('/espace-vendeur')
+  const contrat = page.getByRole('alert').filter({ hasText: 'Contrat vendeur non vérifié' })
+  await expect(contrat).toBeVisible()
+  const avantContrat = lecturesContrat
+  await contrat.getByRole('button', { name: 'Réessayer' }).click()
+  await expect.poll(() => lecturesContrat).toBeGreaterThan(avantContrat)
+
+  await page.getByRole('button', { name: 'Vérification', exact: true }).click()
+  const documents = page.getByRole('alert').filter({ hasText: 'Liste des documents indisponible' })
+  await expect(documents).toBeVisible()
+  const avantExigences = lecturesExigences
+  await documents.getByRole('button', { name: 'Réessayer' }).click()
+  await expect.poll(() => lecturesExigences).toBeGreaterThan(avantExigences)
+})
+
+test('une relance après coupure reprend le produit existant sans renvoyer ses médias', async ({ page }) => {
+  api = (await espaceVendeur(page, []))
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'deja-cree', statut: 'actif' }, offres: [{ id: 'offre-existante' }], reprise: true })
+    .quand('GET', new RegExp(`^/marketplace/boutiques/${B}/produits/deja-cree/contenu$`), { revisionOuverte: null })
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Nom du produit').fill('Produit repris après coupure')
+  await ajouterPhoto(page)
+  await page.getByLabel('Référence de la variante 1').fill('REPRISE-1')
+  await page.getByLabel('Prix de la variante 1').fill('25000')
+  await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
+  await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléphones' })
+  await page.getByRole('button', { name: 'Mettre en ligne' }).click()
+
+  await expect(page.getByText('Produit en ligne : il est visible sur votre boutique.')).toBeVisible()
+  expect(api.appelsVers('POST', /produits-complets$/)).toHaveLength(1)
+  expect(api.appelsVers('POST', /\/images$/)).toHaveLength(0)
+})
+
 test('le marchand crée un produit complet : deux variantes avec leur prix, leur statut et la garantie', async ({ page }) => {
   api = (await espaceVendeur(page, []))
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'actif' }, offres: [] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'actif' }, offres: [{ id: 'offre-128' }, { id: 'offre-256' }] })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'approuvee' })
 
@@ -224,6 +440,7 @@ test('le marchand crée un produit complet : deux variantes avec leur prix, leur
   await page.getByLabel('Référence de la variante 2').fill('A25-256')
   await page.getByLabel('Prix de la variante 2').fill('219000')
   await page.getByLabel('Statut du stock de la variante 2').selectOption('reapprovisionnement')
+  await expect(page.getByText('2 variante(s) n’ont pas d’image spécifique')).toBeVisible()
 
   // Le bouton est sous le formulaire, apres le referencement (9 novembre 2026), et il est le seul.
   await expect(page.getByRole('button', { name: 'Mettre en ligne' })).toHaveCount(1)
@@ -233,11 +450,13 @@ test('le marchand crée un produit complet : deux variantes avec leur prix, leur
 
   // Deux variantes : chacune doit porter un nom.
   await page.getByRole('button', { name: 'Mettre en ligne' }).click()
-  await expect(page.getByText('Donnez un nom à chaque variante (ex. 128 Go / Noir).')).toBeVisible()
+  await expect(page.getByTestId('message-erreur')).toContainText('Donnez un nom à chaque variante (ex. 128 Go / Noir).')
   expect(api.appelsVers('POST', /produits-complets$/)).toHaveLength(0)
 
   await page.getByLabel('Nom de la variante 1').fill('128 Go')
   await page.getByLabel('Nom de la variante 2').fill('256 Go')
+  await page.getByRole('button', { name: /Photo 1/ }).nth(0).click()
+  await page.getByRole('button', { name: /Photo 1/ }).nth(1).click()
   await page.getByLabel('Garantie (mois)').fill('24')
   await expect(page.getByText('189 000 FCFA').first()).toBeVisible()
   await page.getByRole('button', { name: 'Mettre en ligne' }).click()
@@ -248,6 +467,9 @@ test('le marchand crée un produit complet : deux variantes avec leur prix, leur
       { libelleVariante: '128 Go', referenceVendeur: 'A25-128', prixFcfa: 189_000, prixReferenceFcfa: 199_000, quantiteMinimale: 1, devisUniquement: false, statutStock: 'en_stock' },
       { libelleVariante: '256 Go', referenceVendeur: 'A25-256', prixFcfa: 219_000, quantiteMinimale: 1, devisUniquement: false, statutStock: 'reapprovisionnement' },
     ],
+  })
+  expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toMatchObject({
+    images: [{ imageId: PHOTO, offreIds: ['offre-128', 'offre-256'], principalePourOffreIds: ['offre-128', 'offre-256'] }],
   })
 })
 

@@ -13,8 +13,8 @@ import styles from './marketplace-cta.module.css'
 
 const ATOUTS = [
   { icone: '🏪', titre: 'Votre boutique en ligne', texte: 'Vos produits, vos prix et votre stock, en quelques minutes.' },
-  { icone: '🛵', titre: 'Livrée partout', texte: 'Kati Express, votre propre livraison, le retrait ou l’agence.' },
-  { icone: '📱', titre: 'Payé par Mobile Money', texte: 'Orange Money et MTN MoMo, versements suivis dans votre espace.' },
+  { icone: '🛵', titre: 'Livraison partout', texte: 'Kati Express, votre propre livraison, le retrait ou l’agence.' },
+  { icone: '📱', titre: 'Payez par Mobile Money', texte: 'Orange Money et MTN MoMo, versements suivis dans votre espace.' },
   { icone: '🤝', titre: 'Des clients pros', texte: 'Recevez des demandes de devis d’entreprises.' },
 ] as const
 

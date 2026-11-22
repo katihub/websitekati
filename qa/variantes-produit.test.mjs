@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { erreurVariantes, LIGNE_VIDE, problemesVariantes, variantesPourApi } from '../src/lib/variantes-produit.ts'
+import { erreurVariantes, LIGNE_VIDE, photosPourVariante, problemesVariantes, variantesPourApi } from '../src/lib/variantes-produit.ts'
 
 const ligne = (champs) => ({ ...LIGNE_VIDE, ...champs })
 
@@ -42,4 +42,24 @@ test('le message dit quelle variante et quel champ sont en cause', () => {
 
 test('un prix barre doit depasser le prix de vente', () => {
   assert.equal(problemesVariantes([ligne({ prix: '5000', prixBarre: '4000', quantite: '0' })])[0]?.champ, 'prixBarre')
+})
+
+test('les axes de categorie produisent des attributs structures et un libelle stable', () => {
+  const axes = ['Capacité', 'Couleur']
+  const saisie = ligne({ attributs: { Capacité: ' 128 Go ', Couleur: ' Noir ' }, prix: '149000', quantite: '2' })
+  const [api] = variantesPourApi([saisie, ligne({ attributs: { Capacité: '256 Go', Couleur: 'Bleu' }, prix: '169000', quantite: '1' })], true, axes)
+  assert.equal(api.libelleVariante, '128 Go / Noir')
+  assert.deepEqual(api.attributsVariante, { Capacité: '128 Go', Couleur: 'Noir' })
+})
+
+test('deux variantes structurees identiques sont refusees', () => {
+  const axes = ['Couleur']
+  const lignes = [ligne({ attributs: { Couleur: 'Noir' }, prix: '1' }), ligne({ attributs: { Couleur: ' noir ' }, prix: '2' })]
+  assert.match(erreurVariantes(lignes, true, axes), /même combinaison/)
+})
+
+test('les photos de la variante deviennent principales sans dupliquer la galerie commune', () => {
+  const commune = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
+  assert.deepEqual(photosPourVariante(commune, [{ id: 'c' }, { id: 'b' }]).map((image) => image.id), ['c', 'b', 'a'])
+  assert.deepEqual(photosPourVariante(commune, []).map((image) => image.id), ['a', 'b', 'c'])
 })

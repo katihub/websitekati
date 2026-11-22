@@ -85,6 +85,8 @@ export type MarketplaceProduct = {
     libelleVariante?: string | null
     attributsVariante?: Record<string, string> | null
     ordreVariante?: number
+    /** Galerie propre a cette variante, dans l'ordre de preference. */
+    imagesVariante?: Array<{ id: string; url: string; texteAlternatif: string | null }>
     modesLivraison: DeliveryMode[]
     villesLivraison: string[]
     delaiMaxJours: number | null
