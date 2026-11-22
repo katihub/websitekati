@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import type { ApiSimulee } from './support/api'
-import { espaceBoutique, IDS } from './support/donnees'
+import { categories, espaceBoutique, IDS } from './support/donnees'
 import { espaceVendeur } from './support/espace-vendeur'
 
 /**
@@ -96,7 +96,7 @@ test('le marchand ajoute une photo, écrit son référencement et soumet la fich
   expect(envoi[0]!.corps).toEqual({
     metaTitre: 'Samsung Galaxy A15 128 Go au meilleur prix',
     metaDescription: description,
-    images: [{ imageId: PHOTO, texteAlternatif: 'Vue de face, coloris noir' }],
+    images: [{ imageId: PHOTO, texteAlternatif: 'Vue de face, coloris noir', offreIds: [], principalePourOffreIds: [] }],
   })
 })
 
@@ -197,9 +197,9 @@ test('le marchand crée une variante depuis la fiche produit, sans onglet Offres
 
 test('le marchand classe son produit dans une catégorie KatiHub et voit la garantie minimale', async ({ page }) => {
   api = (await espaceVendeur(page, []))
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'actif' }, offres: [] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'brouillon' }, offres: [] })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'approuvee' })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/finaliser$`), { produit: { id: 'nouveau', statut: 'actif' }, revision: { id: 'rc-n', numero: 1, statut: 'approuvee' } })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
@@ -234,9 +234,9 @@ test('le marchand classe son produit dans une catégorie KatiHub et voit la gara
 
 test('sans photo, le produit ne part pas et le vendeur sait pourquoi (9 novembre 2026)', async ({ page }) => {
   api = (await espaceVendeur(page, []))
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'actif' }, offres: [] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'brouillon' }, offres: [] })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'approuvee' })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/finaliser$`), { produit: { id: 'nouveau', statut: 'actif' }, revision: { id: 'rc-n', numero: 1, statut: 'approuvee' } })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
@@ -277,11 +277,14 @@ test('une image endommagée est identifiée avant la publication', async ({ page
 test('un échec pendant une série nomme la photo et confirme celles déjà conservées', async ({ page }) => {
   let depots = 0
   api = (await espaceVendeur(page, []))
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'soumis' }, offres: [{ id: 'offre-nouvelle' }] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'brouillon' }, offres: [{ id: 'offre-nouvelle' }] })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), () => {
       depots += 1
-      return depots === 1 ? IMAGE_DEPOSEE : { status: 500, body: {} }
+      if (depots === 1) return IMAGE_DEPOSEE
+      if (depots === 2) return { status: 500, body: {} }
+      return { ...IMAGE_DEPOSEE, id: PHOTO_B, ordre: 1 }
     })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/finaliser$`), { produit: { id: 'nouveau', statut: 'actif' }, revision: { id: 'rc-n', numero: 1, statut: 'approuvee' } })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
@@ -303,7 +306,11 @@ test('un échec pendant une série nomme la photo et confirme celles déjà cons
   await expect(message).toContainText('La première photo est déjà conservée')
   await expect(message).not.toContainText('Le service a répondu 500')
   await expect(page.getByText('Envoyée ✓')).toBeVisible()
-  await expect(page.getByText('Échec', { exact: true })).toBeVisible()
+  await expect(page.getByText('À reprendre', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Reprendre l’envoi' }).click()
+  await expect(page.getByText('Produit en ligne : il est visible sur votre boutique.')).toBeVisible()
+  expect(api.appelsVers('POST', /\/images$/)).toHaveLength(3)
 })
 
 test('un PDF invalide explique le fichier et la correction avant tout envoi', async ({ page }) => {
@@ -343,7 +350,41 @@ test('le brouillon est restauré après un rechargement de la page', async ({ pa
   await page.reload()
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
   await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByRole('button', { name: 'Continuer' }).click()
   await expect(page.getByLabel('Nom du produit')).toHaveValue('Téléviseur brouillon sauvegardé')
+})
+
+test('plusieurs brouillons restent séparés et un autre onglet ne peut pas les écraser', async ({ page }) => {
+  api = await espaceVendeur(page, [])
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByLabel('Nom du produit').fill('Premier brouillon')
+  await expect(page.getByText(/Brouillon enregistré à/)).toBeVisible()
+  await page.getByRole('button', { name: 'Retour au catalogue' }).click()
+
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await expect(page.getByText('Premier brouillon', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Nouveau brouillon' }).click()
+  await page.getByLabel('Nom du produit').fill('Second brouillon')
+  await expect(page.getByText(/Brouillon enregistré à/)).toBeVisible()
+  await page.getByRole('button', { name: 'Retour au catalogue' }).click()
+
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await expect(page.getByText('Premier brouillon', { exact: true })).toBeVisible()
+  await expect(page.getByText('Second brouillon', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Continuer' }).nth(0).click()
+  await expect(page.getByLabel('Nom du produit')).toHaveValue('Second brouillon')
+
+  const cle = await page.evaluate(() => Object.keys(localStorage).find((item) => item.includes('katimarket:produit:brouillon:') && localStorage.getItem(item)?.includes('Second brouillon'))!.split(':').at(-1)!)
+  await page.evaluate(({ boutique, cleCreation }) => localStorage.setItem(`katimarket:produit:verrou:${boutique}:${cleCreation}`, JSON.stringify({ ongletId: 'autre-onglet', expireLe: Date.now() + 60_000 })), { boutique: B, cleCreation: cle })
+  await page.reload()
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByRole('button', { name: 'Continuer' }).nth(0).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'ouvert dans un autre onglet' })).toBeVisible()
+  await page.getByRole('button', { name: 'Reprendre dans cet onglet' }).click()
+  await expect(page.getByLabel('Nom du produit')).toHaveValue('Second brouillon')
 })
 
 test('un échec des catégories propose une relance utilisable', async ({ page }) => {
@@ -422,9 +463,9 @@ test('une relance après coupure reprend le produit existant sans renvoyer ses m
 
 test('le marchand crée un produit complet : deux variantes avec leur prix, leur statut et la garantie', async ({ page }) => {
   api = (await espaceVendeur(page, []))
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'actif' }, offres: [{ id: 'offre-128' }, { id: 'offre-256' }] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'brouillon' }, offres: [{ id: 'offre-128' }, { id: 'offre-256' }] })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'approuvee' })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/finaliser$`), { produit: { id: 'nouveau', statut: 'actif' }, revision: { id: 'rc-n', numero: 1, statut: 'approuvee' } })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
@@ -468,9 +509,32 @@ test('le marchand crée un produit complet : deux variantes avec leur prix, leur
       { libelleVariante: '256 Go', referenceVendeur: 'A25-256', prixFcfa: 219_000, quantiteMinimale: 1, devisUniquement: false, statutStock: 'reapprovisionnement' },
     ],
   })
-  expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toMatchObject({
+  expect(api.appelsVers('POST', /\/finaliser$/)[0]!.corps).toMatchObject({
     images: [{ imageId: PHOTO, offreIds: ['offre-128', 'offre-256'], principalePourOffreIds: ['offre-128', 'offre-256'] }],
   })
+})
+
+test('le générateur construit toutes les combinaisons proposées par la catégorie', async ({ page }) => {
+  const arbre = categories()
+  const telephones = arbre[0]!.sousCategories[0]! as typeof arbre[0]['sousCategories'][number] & { attributsVariante?: string[] }
+  telephones.attributsVariante = ['Couleur', 'Capacité']
+  api = (await espaceVendeur(page, []))
+    .quand('GET', /^\/marketplace\/categories$/, arbre)
+
+  await page.goto('/espace-vendeur')
+  await page.getByRole('button', { name: 'Produits', exact: true }).click()
+  await page.getByRole('button', { name: /Nouveau produit|Ajouter un produit/ }).first().click()
+  await page.getByRole('combobox', { name: /^Catégorie/ }).selectOption({ label: 'Électronique' })
+  await page.getByRole('combobox', { name: /^Sous-catégorie/ }).selectOption({ label: 'Téléphones' })
+
+  await page.getByLabel('Couleur', { exact: true }).fill('Noir, Bleu')
+  await page.getByLabel('Capacité', { exact: true }).fill('128 Go; 256 Go')
+  await expect(page.getByText('4 combinaison(s), 20 maximum')).toBeVisible()
+  await page.getByRole('button', { name: 'Générer 4 combinaison(s)' }).click()
+
+  await expect(page.getByLabel('Couleur de la variante 4')).toHaveValue('Bleu')
+  await expect(page.getByLabel('Capacité de la variante 4')).toHaveValue('256 Go')
+  await expect(page.getByLabel(/Prix de la variante/)).toHaveCount(4)
 })
 
 test('une boutique avec suivi de stock saisit la quantite et peut imposer le devis', async ({ page }) => {
@@ -639,9 +703,9 @@ test('un produit en ligne sans prix le reçoit sur sa ligne, avec la garantie mi
 test('un vendeur sous surveillance soumet encore son produit à la validation', async ({ page }) => {
   api = (await espaceVendeur(page, []))
     .quand('GET', new RegExp(`^/vendeurs/mes-boutiques/${B}$`), { ...espaceBoutique(), vendeur: { ...espaceBoutique().vendeur, statut: 'sous_surveillance' } })
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'soumis' }, offres: [] })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits-complets$`), { produit: { id: 'nouveau', statut: 'brouillon' }, offres: [] })
     .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/images$`), IMAGE_DEPOSEE)
-    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/contenu/revisions$`), { id: 'rc-n', numero: 1, statut: 'soumise' })
+    .quand('POST', new RegExp(`^/marketplace/boutiques/${B}/produits/nouveau/finaliser$`), { produit: { id: 'nouveau', statut: 'soumis' }, revision: { id: 'rc-n', numero: 1, statut: 'soumise' } })
 
   await page.goto('/espace-vendeur')
   await page.getByRole('button', { name: 'Produits', exact: true }).click()
@@ -694,7 +758,7 @@ test('la fiche complète publie prix, délai et nouveau nom tout de suite', asyn
   await page.getByTestId('fiche-nom').fill('Samsung Galaxy A15 4G')
   await page.getByRole('button', { name: 'Enregistrer et mettre en ligne' }).click()
   await expect(page.getByText('Fiche enregistrée : elle est en ligne.')).toBeVisible()
-  expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toEqual({ nom: 'Samsung Galaxy A15 4G', images: [{ imageId: PHOTO, texteAlternatif: 'Vue de face' }] })
+  expect(api.appelsVers('POST', /\/contenu\/revisions$/)[0]!.corps).toEqual({ nom: 'Samsung Galaxy A15 4G', images: [{ imageId: PHOTO, texteAlternatif: 'Vue de face', offreIds: [], principalePourOffreIds: [] }] })
 })
 
 test('sur téléphone, la fiche produit tient dans l’écran malgré une catégorie au nom long', async ({ page }) => {

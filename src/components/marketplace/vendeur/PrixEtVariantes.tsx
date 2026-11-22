@@ -2,10 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element -- apercus blob locaux avant televersement */
 
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 
 import { libelleStatutStock, STATUTS_STOCK } from '@/lib/stock'
-import { LIGNE_VIDE, MAX_VARIANTES, problemesVariantes, type LigneVariante } from '@/lib/variantes-produit'
+import { genererCombinaisonsVariantes, LIGNE_VIDE, MAX_VARIANTES, problemesVariantes, type LigneVariante } from '@/lib/variantes-produit'
 import styles from './prix-variantes.module.css'
 
 /**
@@ -33,7 +33,23 @@ export {
  * `afficherErreurs` : apres un envoi refuse, toutes les lignes fautives se montrent ;
  * avant, une ligne ne se signale que des que le vendeur a commence a la remplir.
  */
-export function PrixEtVariantes({ lignes, onChange, axes = [], photos = [], suiviStock = true, disabled = false, afficherErreurs = false }: { lignes: LigneVariante[]; onChange: (lignes: LigneVariante[]) => void; axes?: string[]; photos?: Array<{ url: string }>; suiviStock?: boolean; disabled?: boolean; afficherErreurs?: boolean }) {
+function GenerateurVariantes({ axes, lignes, maximum, disabled, onGenerer }: { axes: string[]; lignes: LigneVariante[]; maximum: number; disabled: boolean; onGenerer: (lignes: LigneVariante[]) => void }) {
+  const [valeurs, setValeurs] = useState<Record<string, string>>({})
+  const [message, setMessage] = useState('')
+  const apercu = genererCombinaisonsVariantes(axes, valeurs, lignes[0] ?? LIGNE_VIDE, maximum)
+  const generer = () => {
+    if (apercu.erreur) return setMessage(apercu.erreur)
+    onGenerer(apercu.lignes)
+    setMessage(`${apercu.lignes.length} variante(s) générée(s). Complétez maintenant leurs prix, stocks et images.`)
+  }
+  return <section className={styles.generateur} aria-label="Générateur de combinaisons">
+    <div><strong>Générer toutes les combinaisons</strong><p>Séparez les valeurs par une virgule. Exemple : Noir, Bleu puis 128 Go, 256 Go.</p></div>
+    <div className={styles.axesGenerateur}>{axes.map((axe) => <label key={axe}>{axe}<input value={valeurs[axe] ?? ''} disabled={disabled} placeholder={`Ex. ${axe === 'Couleur' ? 'Noir, Bleu' : 'Valeur 1, Valeur 2'}`} onChange={(event) => { setValeurs((actuelles) => ({ ...actuelles, [axe]: event.target.value })); setMessage('') }} /></label>)}</div>
+    <div className={styles.actionsGenerateur}><button type="button" disabled={disabled || Boolean(apercu.erreur)} onClick={generer}>Générer {apercu.lignes.length || ''} combinaison(s)</button><span className={apercu.erreur ? styles.erreurGenerateur : ''} role={apercu.erreur ? 'alert' : 'status'}>{message || apercu.erreur || `${apercu.lignes.length} combinaison(s), ${maximum} maximum`}</span></div>
+  </section>
+}
+
+export function PrixEtVariantes({ lignes, onChange, axes = [], photos = [], suiviStock = true, disabled = false, afficherErreurs = false, maximum = MAX_VARIANTES }: { lignes: LigneVariante[]; onChange: (lignes: LigneVariante[]) => void; axes?: string[]; photos?: Array<{ url: string }>; suiviStock?: boolean; disabled?: boolean; afficherErreurs?: boolean; maximum?: number }) {
   const changer = (rang: number, champ: keyof LigneVariante, valeur: string | boolean) => onChange(lignes.map((ligne, i) => (i === rang ? { ...ligne, [champ]: valeur } : ligne)))
   const changerAttribut = (rang: number, axe: string, valeur: string) => onChange(lignes.map((ligne, i) => i === rang ? { ...ligne, attributs: { ...ligne.attributs, [axe]: valeur } } : ligne))
   const basculerPhoto = (rang: number, url: string) => onChange(lignes.map((ligne, i) => i === rang ? { ...ligne, imageUrls: ligne.imageUrls.includes(url) ? ligne.imageUrls.filter((image) => image !== url) : [...ligne.imageUrls, url] } : ligne))
@@ -43,6 +59,7 @@ export function PrixEtVariantes({ lignes, onChange, axes = [], photos = [], suiv
   const entamee = (ligne: LigneVariante) => Boolean(ligne.prix.trim() || ligne.reference.trim() || ligne.libelle.trim() || Object.values(ligne.attributs).some(Boolean))
   const nombreColonnes = (afficherConfiguration ? 1 : 0) + (suiviStock ? 8 : 7)
   return <div className={styles.variantes}>
+    {axes.length ? <GenerateurVariantes key={axes.join('|')} axes={axes} lignes={lignes} maximum={maximum} disabled={disabled} onGenerer={onChange} /> : null}
     <div className={styles.scroll}>
       <table className={styles.table}>
         <thead><tr>
@@ -71,6 +88,6 @@ export function PrixEtVariantes({ lignes, onChange, axes = [], photos = [], suiv
         })}</tbody>
       </table>
     </div>
-    {lignes.length < MAX_VARIANTES ? <button type="button" className={styles.ajouter} disabled={disabled} onClick={() => onChange([...lignes, { ...LIGNE_VIDE }])} data-testid="ajouter-variante">＋ Ajouter une variante</button> : null}
+    {lignes.length < maximum ? <button type="button" className={styles.ajouter} disabled={disabled} onClick={() => onChange([...lignes, { ...LIGNE_VIDE }])} data-testid="ajouter-variante">＋ Ajouter une variante</button> : null}
   </div>
 }

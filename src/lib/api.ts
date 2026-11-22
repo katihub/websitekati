@@ -57,6 +57,13 @@ interface Options {
   anonyme?: boolean
 }
 
+export type ProgressionEnvoi = { charges: number; total: number; pourcentage: number }
+export type OptionsTeleversement = {
+  signal?: AbortSignal
+  delaiMs?: number
+  onProgression?: (progression: ProgressionEnvoi) => void
+}
+
 /**
  * L'en-tete d'identite du client connecte, vide pour un visiteur anonyme.
  *
@@ -138,6 +145,58 @@ export async function api<T>(chemin: string, options: Options = {}): Promise<T> 
   }
 
   return donnees as T
+}
+
+/** Multipart suivi octet par octet. XHR est utilise car fetch n'expose pas la progression montante. */
+export async function televerserApi<T>(chemin: string, corps: FormData, options: OptionsTeleversement = {}): Promise<T> {
+  if (!BASE) throw new ErreurApi(0, "Le service n'est pas configuré")
+  const envoyer = (autorisation: Record<string, string>, renouvelerSession: boolean): Promise<T> => new Promise<T>((resoudre, rejeter) => {
+    const requete = new XMLHttpRequest()
+    const abandonner = () => requete.abort()
+    const terminer = () => options.signal?.removeEventListener('abort', abandonner)
+    requete.open('POST', `${BASE}/v1${chemin}`)
+    requete.timeout = options.delaiMs ?? 120_000
+    requete.setRequestHeader('Accept', 'application/json')
+    for (const [nom, valeur] of Object.entries(autorisation)) requete.setRequestHeader(nom, valeur)
+    requete.upload.onprogress = (event) => {
+      const total = event.lengthComputable ? event.total : 0
+      options.onProgression?.({ charges: event.loaded, total, pourcentage: total ? Math.min(100, Math.round((event.loaded / total) * 100)) : 0 })
+    }
+    requete.onload = async () => {
+      terminer()
+      const donnees = requete.responseText ? safeJson(requete.responseText) : null
+      if (requete.status >= 200 && requete.status < 300) resoudre(donnees as T)
+      else if (requete.status === 401 && renouvelerSession && !options.signal?.aborted) {
+        const client = supabase()
+        if (client) {
+          try {
+            const { data, error } = await client.auth.refreshSession()
+            const jeton = data.session?.access_token
+            if (!error && jeton) {
+              options.onProgression?.({ charges: 0, total: 0, pourcentage: 0 })
+              envoyer({ Authorization: `Bearer ${jeton}` }, false).then(resoudre, rejeter)
+              return
+            }
+          } catch {
+            // La réponse 401 reste exploitable et l’écran demandera une reconnexion.
+          }
+        }
+        if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENEMENT_SESSION_INVALIDE))
+        rejeter(new ErreurApi(requete.status, extraireMessage(donnees) ?? `Le service a répondu ${requete.status}`, donnees))
+      } else rejeter(new ErreurApi(requete.status, extraireMessage(donnees) ?? `Le service a répondu ${requete.status}`, donnees))
+    }
+    requete.onerror = () => { terminer(); rejeter(new ErreurApi(0, 'La connexion a été interrompue pendant l’envoi.')) }
+    requete.ontimeout = () => { terminer(); rejeter(new ErreurApi(0, 'L’envoi prend trop de temps. Vérifiez votre connexion puis reprenez-le.')) }
+    requete.onabort = () => { terminer(); rejeter(new DOMException('Envoi annulé', 'AbortError')) }
+    if (options.signal?.aborted) {
+      terminer()
+      rejeter(new DOMException('Envoi annulé', 'AbortError'))
+      return
+    }
+    options.signal?.addEventListener('abort', abandonner, { once: true })
+    requete.send(corps)
+  })
+  return envoyer(await enteteAutorisation(), true)
 }
 
 /** `jetonSuivi` : le document d'un devis ou d'une commande sans compte, ouvert par son lien. */

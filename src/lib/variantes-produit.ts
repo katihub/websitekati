@@ -10,6 +10,36 @@ export type LigneVariante = { libelle: string; attributs: Record<string, string>
 export const LIGNE_VIDE: LigneVariante = { libelle: '', attributs: {}, imageUrls: [], reference: '', prix: '', prixBarre: '', minimum: '1', quantite: '', statut: 'en_stock', devisUniquement: false }
 export const MAX_VARIANTES = 20
 
+export type ResultatCombinaisons = { lignes: LigneVariante[]; erreur: string }
+
+/** Produit cartesien des valeurs de chaque axe, borne avant toute creation de lignes. */
+export function genererCombinaisonsVariantes(
+  axes: readonly string[],
+  valeursParAxe: Record<string, string>,
+  modele: LigneVariante = LIGNE_VIDE,
+  maximum = MAX_VARIANTES,
+): ResultatCombinaisons {
+  if (!axes.length) return { lignes: [], erreur: 'Cette catégorie ne définit aucun axe de variante.' }
+  const valeurs = axes.map((axe) => {
+    const vues = new Set<string>()
+    return (valeursParAxe[axe] ?? '').split(/[,;\n]/).map((valeur) => valeur.trim()).filter((valeur) => {
+      const identifiant = valeur.toLocaleLowerCase('fr')
+      if (!identifiant || vues.has(identifiant)) return false
+      vues.add(identifiant)
+      return true
+    })
+  })
+  const manquant = valeurs.findIndex((liste) => !liste.length)
+  if (manquant >= 0) return { lignes: [], erreur: `Ajoutez au moins une valeur pour « ${axes[manquant]} ».` }
+  const total = valeurs.reduce((produit, liste) => produit * liste.length, 1)
+  if (total > maximum) return { lignes: [], erreur: `${total} combinaisons seraient créées. Réduisez les valeurs à ${maximum} variantes maximum.` }
+  let combinaisons: Record<string, string>[] = [{}]
+  for (const [index, axe] of axes.entries()) {
+    combinaisons = combinaisons.flatMap((combinaison) => valeurs[index]!.map((valeur) => ({ ...combinaison, [axe]: valeur })))
+  }
+  return { erreur: '', lignes: combinaisons.map((attributs) => ({ ...modele, attributs, libelle: '', reference: '', imageUrls: [] })) }
+}
+
 /** Galerie client : photos propres a la variante d'abord, puis le reste de la galerie commune sans doublon. */
 export function photosPourVariante<T extends { id: string }>(generales: readonly T[], variante?: readonly T[] | null): T[] {
   if (!variante?.length) return [...generales]

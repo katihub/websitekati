@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { erreurVariantes, LIGNE_VIDE, photosPourVariante, problemesVariantes, variantesPourApi } from '../src/lib/variantes-produit.ts'
+import { erreurVariantes, genererCombinaisonsVariantes, LIGNE_VIDE, photosPourVariante, problemesVariantes, variantesPourApi } from '../src/lib/variantes-produit.ts'
 
 const ligne = (champs) => ({ ...LIGNE_VIDE, ...champs })
 
@@ -62,4 +62,23 @@ test('les photos de la variante deviennent principales sans dupliquer la galerie
   const commune = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
   assert.deepEqual(photosPourVariante(commune, [{ id: 'c' }, { id: 'b' }]).map((image) => image.id), ['c', 'b', 'a'])
   assert.deepEqual(photosPourVariante(commune, []).map((image) => image.id), ['a', 'b', 'c'])
+})
+
+test('le generateur produit toutes les combinaisons sans doublonner les valeurs', () => {
+  const resultat = genererCombinaisonsVariantes(['Couleur', 'Capacité'], { Couleur: 'Noir, Bleu, noir', Capacité: '128 Go; 256 Go' }, ligne({ prix: '150000' }))
+  assert.equal(resultat.erreur, '')
+  assert.equal(resultat.lignes.length, 4)
+  assert.deepEqual(resultat.lignes.map((variante) => variante.attributs), [
+    { Couleur: 'Noir', Capacité: '128 Go' },
+    { Couleur: 'Noir', Capacité: '256 Go' },
+    { Couleur: 'Bleu', Capacité: '128 Go' },
+    { Couleur: 'Bleu', Capacité: '256 Go' },
+  ])
+  assert.ok(resultat.lignes.every((variante) => variante.prix === '150000' && variante.reference === ''))
+})
+
+test('le generateur refuse une valeur manquante et plus de vingt combinaisons', () => {
+  assert.match(genererCombinaisonsVariantes(['Couleur', 'Taille'], { Couleur: 'Noir' }).erreur, /Taille/)
+  const trop = genererCombinaisonsVariantes(['A', 'B'], { A: '1,2,3,4,5', B: '1,2,3,4,5' })
+  assert.match(trop.erreur, /25 combinaisons/)
 })

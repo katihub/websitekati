@@ -60,6 +60,13 @@ export const POLITIQUE_KATI = {
 export async function simulerApi(page: Page): Promise<ApiSimulee> {
   // Une route de fond, lue partout : declaree d'office, un test peut la remplacer.
   const routes: Route[] = [
+    { methode: 'GET', motif: /^\/marketplace\/regles-produit$/, gestionnaire: () => ({
+      version: 1,
+      produit: { nomMin: 2, nomMax: 240, marqueMax: 120, descriptionMax: 10_000, descriptionCourteMin: 10, descriptionCourteMax: 300, ficheTechniqueMax: 20_000, categoriesSupplementairesMax: 2 },
+      variantes: { minimum: 1, maximum: 20, libelleMax: 120, attributMax: 60, prixMinFcfa: 1, prixMaxFcfa: 2_000_000_000, quantiteMinimaleMax: 9_999, quantiteInitialeMax: 1_000_000 },
+      vente: { garantieMaxMois: 120, delaiMaxJours: 3 },
+      images: { maximum: 12, tailleMaxOctets: 5 * 1024 * 1024, typesMime: ['image/jpeg', 'image/png', 'image/webp'], envoisSimultanesMax: 2 },
+    }) },
     { methode: 'GET', motif: /^\/marketplace\/kati\/politique$/, gestionnaire: () => POLITIQUE_KATI },
     // Les services du panier : sans assurance ni installation par defaut, un test les active.
     { methode: 'GET', motif: /^\/marketplace\/services-commande\?/, gestionnaire: () => ({ assurance: { active: false, tauxBps: 0 }, installations: [] }) },

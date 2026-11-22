@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import Image from 'next/image'
 
-import { api, enteteAutorisation } from '@/lib/api'
+import { api, enteteAutorisation, televerserApi, type ProgressionEnvoi } from '@/lib/api'
 import { lireSuggestionProduit, type MerchantProductDraft, type MerchantProductSuggestion } from '@/lib/merchant-product-ai'
 import { cheminCategorie, libelleMois, useCategoriesMarketplace, type CategorieProduit } from './categories'
 import { erreurVariantes, LIGNE_VIDE, PrixEtVariantes, variantesPourApi, type LigneVariante } from './PrixEtVariantes'
@@ -17,6 +17,9 @@ import { VenteDuProduit, type OffreDuProduit } from './VenteDuProduit'
 import { avertissementPhoto, CONSEIL_PHOTOS, MESSAGE_PHOTO_OBLIGATOIRE, lirePrix, offreDuPrix, produitSansPrix, type Livraison } from '@/lib/publication-produit'
 import { erreur, MessageRetour, succes, type Retour } from './MessageRetour'
 import { erreurActionnable } from '@/lib/erreur-actionnable'
+import { cleVerrouBrouillon, lireBrouillonProduit, listerBrouillonsProduits, sauverBrouillonProduit, supprimerBrouillonProduit, type BrouillonProduit } from '@/lib/brouillons-produits'
+import { preparerImage } from '@/lib/reduire-image'
+import { useReglesProduit } from '@/lib/regles-produit'
 import styles from './administration-produits.module.css'
 
 type Produit = {
@@ -76,19 +79,8 @@ type Offre = {
 }
 
 type BrouillonLot = { prix: string; prixReference: string; stock: string; minimum: string; delai: string }
-type PhotoLocale = { fichier: File; url: string; avertissement?: string | null; erreurLecture?: string | null }
-type EtatEnvoiPhoto = 'attente' | 'envoi' | 'envoyee' | 'erreur'
-type BrouillonProduit = {
-  version: 1
-  cleCreation: string
-  values: MerchantProductDraft
-  variantes: LigneVariante[]
-  vente: { etat: string; garantie: string; delai: string }
-  autres: string[]
-  avaitPhotos: boolean
-  avaitPdf?: boolean
-  enregistreLe: string
-}
+type PhotoLocale = { fichier: File; url: string; avertissement?: string | null; erreurLecture?: string | null; imageServeur?: ImageFiche }
+type EtatEnvoiPhoto = 'preparation' | 'attente' | 'envoi' | 'envoyee' | 'erreur'
 type Mode = 'liste' | 'ajout' | 'lot'
 
 const STATUTS: Record<string, string> = {
@@ -100,6 +92,19 @@ const REVISIONS_OUVERTES = ['soumise', 'en_verification']
 const money = (valeur: number) => `${new Intl.NumberFormat('fr-FR').format(valeur)} FCFA`
 const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 const messageErreur = (cause: unknown) => erreurActionnable(cause)
+const megaoctets = (octets: number) => `${(octets / 1024 / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Mo`
+const delaiEnvoiAdapte = (octets: number) => Math.min(10 * 60_000, Math.max(120_000, 60_000 + Math.ceil(octets / 20_000) * 1_000))
+
+async function traiterAvecConcurrence<T>(elements: readonly T[], maximum: number, traiter: (element: T, index: number) => Promise<void>) {
+  let prochain = 0
+  const ouvrier = async () => {
+    while (prochain < elements.length) {
+      const index = prochain++
+      await traiter(elements[index]!, index)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(maximum, elements.length) }, () => ouvrier()))
+}
 
 function valeursOffre(offre: Offre): BrouillonLot {
   const revision = offre.revisions[0]
@@ -133,6 +138,8 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
   const [fiche, setFiche] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [rangement, setRangement] = useState<Produit | null>(null)
+  const [cleBrouillon, setCleBrouillon] = useState<string | null>(null)
+  const ouvrirAjout = () => { setCleBrouillon(null); setMode('ajout') }
 
   // La fiche complete (6 novembre 2026) : le contenu valide, et entre deux, ce qui se publie tout de suite.
   const produitOuvert = fiche ? produits.find((produit) => produit.id === fiche) : undefined
@@ -145,7 +152,7 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
       <div><p className={styles.eyebrow}>CATALOGUE VENDEUR</p><h2>Produits</h2><p>{produits.length} fiche(s) · {offres.length} offre(s) dans votre boutique</p></div>
       <div className={styles.headerActions}>
         {offres.length ? <button type="button" className={mode === 'lot' ? styles.activeSecondary : styles.secondary} onClick={() => setMode(mode === 'lot' ? 'liste' : 'lot')}>✎ Modification en lot</button> : null}
-        <button type="button" className={styles.primary} disabled={!canPublish} onClick={() => setMode('ajout')}>＋ Nouveau produit</button>
+        <button type="button" className={styles.primary} disabled={!canPublish} onClick={ouvrirAjout}>＋ Nouveau produit</button>
       </div>
     </header>
     {!canPublish ? <div className={styles.publicationBloquee} role="alert"><div><strong>Création momentanément indisponible</strong><span>La boutique et le compte vendeur doivent être actifs. La rubrique Vérification indique précisément l’action attendue.</span></div>{onVerification ? <button type="button" onClick={onVerification}>Voir la vérification</button> : null}</div> : null}
@@ -153,9 +160,12 @@ export function AdministrationProduits({ boutiqueId, nomBoutique, produits, offr
       <strong>Images obligatoires</strong><span>Les produits signalés ci-dessous restent invisibles sur votre boutique tant qu’ils n’ont pas au moins une image publiée.</span>
     </div> : null}
     {notice ? <p role="status" className={styles.feedback}>{notice}</p> : null}
-    {mode === 'ajout' ? <AjoutProduit boutiqueId={boutiqueId} nomBoutique={nomBoutique} canPublish={canPublish} suiviStock={suiviStock} onAnnuler={() => setMode('liste')} direct={direct} onCree={async (enLigne) => { await onRefresh(); setNotice(enLigne ? 'Produit en ligne : il est visible sur votre boutique.' : 'Produit envoyé à la validation de KatiMarket. Vous pouvez suivre son statut dans la liste.'); setMode('liste') }} /> : null}
+    {mode === 'ajout' ? cleBrouillon
+      ? <AjoutProduit key={cleBrouillon} cleBrouillon={cleBrouillon} boutiqueId={boutiqueId} nomBoutique={nomBoutique} canPublish={canPublish} suiviStock={suiviStock} onAnnuler={() => { setCleBrouillon(null); setMode('liste') }} direct={direct} onCree={async (enLigne) => { await onRefresh(); setNotice(enLigne ? 'Produit en ligne : il est visible sur votre boutique.' : 'Produit envoyé à la validation de KatiMarket. Vous pouvez suivre son statut dans la liste.'); setCleBrouillon(null); setMode('liste') }} />
+      : <ChoixBrouillon boutiqueId={boutiqueId} onChoisir={setCleBrouillon} onRetour={() => setMode('liste')} />
+      : null}
     {mode === 'lot' ? <ModificationLot boutiqueId={boutiqueId} offres={offres} onRetour={() => setMode('liste')} onRefresh={onRefresh} /> : null}
-    {mode === 'liste' ? <ListeProduits boutiqueId={boutiqueId} produits={produits} offres={offres} canPublish={canPublish} livraison={livraison} onRefresh={onRefresh} onPrix={(nom) => setNotice(`Prix enregistré : « ${nom} » est en ligne.`)} onSupprime={(nom) => setNotice(`« ${nom} » a été supprimé de votre catalogue.`)} onFiche={setFiche} onCategories={setRangement} onAjouter={() => setMode('ajout')} onLot={() => setMode('lot')} /> : null}
+    {mode === 'liste' ? <ListeProduits boutiqueId={boutiqueId} produits={produits} offres={offres} canPublish={canPublish} livraison={livraison} onRefresh={onRefresh} onPrix={(nom) => setNotice(`Prix enregistré : « ${nom} » est en ligne.`)} onSupprime={(nom) => setNotice(`« ${nom} » a été supprimé de votre catalogue.`)} onFiche={setFiche} onCategories={setRangement} onAjouter={ouvrirAjout} onLot={() => setMode('lot')} /> : null}
     {rangement ? <FenetreCategories key={rangement.id} boutiqueId={boutiqueId} produit={rangement} onFermer={() => setRangement(null)}
       onEnregistre={async () => { await onRefresh(); setRangement(null); setNotice('Catégories enregistrées et publiées.') }} /> : null}
   </section>
@@ -301,7 +311,96 @@ function AjouterPrix({ boutiqueId, produit, livraison, disabled, onEnregistre }:
   </form>
 }
 
-function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock, onAnnuler, onCree }: { boutiqueId: string; nomBoutique: string; canPublish: boolean; direct: boolean; suiviStock: boolean; onAnnuler: () => void; onCree: (enLigne: boolean) => Promise<void> }) {
+function ChoixBrouillon({ boutiqueId, onChoisir, onRetour }: { boutiqueId: string; onChoisir: (cle: string) => void; onRetour: () => void }) {
+  const [brouillons, setBrouillons] = useState<BrouillonProduit[]>([])
+  const [erreurStockage, setErreurStockage] = useState('')
+  const relire = () => {
+    try { setBrouillons(listerBrouillonsProduits(window.localStorage, boutiqueId)); setErreurStockage('') }
+    catch { setErreurStockage('Les brouillons de ce navigateur ne peuvent pas être lus. Vous pouvez néanmoins commencer un nouveau produit.') }
+  }
+  useEffect(() => {
+    const minuterie = window.setTimeout(() => {
+      try {
+        const trouves = listerBrouillonsProduits(window.localStorage, boutiqueId)
+        if (!trouves.length) onChoisir(window.crypto.randomUUID())
+        else setBrouillons(trouves)
+      } catch { setErreurStockage('Les brouillons de ce navigateur ne peuvent pas être lus. Vous pouvez néanmoins commencer un nouveau produit.') }
+    }, 0)
+    return () => window.clearTimeout(minuterie)
+  }, [boutiqueId, onChoisir])
+  const nouveau = () => onChoisir(window.crypto.randomUUID())
+  const supprimer = (cleCreation: string) => {
+    try { supprimerBrouillonProduit(window.localStorage, boutiqueId, cleCreation); relire() }
+    catch { setErreurStockage('Ce brouillon n’a pas pu être supprimé du navigateur.') }
+  }
+  return <div className={styles.draftChooser}>
+    <button type="button" className={styles.back} onClick={onRetour}>← Retour au catalogue</button>
+    <div className={styles.draftChooserHeading}><div><p className={styles.eyebrow}>BROUILLONS PRODUITS</p><h3>Que voulez-vous préparer ?</h3><p>Chaque produit possède son propre brouillon. Vous pouvez en conserver plusieurs et les reprendre séparément.</p></div><button type="button" className={styles.primary} onClick={nouveau}>＋ Nouveau brouillon</button></div>
+    {erreurStockage ? <p className={styles.errorText} role="alert">{erreurStockage}</p> : null}
+    {brouillons.length ? <ul className={styles.draftList}>{brouillons.map((brouillon) => <li key={brouillon.cleCreation}><div><strong>{brouillon.values.nom.trim() || 'Produit sans nom'}</strong><span>Enregistré le {new Date(brouillon.enregistreLe).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><small>{brouillon.variantes.length} variante(s){brouillon.avaitPhotos ? ' · photos à sélectionner de nouveau après une reprise' : ''}</small></div><div><button type="button" className={styles.secondary} onClick={() => onChoisir(brouillon.cleCreation)}>Continuer</button><button type="button" className={styles.dangerLink} onClick={() => supprimer(brouillon.cleCreation)}>Abandonner</button></div></li>)}</ul>
+      : <div className={styles.emptyDrafts}><strong>Aucun brouillon enregistré</strong><p>Commencez un nouveau produit ; il sera sauvegardé indépendamment des suivants.</p><button type="button" className={styles.primary} onClick={nouveau}>Créer mon premier brouillon</button></div>}
+    <p className={styles.draftRetention}>Une préparation déjà envoyée au serveur mais jamais finalisée est automatiquement nettoyée après 7 jours d’inactivité.</p>
+  </div>
+}
+
+function useVerrouBrouillon(boutiqueId: string, cleCreation: string) {
+  const ongletId = useRef('')
+  const [pret, setPret] = useState(false)
+  const [bloque, setBloque] = useState(false)
+  const cle = cleVerrouBrouillon(boutiqueId, cleCreation)
+  const duree = 15_000
+
+  const identifierOnglet = () => {
+    if (ongletId.current) return ongletId.current
+    const prefixe = 'katimarket-onglet:'
+    // `window.name` appartient au contexte de navigation : il survit a un
+    // rechargement, mais un nouvel onglet recoit sa propre identite.
+    ongletId.current = window.name.startsWith(prefixe) ? window.name.slice(prefixe.length) : window.crypto.randomUUID()
+    try { window.name = `${prefixe}${ongletId.current}` } catch { /* Le bail expirera si le navigateur refuse. */ }
+    return ongletId.current
+  }
+
+  const prendre = () => {
+    identifierOnglet()
+    try {
+      window.localStorage.setItem(cle, JSON.stringify({ ongletId: ongletId.current, expireLe: Date.now() + duree }))
+    } catch {
+      // Certains navigateurs bloquent tout stockage local. Le formulaire reste utilisable ;
+      // l'alerte d'autosauvegarde expliquera alors que la protection inter-onglets est indisponible.
+    }
+    setBloque(false); setPret(true)
+  }
+
+  useEffect(() => {
+    identifierOnglet()
+    const verifier = () => {
+      try {
+        const verrou = JSON.parse(window.localStorage.getItem(cle) ?? 'null') as { ongletId?: string; expireLe?: number } | null
+        if (verrou?.ongletId && verrou.ongletId !== ongletId.current && Number(verrou.expireLe) > Date.now()) {
+          setBloque(true); setPret(true); return
+        }
+        prendre()
+      } catch { prendre() }
+    }
+    verifier()
+    const minuterie = window.setInterval(verifier, 5_000)
+    const stockage = (event: StorageEvent) => { if (event.key === cle) verifier() }
+    window.addEventListener('storage', stockage)
+    return () => {
+      window.clearInterval(minuterie); window.removeEventListener('storage', stockage)
+      try {
+        const verrou = JSON.parse(window.localStorage.getItem(cle) ?? 'null') as { ongletId?: string } | null
+        if (verrou?.ongletId === ongletId.current) window.localStorage.removeItem(cle)
+      } catch { /* Le bail expirera seul. */ }
+    }
+  // `prendre` et `identifierOnglet` utilisent uniquement la cle et les refs de cet effet.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cle])
+
+  return { pret, bloque, reprendreIci: prendre }
+}
+
+function AjoutProduit({ cleBrouillon, boutiqueId, nomBoutique, canPublish, direct, suiviStock, onAnnuler, onCree }: { cleBrouillon: string; boutiqueId: string; nomBoutique: string; canPublish: boolean; direct: boolean; suiviStock: boolean; onAnnuler: () => void; onCree: (enLigne: boolean) => Promise<void> }) {
   const [values, setValues] = useState<MerchantProductDraft>({ nom: '', marque: '', categorie: '', sousCategorie: '', accessoireCategorie: '', description: '', descriptionCourte: '', ficheTechnique: '', metaTitre: '', metaDescription: '' })
   const [photos, setPhotos] = useState<PhotoLocale[]>([])
   const photosRef = useRef<PhotoLocale[]>([])
@@ -316,17 +415,22 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
   const [suggestionIa, setSuggestionIa] = useState<MerchantProductSuggestion | null>(null)
   const [avantIa, setAvantIa] = useState<MerchantProductDraft | null>(null)
   const [autres, setAutres] = useState<string[]>([])
-  const [cleCreation, setCleCreation] = useState('')
+  const [cleCreation] = useState(cleBrouillon)
   const [brouillonPret, setBrouillonPret] = useState(false)
   const [brouillonEnregistreLe, setBrouillonEnregistreLe] = useState('')
   const [avertissementsFichiers, setAvertissementsFichiers] = useState<string[]>([])
   const [progression, setProgression] = useState('')
+  const [pourcentageEnvoi, setPourcentageEnvoi] = useState(0)
   const [etatPhotos, setEtatPhotos] = useState<Record<string, EtatEnvoiPhoto>>({})
   const [erreurBrouillon, setErreurBrouillon] = useState('')
   const [erreurPdf, setErreurPdf] = useState('')
+  const [clePdfEnvoyee, setClePdfEnvoyee] = useState('')
+  const controleurEnvoi = useRef<AbortController | null>(null)
   // Le prix, les variantes et la vente partent avec la fiche (6 novembre 2026).
   const [variantes, setVariantes] = useState<LigneVariante[]>([{ ...LIGNE_VIDE }])
   const [vente, setVente] = useState({ etat: 'neuf', garantie: '', delai: '2' })
+  const verrou = useVerrouBrouillon(boutiqueId, cleCreation)
+  const regles = useReglesProduit()
   const { categories, erreur: erreurCategories, reessayer: reessayerCategories } = useCategoriesMarketplace()
   const racine = categories?.find((categorie) => categorie.id === values.categorie)
   const sousCategorie = racine?.sousCategories.find((sous) => sous.id === values.sousCategorie)
@@ -341,49 +445,43 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
   const image = variantes[0]?.imageUrls[0] ?? photos[0]?.url
   const lignes = useMemo(() => values.ficheTechnique.split('\n').map((ligne) => ligne.trim()).filter(Boolean).slice(0, 5), [values.ficheTechnique])
   const checklist = [
-    { id: 'produit-informations', libelle: 'Nom et catégorie', ok: values.nom.trim().length >= 2 && Boolean(categorieId) },
+    { id: 'produit-informations', libelle: 'Nom et catégorie', ok: values.nom.trim().length >= regles.produit.nomMin && values.nom.trim().length <= regles.produit.nomMax && Boolean(categorieId) },
     { id: 'produit-medias', libelle: 'Au moins une photo', ok: photos.length > 0 },
     { id: 'produit-prix', libelle: variantes.length > 1 ? `${variantes.length} variantes complètes` : 'Prix du produit', ok: !erreurVariantes(variantes, suiviStock, axesVariantes) },
-    { id: 'produit-vente', libelle: 'Conditions de vente', ok: Number.isInteger(garantieSaisie) && garantieSaisie >= garantieMinimale && garantieSaisie <= 120 },
+    { id: 'produit-vente', libelle: 'Conditions de vente', ok: Number.isInteger(garantieSaisie) && garantieSaisie >= garantieMinimale && garantieSaisie <= regles.vente.garantieMaxMois },
   ]
   const variantesSansImage = variantes.length > 1 ? variantes.filter((variante) => variante.imageUrls.length === 0).length : 0
 
   useEffect(() => { photosRef.current = photos }, [photos])
   useEffect(() => () => photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.url)), [])
   useEffect(() => {
-    const cle = `katimarket:produit:brouillon:${boutiqueId}`
     const restauration = window.setTimeout(() => {
       try {
-        const sauvegarde = window.localStorage.getItem(cle)
-        if (sauvegarde) {
-          const brouillon = JSON.parse(sauvegarde) as BrouillonProduit
-          if (brouillon.version === 1) {
-            setValues(brouillon.values)
-            setVariantes(brouillon.variantes.map((variante) => ({ ...variante, imageUrls: [] })))
-            setVente(brouillon.vente)
-            setAutres(brouillon.autres)
-            setCleCreation(brouillon.cleCreation)
-            setBrouillonEnregistreLe(brouillon.enregistreLe)
-            if (brouillon.avaitPhotos || brouillon.avaitPdf) setAvertissementsFichiers([`Le brouillon a été restauré. Pour votre sécurité, sélectionnez de nouveau ${brouillon.avaitPhotos && brouillon.avaitPdf ? 'ses photos et son PDF' : brouillon.avaitPhotos ? 'ses photos' : 'son PDF'} avant la publication.`])
-          }
+        const brouillon = lireBrouillonProduit(window.localStorage, boutiqueId, cleCreation)
+        if (brouillon) {
+          setValues(brouillon.values)
+          setVariantes(brouillon.variantes.map((variante) => ({ ...variante, imageUrls: [] })))
+          setVente(brouillon.vente)
+          setAutres(brouillon.autres)
+          setBrouillonEnregistreLe(brouillon.enregistreLe)
+          if (brouillon.avaitPhotos || brouillon.avaitPdf) setAvertissementsFichiers([`Le brouillon a été restauré. Pour votre sécurité, sélectionnez de nouveau ${brouillon.avaitPhotos && brouillon.avaitPdf ? 'ses photos et son PDF' : brouillon.avaitPhotos ? 'ses photos' : 'son PDF'} avant la publication.`])
         }
       } catch {
-        try { window.localStorage.removeItem(cle) } catch { /* Le message ci-dessous suffit. */ }
+        try { supprimerBrouillonProduit(window.localStorage, boutiqueId, cleCreation) } catch { /* Le message ci-dessous suffit. */ }
         setErreurBrouillon('Le brouillon enregistré sur cet appareil est illisible. Le formulaire a été réinitialisé : vérifiez les informations avant de continuer.')
       }
-      setCleCreation((actuelle) => actuelle || window.crypto.randomUUID())
       setBrouillonPret(true)
     }, 0)
     return () => window.clearTimeout(restauration)
-  }, [boutiqueId])
+  }, [boutiqueId, cleCreation])
 
   useEffect(() => {
-    if (!brouillonPret || !cleCreation) return
+    if (!brouillonPret || !cleCreation || verrou.bloque) return
     const minuterie = window.setTimeout(() => {
       const enregistreLe = new Date().toISOString()
-      const brouillon: BrouillonProduit = { version: 1, cleCreation, values, variantes: variantes.map((variante) => ({ ...variante, imageUrls: [] })), vente, autres, avaitPhotos: photos.length > 0, avaitPdf: Boolean(pdf), enregistreLe }
+      const brouillon: BrouillonProduit = { version: 2, cleCreation, values, variantes: variantes.map((variante) => ({ ...variante, imageUrls: [] })), vente, autres, avaitPhotos: photos.length > 0, avaitPdf: Boolean(pdf), enregistreLe }
       try {
-        window.localStorage.setItem(`katimarket:produit:brouillon:${boutiqueId}`, JSON.stringify(brouillon))
+        sauverBrouillonProduit(window.localStorage, boutiqueId, brouillon)
         setBrouillonEnregistreLe(enregistreLe)
         setErreurBrouillon('')
       } catch {
@@ -391,21 +489,40 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
       }
     }, 600)
     return () => window.clearTimeout(minuterie)
-  }, [autres, boutiqueId, brouillonPret, cleCreation, pdf, photos.length, values, variantes, vente])
+  }, [autres, boutiqueId, brouillonPret, cleCreation, pdf, photos.length, values, variantes, vente, verrou.bloque])
 
-  function choisirPhotos(fichiers: FileList | null) {
+  async function choisirPhotos(fichiers: FileList | null) {
     if (!fichiers) return
-    const places = Math.max(0, 12 - photos.length)
+    const places = Math.max(0, regles.images.maximum - photos.length)
     const erreursFichiers: string[] = []
-    const valides = Array.from(fichiers).filter((fichier) => {
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(fichier.type)) { erreursFichiers.push(`${fichier.name} : format non accepté (JPG, PNG ou WebP uniquement).`); return false }
-      if (fichier.size > 5 * 1024 * 1024) { erreursFichiers.push(`${fichier.name} : fichier trop lourd (5 Mo maximum).`); return false }
+    const candidates = Array.from(fichiers).filter((fichier) => {
+      const heic = /\.(heic|heif)$/i.test(fichier.name) || ['image/heic', 'image/heif'].includes(fichier.type.toLowerCase())
+      if (!regles.images.typesMime.includes(fichier.type) && !heic) { erreursFichiers.push(`${fichier.name} : format non accepté (JPG, PNG, WebP ou HEIC uniquement).`); return false }
+      if (fichier.size > 30 * 1024 * 1024) { erreursFichiers.push(`${fichier.name} : fichier trop lourd pour être préparé sur ce téléphone (30 Mo maximum).`); return false }
       return true
     })
-    if (valides.length > places) erreursFichiers.push(`${valides.length - places} photo(s) ignorée(s) : la galerie est limitée à 12 images.`)
+    if (candidates.length > places) erreursFichiers.push(`${candidates.length - places} photo(s) ignorée(s) : la galerie est limitée à ${regles.images.maximum} images.`)
+    const preparees: PhotoLocale[] = []
+    setProgression(`Préparation de ${Math.min(candidates.length, places)} photo(s)…`)
+    await traiterAvecConcurrence(candidates.slice(0, places), regles.images.envoisSimultanesMax, async (fichier, index) => {
+      try {
+        const resultat = await preparerImage(fichier)
+        if (resultat.fichier.size > regles.images.tailleMaxOctets) {
+          erreursFichiers.push(`${fichier.name} reste trop lourd après compression (${megaoctets(resultat.fichier.size)} ; ${megaoctets(regles.images.tailleMaxOctets)} maximum).`)
+          return
+        }
+        const detail = resultat.convertieHeic
+          ? `Photo iPhone convertie en JPEG (${megaoctets(resultat.octetsApres)}).`
+          : resultat.compressee ? `Photo optimisée de ${megaoctets(resultat.octetsAvant)} à ${megaoctets(resultat.octetsApres)}, sans réduction visible de qualité.` : null
+        preparees[index] = { fichier: resultat.fichier, url: URL.createObjectURL(resultat.fichier), avertissement: detail }
+      } catch {
+        erreursFichiers.push(`${fichier.name} : cette photo est illisible ou endommagée et ne peut pas être convertie. Sur iPhone, choisissez « Le plus compatible » puis réessayez.`)
+      }
+    })
+    const ajoutees = preparees.filter(Boolean)
+    setProgression('')
     setAvertissementsFichiers(erreursFichiers)
-    const ajoutees = valides.slice(0, places).map((fichier) => ({ fichier, url: URL.createObjectURL(fichier) }))
-    setPhotos((actuelles) => [...actuelles, ...ajoutees].slice(0, 12))
+    setPhotos((actuelles) => [...actuelles, ...ajoutees].slice(0, regles.images.maximum))
     setEtatPhotos((actuels) => Object.fromEntries([...Object.entries(actuels), ...ajoutees.map((photo) => [photo.url, 'attente' as const])]))
     // Chaque photo est mesuree : trop petite ou trop allongee, le vendeur est prevenu, sans blocage.
     for (const photo of ajoutees) {
@@ -421,6 +538,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
 
   function choisirPdf(fichier: File | undefined) {
     setErreurPdf('')
+    setClePdfEnvoyee('')
     if (!fichier) { setPdf(null); return }
     if (fichier.type !== 'application/pdf') { setPdf(null); setErreurPdf(`${fichier.name} : ce fichier n’est pas un PDF. Choisissez un fichier dont le nom se termine par .pdf.`); return }
     if (fichier.size === 0) { setPdf(null); setErreurPdf(`${fichier.name} est vide. Choisissez un PDF contenant la fiche technique.`); return }
@@ -436,7 +554,7 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
   }
 
   function effacerBrouillon() {
-    try { window.localStorage.removeItem(`katimarket:produit:brouillon:${boutiqueId}`) } catch {
+    try { supprimerBrouillonProduit(window.localStorage, boutiqueId, cleCreation) } catch {
       // La publication a reussi : un stockage local bloque ne doit jamais la transformer en echec.
     }
   }
@@ -503,7 +621,8 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
   }
 
   async function submit(event: FormEvent) {
-    event.preventDefault(); setMessage(null); setProgression('')
+    event.preventDefault(); setMessage(null); setProgression(''); setPourcentageEnvoi(0)
+    if (verrou.bloque) return setMessage(erreur('Ce brouillon est maintenant utilisé dans un autre onglet. Reprenez-le ici avant de publier.'))
     // Au moins une photo (9 novembre 2026) : un produit sans image ne se met plus en ligne.
     if (!photos.length) return setMessage(erreur(MESSAGE_PHOTO_OBLIGATOIRE))
     const photoIllisible = photos.find((photo) => photo.erreurLecture)
@@ -512,12 +631,14 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
     const erreurPrix = erreurVariantes(variantes, suiviStock, axesVariantes)
     // Les lignes fautives se montrent toutes, en rouge, sous le tableau des variantes.
     if (erreurPrix) { setAfficherErreurs(true); return setMessage(erreur(erreurPrix)) }
-    if (!Number.isInteger(garantieSaisie) || garantieSaisie < garantieMinimale || garantieSaisie > 120) return setMessage(erreur(`La garantie de cette catégorie est d’au moins ${libelleMois(garantieMinimale)}.`))
+    if (!Number.isInteger(garantieSaisie) || garantieSaisie < garantieMinimale || garantieSaisie > regles.vente.garantieMaxMois) return setMessage(erreur(`La garantie de cette catégorie est d’au moins ${libelleMois(garantieMinimale)}.`))
     setPending(true)
+    const controleur = new AbortController()
+    controleurEnvoi.current = controleur
     let etape = 'création de la fiche et des prix'
     try {
       setProgression('Création sécurisée de la fiche et des prix…')
-      const { produit, offres, reprise } = await api<{ produit: { id: string; statut?: string }; offres: Array<{ id: string }>; reprise?: boolean }>(`/marketplace/boutiques/${boutiqueId}/produits-complets`, { methode: 'POST', corps: {
+      const { produit, offres, reprise } = await api<{ produit: { id: string; statut?: string; finaliseLe?: string | null }; offres: Array<{ id: string }>; reprise?: boolean }>(`/marketplace/boutiques/${boutiqueId}/produits-complets`, { methode: 'POST', corps: {
         cleCreation,
         produit: {
           nom: values.nom.trim(), slug: slugify(values.nom), marque: values.marque.trim() || undefined, categorieId,
@@ -526,40 +647,75 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
         },
         vente: { etat: vente.etat, garantieMois: garantieSaisie, delaiMaxJours: Number(vente.delai) },
         variantes: variantesPourApi(variantes, suiviStock, axesVariantes),
-      } })
+      }, signal: controleur.signal })
       etape = 'vérification de la reprise après coupure'
-      const contenuExistant = reprise ? await api<{ revisionOuverte?: { id: string } | null }>(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}/contenu`) : null
-      if (reprise && (produit.statut === 'actif' || contenuExistant?.revisionOuverte)) {
+      const contenuExistant = reprise ? await api<{ revisionOuverte?: { id: string } | null }>(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}/contenu`, { signal: controleur.signal }) : null
+      if (reprise && (produit.finaliseLe || produit.statut === 'actif' || contenuExistant?.revisionOuverte)) {
         effacerBrouillon()
         setProgression('')
         setMessage(succes(produit.statut === 'actif' ? 'Ce produit était déjà en ligne : aucun doublon n’a été créé.' : 'Ce produit était déjà envoyé à la validation : aucun doublon n’a été créé.'))
         await onCree(produit.statut === 'actif')
         return
       }
-      const images: ImageFiche[] = []
-      for (const [index, photo] of photos.entries()) {
+      const images: Array<ImageFiche | undefined> = photos.map((photo) => photo.imageServeur)
+      const progressionPhotos = new Map(photos.map((photo) => [photo.url, photo.imageServeur ? photo.fichier.size : 0]))
+      const totalPhotos = photos.reduce((total, photo) => total + photo.fichier.size, 0)
+      const afficherProgression = () => {
+        const charges = [...progressionPhotos.values()].reduce((total, octets) => total + octets, 0)
+        const pourcentage = totalPhotos ? Math.min(100, Math.round(charges / totalPhotos * 100)) : 100
+        setPourcentageEnvoi(pourcentage)
+        setProgression(`Photos : ${megaoctets(charges)} sur ${megaoctets(totalPhotos)} · ${pourcentage} %`)
+      }
+      let premiereErreur: { cause: unknown; photo: PhotoLocale; index: number } | null = null
+      await traiterAvecConcurrence(photos, regles.images.envoisSimultanesMax, async (photo, index) => {
+        if (photo.imageServeur || premiereErreur || controleur.signal.aborted) return
         etape = `envoi de la photo « ${photo.fichier.name} » (${index + 1}/${photos.length})`
-        setProgression(`Envoi de la photo ${index + 1} sur ${photos.length}…`)
         setEtatPhotos((actuels) => ({ ...actuels, [photo.url]: 'envoi' }))
         try {
           const corps = new FormData(); corps.append('fichier', photo.fichier)
-          images.push(await api<ImageFiche>(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}/images`, { methode: 'POST', corps }))
+          const imageServeur = await televerserApi<ImageFiche>(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}/images`, corps, {
+            signal: controleur.signal,
+            delaiMs: delaiEnvoiAdapte(photo.fichier.size),
+            onProgression: (progressionPhoto: ProgressionEnvoi) => {
+              const proportion = progressionPhoto.total ? progressionPhoto.charges / progressionPhoto.total : progressionPhoto.pourcentage / 100
+              progressionPhotos.set(photo.url, Math.min(photo.fichier.size, Math.round(photo.fichier.size * proportion)))
+              afficherProgression()
+            },
+          })
+          images[index] = imageServeur
+          progressionPhotos.set(photo.url, photo.fichier.size)
+          afficherProgression()
+          setPhotos((actuelles) => actuelles.map((actuelle) => actuelle.url === photo.url ? { ...actuelle, imageServeur } : actuelle))
           setEtatPhotos((actuels) => ({ ...actuels, [photo.url]: 'envoyee' }))
         } catch (cause) {
-          setEtatPhotos((actuels) => ({ ...actuels, [photo.url]: 'erreur' }))
-          const dejaEnvoyees = images.length === 1 ? 'La première photo est déjà conservée. ' : images.length > 1 ? `${images.length} photos précédentes sont déjà conservées. ` : ''
-          throw new Error(`La photo « ${photo.fichier.name} » (${index + 1} sur ${photos.length}) n’a pas été envoyée. ${erreurActionnable(cause, 'Le brouillon est conservé.')} ${dejaEnvoyees}Corrigez ce fichier ou votre connexion, puis cliquez de nouveau sur le bouton de publication.`)
+          if (!premiereErreur && !(cause instanceof DOMException && cause.name === 'AbortError')) premiereErreur = { cause, photo, index }
+          setEtatPhotos((actuels) => ({ ...actuels, [photo.url]: cause instanceof DOMException && cause.name === 'AbortError' ? 'attente' : 'erreur' }))
+          controleur.abort()
         }
+      })
+      if (premiereErreur) {
+        const echec = premiereErreur as { cause: unknown; photo: PhotoLocale; index: number }
+        const dejaEnvoyees = images.filter(Boolean).length
+        const reprise = dejaEnvoyees === 1 ? 'La première photo est déjà conservée et ne sera pas renvoyée. ' : dejaEnvoyees > 1 ? `${dejaEnvoyees} photos sont déjà conservées et ne seront pas renvoyées. ` : ''
+        throw new Error(`La photo « ${echec.photo.fichier.name} » (${echec.index + 1} sur ${photos.length}) n’a pas été envoyée. ${erreurActionnable(echec.cause, 'Le brouillon est conservé.')} ${reprise}Corrigez ce fichier ou votre connexion, puis reprenez l’envoi.`)
       }
-      let clePdf: string | undefined
-      if (pdf) {
+      if (controleur.signal.aborted) throw new DOMException('Envoi annulé', 'AbortError')
+
+      let clePdf: string | undefined = clePdfEnvoyee || undefined
+      if (pdf && !clePdf) {
         etape = `envoi du PDF « ${pdf.name} »`
-        setProgression('Envoi de la fiche technique PDF…')
+        setPourcentageEnvoi(0); setProgression(`PDF : 0 Mo sur ${megaoctets(pdf.size)} · 0 %`)
         try {
           const corps = new FormData(); corps.append('fichier', pdf)
-          const depot = await api<{ cle: string }>(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}/fiche-technique`, { methode: 'POST', corps })
+          const depot = await televerserApi<{ cle: string }>(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}/fiche-technique`, corps, {
+            signal: controleur.signal,
+            delaiMs: delaiEnvoiAdapte(pdf.size),
+            onProgression: ({ charges, total, pourcentage }) => { setPourcentageEnvoi(pourcentage); setProgression(`PDF : ${megaoctets(charges)} sur ${megaoctets(total || pdf.size)} · ${pourcentage} %`) },
+          })
           clePdf = depot.cle
+          setClePdfEnvoyee(depot.cle)
         } catch (cause) {
+          if (cause instanceof DOMException && cause.name === 'AbortError') throw cause
           throw new Error(`Le PDF « ${pdf.name} » n’a pas été envoyé. ${erreurActionnable(cause, 'Les photos déjà envoyées sont conservées. Corrigez le PDF ou votre connexion, puis réessayez.')}`)
         }
       }
@@ -567,33 +723,48 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
         etape = 'finalisation de la galerie et des variantes'
         setProgression('Finalisation de la galerie et des variantes…')
         const associationsImages = variantes.some((variante) => variante.imageUrls.length > 0)
-        await api(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}/contenu/revisions`, { methode: 'POST', corps: {
+        const finalisation = await api<{ produit: { statut: string }; reprise?: boolean }>(`/marketplace/boutiques/${boutiqueId}/produits/${produit.id}/finaliser`, { methode: 'POST', corps: {
           metaTitre: values.metaTitre.trim() || undefined, metaDescription: values.metaDescription.trim() || undefined,
           descriptionCourte: values.descriptionCourte.trim() || undefined, ficheTechnique: values.ficheTechnique.trim() || undefined,
           ficheTechniquePdfCle: clePdf, images: images.map((photo, index) => ({
-            imageId: photo.id,
+            imageId: photo!.id,
             texteAlternatif: `${values.nom.trim()}, photo ${index + 1}`,
             ...(associationsImages ? {
               offreIds: variantes.flatMap((variante, rang) => variante.imageUrls.includes(photos[index]!.url) && offres[rang] ? [offres[rang]!.id] : []),
               principalePourOffreIds: variantes.flatMap((variante, rang) => variante.imageUrls[0] === photos[index]!.url && offres[rang] ? [offres[rang]!.id] : []),
             } : {}),
           })),
-        } })
+        }, signal: controleur.signal })
+        produit.statut = finalisation.produit.statut
       }
       // La revision de contenu active atomiquement le produit seulement apres
       // la publication de sa premiere image pour un vendeur autorise en direct.
-      const enLigne = direct
+      const enLigne = produit.statut === 'actif'
       effacerBrouillon()
       setProgression('')
       setMessage(succes(enLigne ? 'Produit, prix et médias en ligne.' : 'Produit, prix et médias envoyés à la validation de KatiMarket.')); await onCree(enLigne)
     } catch (cause) {
       setProgression('')
+      if (cause instanceof DOMException && cause.name === 'AbortError') {
+        setMessage(erreur('Envoi annulé. Le brouillon et les fichiers déjà reçus sont conservés ; cliquez sur « Reprendre l’envoi » lorsque vous êtes prêt.'))
+        return
+      }
       const detail = messageErreur(cause)
       setMessage(erreur(detail.startsWith('La photo') || detail.startsWith('Le PDF')
         ? detail
         : `Le problème se situe pendant la ${etape}. ${detail} Votre brouillon est conservé : vous pouvez réessayer sans recréer le produit.`))
-    } finally { setPending(false) }
+    } finally {
+      if (controleurEnvoi.current === controleur) controleurEnvoi.current = null
+      setPending(false)
+    }
   }
+
+  function annulerEnvoi() {
+    controleurEnvoi.current?.abort()
+  }
+
+  if (!verrou.pret) return <div className={styles.draftLock} role="status">Vérification de ce brouillon…</div>
+  if (verrou.bloque) return <div className={styles.draftLock} role="alert"><div><strong>Ce brouillon est ouvert dans un autre onglet</strong><p>Pour éviter de mélanger deux versions, la modification est momentanément bloquée ici. Vous pouvez revenir au catalogue ou reprendre le brouillon dans cet onglet ; l’autre onglet passera alors en lecture seule.</p></div><div><button type="button" className={styles.primary} onClick={verrou.reprendreIci}>Reprendre dans cet onglet</button><button type="button" className={styles.secondary} onClick={onAnnuler}>Retour au catalogue</button></div></div>
 
   return <form className={styles.create} onSubmit={submit}>
     <div className={styles.createTop}><div><button type="button" className={styles.back} onClick={onAnnuler}>← Retour au catalogue</button><h3>Ajouter un produit</h3><p>Les informations saisies apparaissent immédiatement dans l’aperçu client.</p></div><small className={styles.draftStatus}>{brouillonEnregistreLe ? `Brouillon enregistré à ${new Date(brouillonEnregistreLe).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'Enregistrement automatique du brouillon'}</small></div>
@@ -619,17 +790,17 @@ function AjoutProduit({ boutiqueId, nomBoutique, canPublish, direct, suiviStock,
           {messageIa ? <p className={styles.aiStatus} role="status">{messageIa}</p> : null}
           {suggestionIa ? <div className={styles.aiReview} data-testid="assistant-produit-resultat"><div><strong>8 champs proposés et appliqués</strong><small>Photos, PDF, prix et stock restent sous votre contrôle.</small></div>{suggestionIa.pointsAValider.length ? <div className={styles.aiWarnings}><strong>À vérifier avant validation</strong><ul>{suggestionIa.pointsAValider.map((point) => <li key={point}>{point}</li>)}</ul></div> : <p className={styles.aiClean}>Aucun fait manquant signalé. Une relecture humaine reste requise.</p>}</div> : null}
         </section>
-        <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/150</em><input required minLength={2} maxLength={150} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '', accessoireCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value, accessoireCategorie: '' })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{sousCategorie?.sousCategories?.length ? <label className={styles.full}>Catégorie d’accessoires <span>(facultatif)</span><select value={values.accessoireCategorie} onChange={(e) => setValues({ ...values, accessoireCategorie: e.target.value })}><option value="">Garder la sous-catégorie parente</option>{(sousCategorie.sousCategories ?? []).map((accessoire) => <option key={accessoire.id} value={accessoire.id}>{accessoire.nom}</option>)}</select></label> : null}{categorieId ? <AutresCategories arbre={categories} principale={categorieId} valeur={autres} onChange={setAutres} className={styles.full} /> : null}</div>{categorieId ? <p className={styles.categoryRule}>Le produit apparaît aussi dans les autres catégories choisies ; la première garde les règles (garantie, variantes).</p> : null}{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
-        <fieldset id="produit-medias"><legend><span>2</span>Médias <small>obligatoire</small></legend><p className={styles.help}>La première image devient le visuel principal · JPG, PNG ou WebP · 5 Mo maximum par image · 12 images maximum.</p><p className={styles.conseilPhotos} data-testid="conseil-photos">{CONSEIL_PHOTOS}</p><label className={styles.dropzone}>＋ Ajouter des photos (au moins une)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => choisirPhotos(e.currentTarget.files)} /></label>{avertissementsFichiers.map((avertissement) => <p key={avertissement} className={styles.errorText} role="alert">{avertissement}</p>)}{photos.length ? <div className={styles.thumbnails}>{photos.map((photo, index) => <figure key={photo.url} data-upload={etatPhotos[photo.url] ?? 'attente'} data-error={photo.erreurLecture || undefined}><img src={photo.url} alt="" onError={() => setPhotos((actuelles) => actuelles.map((element) => element.url === photo.url ? { ...element, erreurLecture: 'Cette image est illisible ou endommagée. Retirez-la et choisissez un autre fichier.' } : element))}/><button type="button" onClick={() => retirerPhoto(index)} aria-label={`Retirer la photo ${index + 1}`}>×</button><figcaption>{photo.erreurLecture ? 'Illisible' : etatPhotos[photo.url] === 'envoi' ? 'Envoi…' : etatPhotos[photo.url] === 'envoyee' ? 'Envoyée ✓' : etatPhotos[photo.url] === 'erreur' ? 'Échec' : index === 0 ? 'Principale' : index + 1}</figcaption></figure>)}</div> : null}{photos.filter((photo) => photo.erreurLecture || photo.avertissement).map((photo) => <p key={photo.url} className={photo.erreurLecture ? styles.errorText : styles.avertissementPhoto} role={photo.erreurLecture ? 'alert' : 'status'}>{photo.fichier.name} : {photo.erreurLecture ?? photo.avertissement}</p>)}</fieldset>
-        <fieldset><legend><span>3</span>Contenu</legend><label>Description courte <em>{values.descriptionCourte.length}/300</em><textarea minLength={10} maxLength={300} rows={3} value={values.descriptionCourte} onChange={(e) => setValues({ ...values, descriptionCourte: e.target.value })} placeholder="La promesse essentielle du produit en trois lignes." /></label><label>Description détaillée<textarea rows={5} value={values.description} onChange={(e) => setValues({ ...values, description: e.target.value })} placeholder="Usage, bénéfices et éléments de différenciation…" /></label><label>Fiche technique<textarea rows={6} maxLength={20000} value={values.ficheTechnique} onChange={(e) => setValues({ ...values, ficheTechnique: e.target.value })} placeholder={'Écran : 16 pouces\nMémoire : 16 Go\nStockage : SSD 1 To'} /></label><label>Fiche technique PDF <small>facultatif · PDF lisible · 25 Mo maximum</small><input type="file" accept="application/pdf" onChange={(e) => choisirPdf(e.currentTarget.files?.[0])} /></label>{pdf ? <p className={styles.fileReady} role="status">PDF prêt : {pdf.name}</p> : null}{erreurPdf ? <p className={styles.errorText} role="alert">{erreurPdf}</p> : null}</fieldset>
-        <fieldset id="produit-prix" className={styles.fieldsetLarge}><legend><span>4</span>Prix et stock <small>obligatoire</small></legend><p className={styles.help}>{variantes.length === 1 ? 'Produit simple : complétez cette ligne. Si la catégorie propose une configuration, renseignez-la maintenant pour pouvoir ajouter facilement d’autres variantes plus tard.' : `Produit à variantes : chaque version doit avoir sa configuration, son prix et peut recevoir ses propres images.`}{suiviStock ? ' La quantité initiale est facultative : si elle reste vide, le statut du stock décide de la disponibilité.' : ''}</p>{variantesSansImage ? <p className={styles.variantImageNotice} role="status">{variantesSansImage} variante(s) n’ont pas d’image spécifique. Elles utiliseront la photo principale commune. Pour afficher une autre photo lorsqu’un client choisit la variante, sélectionnez ses images sous sa ligne de prix.</p> : null}<PrixEtVariantes lignes={variantes} onChange={setVariantes} axes={axesVariantes} photos={photos} suiviStock={suiviStock} disabled={!canPublish} afficherErreurs={afficherErreurs} /></fieldset>
-        <fieldset id="produit-vente"><legend><span>5</span>Vente <small>obligatoire</small></legend><div className={styles.fieldGrid}><label>État<select value={vente.etat} disabled={!canPublish} onChange={(e) => setVente({ ...vente, etat: e.target.value })}><option value="neuf">Neuf</option><option value="reconditionne">Reconditionné</option><option value="occasion">Occasion</option></select></label><label>Garantie (mois)<input inputMode="numeric" value={vente.garantie === '' ? String(garantieMinimale) : vente.garantie} disabled={!canPublish} onChange={(e) => setVente({ ...vente, garantie: e.target.value })} /></label><label>Délai de préparation<select value={vente.delai} disabled={!canPublish} onChange={(e) => setVente({ ...vente, delai: e.target.value })}>{['0', '1', '2', '3'].map((jours) => <option key={jours} value={jours}>{jours === '0' ? 'Le jour même' : `${jours} jour(s)`}</option>)}</select></label></div><p className={styles.help}>La livraison reprend les modes et les villes de votre boutique.{garantieMinimale ? ` Cette catégorie impose au moins ${libelleMois(garantieMinimale)} de garantie.` : ''}</p></fieldset>
+        <fieldset><legend><span>1</span>Informations produit</legend><div className={styles.fieldGrid}><label className={styles.full}>Nom du produit <em>{values.nom.length}/{regles.produit.nomMax}</em><input required minLength={regles.produit.nomMin} maxLength={regles.produit.nomMax} value={values.nom} onChange={(e) => setValues({ ...values, nom: e.target.value })} placeholder="Ex. Ordinateur portable HP Omen 16" /></label><label>Marque<input maxLength={regles.produit.marqueMax} value={values.marque} onChange={(e) => setValues({ ...values, marque: e.target.value })} placeholder="Ex. HP" /></label><label>Catégorie<select required value={values.categorie} onChange={(e) => setValues({ ...values, categorie: e.target.value, sousCategorie: '', accessoireCategorie: '' })}><option value="">Sélectionner…</option>{categories?.map((categorie) => <option key={categorie.id} value={categorie.id}>{categorie.nom}</option>)}</select></label>{racine?.sousCategories.length ? <label className={styles.full}>Sous-catégorie<select required value={values.sousCategorie} onChange={(e) => setValues({ ...values, sousCategorie: e.target.value, accessoireCategorie: '' })}><option value="">Sélectionner…</option>{racine.sousCategories.map((sous) => <option key={sous.id} value={sous.id}>{sous.nom}</option>)}</select></label> : null}{sousCategorie?.sousCategories?.length ? <label className={styles.full}>Catégorie d’accessoires <span>(facultatif)</span><select value={values.accessoireCategorie} onChange={(e) => setValues({ ...values, accessoireCategorie: e.target.value })}><option value="">Garder la sous-catégorie parente</option>{(sousCategorie.sousCategories ?? []).map((accessoire) => <option key={accessoire.id} value={accessoire.id}>{accessoire.nom}</option>)}</select></label> : null}{categorieId ? <AutresCategories arbre={categories} principale={categorieId} valeur={autres} onChange={setAutres} className={styles.full} /> : null}</div>{categorieId ? <p className={styles.categoryRule}>Le produit apparaît aussi dans les autres catégories choisies ; la première garde les règles (garantie, variantes).</p> : null}{garantie ? <p className={styles.categoryRule} data-testid="garantie-categorie">Garantie minimale de cette catégorie : <strong>{garantie.mois ? garantie.libelle : 'aucune'}</strong>.</p> : null}{erreurCategories ? <p className={styles.errorText}>{erreurCategories}</p> : null}</fieldset>
+        <fieldset id="produit-medias"><legend><span>2</span>Médias <small>obligatoire</small></legend><p className={styles.help}>La première image devient le visuel principal · JPG, PNG, WebP ou HEIC · compression automatique · {megaoctets(regles.images.tailleMaxOctets)} maximum après préparation · {regles.images.maximum} images.</p><p className={styles.conseilPhotos} data-testid="conseil-photos">{CONSEIL_PHOTOS}</p><label className={styles.dropzone}>＋ Ajouter des photos (au moins une)<input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple onChange={(e) => void choisirPhotos(e.currentTarget.files)} /></label>{avertissementsFichiers.map((avertissement) => <p key={avertissement} className={styles.errorText} role="alert">{avertissement}</p>)}{photos.length ? <div className={styles.thumbnails}>{photos.map((photo, index) => <figure key={photo.url} data-upload={etatPhotos[photo.url] ?? 'attente'} data-error={photo.erreurLecture || undefined}><img src={photo.url} alt="" onError={() => setPhotos((actuelles) => actuelles.map((element) => element.url === photo.url ? { ...element, erreurLecture: 'Cette image est illisible ou endommagée. Retirez-la et choisissez un autre fichier.' } : element))}/><button type="button" disabled={pending} onClick={() => retirerPhoto(index)} aria-label={`Retirer la photo ${index + 1}`}>×</button><figcaption>{photo.erreurLecture ? 'Illisible' : etatPhotos[photo.url] === 'preparation' ? 'Préparation…' : etatPhotos[photo.url] === 'envoi' ? 'Envoi…' : etatPhotos[photo.url] === 'envoyee' ? 'Envoyée ✓' : etatPhotos[photo.url] === 'erreur' ? 'À reprendre' : index === 0 ? 'Principale' : index + 1}</figcaption></figure>)}</div> : null}{photos.filter((photo) => photo.erreurLecture || photo.avertissement).map((photo) => <p key={photo.url} className={photo.erreurLecture ? styles.errorText : styles.avertissementPhoto} role={photo.erreurLecture ? 'alert' : 'status'}>{photo.fichier.name} : {photo.erreurLecture ?? photo.avertissement}</p>)}</fieldset>
+        <fieldset><legend><span>3</span>Contenu</legend><label>Description courte <em>{values.descriptionCourte.length}/{regles.produit.descriptionCourteMax}</em><textarea minLength={regles.produit.descriptionCourteMin} maxLength={regles.produit.descriptionCourteMax} rows={3} value={values.descriptionCourte} onChange={(e) => setValues({ ...values, descriptionCourte: e.target.value })} placeholder="La promesse essentielle du produit en trois lignes." /></label><label>Description détaillée<textarea rows={5} maxLength={regles.produit.descriptionMax} value={values.description} onChange={(e) => setValues({ ...values, description: e.target.value })} placeholder="Usage, bénéfices et éléments de différenciation…" /></label><label>Fiche technique<textarea rows={6} maxLength={regles.produit.ficheTechniqueMax} value={values.ficheTechnique} onChange={(e) => setValues({ ...values, ficheTechnique: e.target.value })} placeholder={'Écran : 16 pouces\nMémoire : 16 Go\nStockage : SSD 1 To'} /></label><label>Fiche technique PDF <small>facultatif · PDF lisible · 25 Mo maximum</small><input type="file" accept="application/pdf" onChange={(e) => choisirPdf(e.currentTarget.files?.[0])} /></label>{pdf ? <p className={styles.fileReady} role="status">PDF prêt : {pdf.name}</p> : null}{erreurPdf ? <p className={styles.errorText} role="alert">{erreurPdf}</p> : null}</fieldset>
+        <fieldset id="produit-prix" className={styles.fieldsetLarge}><legend><span>4</span>Prix et stock <small>obligatoire</small></legend><p className={styles.help}>{variantes.length === 1 ? 'Produit simple : complétez cette ligne. Si la catégorie propose une configuration, renseignez-la maintenant pour pouvoir générer automatiquement toutes les variantes.' : `Produit à variantes : chaque version doit avoir sa configuration, son prix et peut recevoir ses propres images.`}{suiviStock ? ' La quantité initiale est facultative : si elle reste vide, le statut du stock décide de la disponibilité.' : ''}</p>{variantesSansImage ? <p className={styles.variantImageNotice} role="status">{variantesSansImage} variante(s) n’ont pas d’image spécifique. Elles utiliseront la photo principale commune. Pour afficher une autre photo lorsqu’un client choisit la variante, sélectionnez ses images sous sa ligne de prix.</p> : null}<PrixEtVariantes lignes={variantes} onChange={setVariantes} axes={axesVariantes} photos={photos} suiviStock={suiviStock} disabled={!canPublish || pending} afficherErreurs={afficherErreurs} maximum={regles.variantes.maximum} /></fieldset>
+        <fieldset id="produit-vente"><legend><span>5</span>Vente <small>obligatoire</small></legend><div className={styles.fieldGrid}><label>État<select value={vente.etat} disabled={!canPublish} onChange={(e) => setVente({ ...vente, etat: e.target.value })}><option value="neuf">Neuf</option><option value="reconditionne">Reconditionné</option><option value="occasion">Occasion</option></select></label><label>Garantie (mois)<input inputMode="numeric" value={vente.garantie === '' ? String(garantieMinimale) : vente.garantie} disabled={!canPublish} onChange={(e) => setVente({ ...vente, garantie: e.target.value })} /></label><label>Délai de préparation<select value={vente.delai} disabled={!canPublish} onChange={(e) => setVente({ ...vente, delai: e.target.value })}>{Array.from({ length: regles.vente.delaiMaxJours + 1 }, (_, jours) => String(jours)).map((jours) => <option key={jours} value={jours}>{jours === '0' ? 'Le jour même' : `${jours} jour(s)`}</option>)}</select></label></div><p className={styles.help}>La livraison reprend les modes et les villes de votre boutique.{garantieMinimale ? ` Cette catégorie impose au moins ${libelleMois(garantieMinimale)} de garantie.` : ''}</p></fieldset>
         <fieldset><legend><span>6</span>Référencement</legend><label>Meta title <em>{values.metaTitre.length}/70</em><input maxLength={70} value={values.metaTitre} onChange={(e) => setValues({ ...values, metaTitre: e.target.value })} placeholder={values.nom || 'Titre visible sur Google'} /></label><label>Meta description <em>{values.metaDescription.length}/170</em><textarea rows={3} maxLength={170} value={values.metaDescription} onChange={(e) => setValues({ ...values, metaDescription: e.target.value })} /></label></fieldset>
         {/* Le bouton sous le formulaire (9 novembre 2026) : on envoie une fois tout rempli, le resultat s'affiche juste au-dessus. */}
         <div className={styles.envoiFiche}>
           <MessageRetour retour={message} className={styles.feedback} />
-          {progression ? <p className={styles.uploadProgress} role="status">{progression}</p> : null}
-          <button className={styles.primary} disabled={!canPublish || !cleCreation || pending}>{pending ? progression || 'Envoi en cours…' : direct ? 'Mettre en ligne' : 'Soumettre à la validation'}</button>
+          {progression ? <div className={styles.uploadProgress} role="status"><progress max="100" value={pourcentageEnvoi} /><span>{progression}</span></div> : null}
+          <div className={styles.uploadActions}>{pending ? <button type="button" className={styles.cancelUpload} onClick={annulerEnvoi}>Annuler l’envoi</button> : null}<button className={styles.primary} disabled={!canPublish || !cleCreation || pending}>{pending ? 'Envoi en cours…' : photos.some((photo) => photo.imageServeur) || clePdfEnvoyee ? 'Reprendre l’envoi' : direct ? 'Mettre en ligne' : 'Soumettre à la validation'}</button></div>
         </div>
       </div>
       <aside className={`${styles.preview} ${mobile ? styles.previewMobile : ''}`}>
