@@ -31,6 +31,7 @@ export function LegalPageView({ slug, fr, en = null, version = null }: { slug: L
             <h2><ShopIcon name="info" /> <LocalizedText fr="Aide & informations" en="Help & information" /></h2>
             <nav aria-label="Pages d’information">
               {links.map(link => <Link key={link.href} href={link.href} aria-current={link.href === `/${slug}` ? 'page' : undefined}><ShopIcon name={link.icon} /><span><LocalizedText fr={link.fr} en={link.en} /></span><span aria-hidden="true">›</span></Link>)}
+              <Link href="/suppression-compte"><ShopIcon name="lock" /><span><LocalizedText fr="Suppression de compte" en="Account deletion" /></span><span aria-hidden="true">›</span></Link>
               <Link href="/contact"><ShopIcon name="headphones" /><span><LocalizedText fr="Nous contacter" en="Contact us" /></span><span aria-hidden="true">›</span></Link>
             </nav>
           </aside>
