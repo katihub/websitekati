@@ -6,6 +6,7 @@ import type { PublishedBanner } from '@/lib/banners'
 import { texteBanniere } from '@/lib/carrousel-accueil'
 import { useMarketplaceLanguage } from '@/lib/language'
 import styles from './marketplace-home-v2.module.css'
+import panelStyles from './hero-panel-mobile.module.css'
 import { useDefilement } from './useDefilement'
 
 /**
@@ -43,7 +44,7 @@ function BandeauPanel({ bannieres }: { bannieres: readonly PublishedBanner[] }) 
       <Image src={banniere.large.url} alt={banniere.alt} fill priority={active === 0} sizes="(max-width: 900px) 100vw, 70vw" className={`${styles.heroImage} ${styles.heroLarge}`} style={position} />
       <Image src={banniere.mobile.url} alt="" fill sizes="100vw" className={`${styles.heroImage} ${styles.heroMobile}`} style={position} />
     </Link>
-    <div className={`${styles.heroCopy} ${styles.heroCopyPanel}`}>
+    <div className={`${styles.heroCopy} ${styles.heroCopyPanel} ${panelStyles.panel}`}>
       <h1>{contenu.titre}</h1>
       {contenu.description && <p>{contenu.description}</p>}
       <Link href={banniere.href}>{contenu.action}<span>→</span></Link>

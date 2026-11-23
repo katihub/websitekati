@@ -1,0 +1,46 @@
+/* Les bannieres du panel placent leur aplat colore a gauche. Sur telephone,
+   le texte reste dans cet aplat au lieu de traverser la zone claire du visuel. */
+@media (max-width: 560px) {
+  .panel.panel.panel {
+    inset: 0 auto 0 0;
+    width: min(50%, 190px);
+    min-height: 0;
+    justify-content: center;
+    overflow: hidden;
+    padding: 17px 9px 27px 16px;
+    background: none;
+  }
+
+  .panel.panel.panel h1 {
+    max-width: 100%;
+    overflow: visible;
+    font-size: clamp(.86rem, 4.1vw, 1rem);
+    line-height: 1.03;
+    letter-spacing: -.035em;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: auto;
+  }
+
+  .panel.panel.panel p {
+    display: -webkit-box;
+    max-width: 100%;
+    margin: 5px 0 8px;
+    overflow: hidden;
+    font-size: .52rem;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .panel.panel.panel > a {
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    padding: 7px 9px;
+    overflow: hidden;
+    font-size: .58rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
