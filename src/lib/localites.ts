@@ -12,7 +12,7 @@ import { api } from './api'
  * restent des champs texte.
  */
 export interface QuartierLocalite { id: string; nom: string }
-export interface Localite { ville: string; quartiers: QuartierLocalite[] }
+export interface Localite { id: string; ville: string; quartiers: QuartierLocalite[] }
 
 export function useLocalites(): Localite[] {
   const [localites, setLocalites] = useState<Localite[]>([])

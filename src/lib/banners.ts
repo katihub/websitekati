@@ -41,12 +41,13 @@ export interface BannerVariant {
 /**
  * OU LA PIECE S'AFFICHE DANS L'OUVERTURE DE LA PAGE D'ACCUEIL.
  *
- * Le proprietaire a divise la section en deux blocs sur la meme rangee : le
- * carrousel des bannieres et, a cote, celui des promotions. `pub_accueil` est
+ * Le proprietaire a divise l'accueil en surfaces editoriales : le carrousel
+ * principal, les promotions, la bande `media_accueil` sans texte HTML et la
+ * publicite laterale `pub_accueil`. `pub_accueil` est
  * la publicite de l'accueil KatiMarket, dans la colonne de droite. L'emplacement
  * est choisi dans le panel, piece par piece.
  */
-export type EmplacementBanniere = 'principal' | 'promo' | 'pub_accueil'
+export type EmplacementBanniere = 'principal' | 'promo' | 'media_accueil' | 'pub_accueil'
 
 export interface PublishedBanner {
   readonly id: number | string
@@ -71,6 +72,8 @@ export interface PublishedBanner {
 export interface BannieresAccueil {
   readonly principales: PublishedBanner[]
   readonly promos: PublishedBanner[]
+  /** Les fichiers seuls de la bande compacte sous les promotions. */
+  readonly mediasAccueil: PublishedBanner[]
   /** Les publicites de l'accueil KatiMarket ; la premiere est affichee. */
   readonly pubsAccueil: PublishedBanner[]
 }
@@ -171,7 +174,10 @@ function normaliser(valeur: unknown): PublishedBanner | null {
     tonalite: b.tonalite === 'navy' || b.tonalite === 'orange' ? b.tonalite : 'light',
     alt: b.alt,
     focus: Number(b.focus) || 50,
-    emplacement: b.emplacement === 'promo' || b.emplacement === 'pub_accueil' ? b.emplacement : 'principal',
+    emplacement:
+      b.emplacement === 'promo' || b.emplacement === 'media_accueil' || b.emplacement === 'pub_accueil'
+        ? b.emplacement
+        : 'principal',
     large: b.large,
     mobile: estVariante(b.mobile) ? b.mobile : b.large,
   }
@@ -183,6 +189,7 @@ export async function getBanners(): Promise<BannieresAccueil> {
   return {
     principales: toutes.filter((b) => b.emplacement === 'principal'),
     promos: toutes.filter((b) => b.emplacement === 'promo'),
+    mediasAccueil: toutes.filter((b) => b.emplacement === 'media_accueil'),
     pubsAccueil: toutes.filter((b) => b.emplacement === 'pub_accueil'),
   }
 }

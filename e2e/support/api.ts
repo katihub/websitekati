@@ -39,15 +39,16 @@ function estReponse(valeur: unknown): valeur is Reponse {
 
 /** Les villes et quartiers des listes deroulantes (commande, creation de boutique). */
 export const LOCALITES = [
-  { ville: 'Douala', quartiers: [
+  { id: '00000000-0000-4000-8000-0000000000d1', ville: 'Douala', quartiers: [
     { id: '00000000-0000-4000-8000-0000000000a1', nom: 'Akwa' },
     { id: '00000000-0000-4000-8000-0000000000b2', nom: 'Bonanjo' },
     { id: '00000000-0000-4000-8000-0000000000c3', nom: 'Bonamoussadi' },
   ] },
-  { ville: 'Yaoundé', quartiers: [
+  { id: '00000000-0000-4000-8000-0000000000d2', ville: 'Yaoundé', quartiers: [
     { id: '00000000-0000-4000-8000-0000000000d4', nom: 'Bastos' },
     { id: '00000000-0000-4000-8000-0000000000e5', nom: 'Mvan' },
   ] },
+  { id: '00000000-0000-4000-8000-0000000000d3', ville: 'Kribi', quartiers: [] },
 ]
 
 /** La politique KATI publique : lue par le panier et la fiche produit sur toutes les pages. */
@@ -71,6 +72,7 @@ export async function simulerApi(page: Page): Promise<ApiSimulee> {
     // Les services du panier : sans assurance ni installation par defaut, un test les active.
     { methode: 'GET', motif: /^\/marketplace\/services-commande\?/, gestionnaire: () => ({ assurance: { active: false, tauxBps: 0 }, installations: [] }) },
     { methode: 'GET', motif: /^\/marketplace\/localites$/, gestionnaire: () => LOCALITES },
+    { methode: 'GET', motif: /^\/marketplace\/livraison\/tarifs-agence$/, gestionnaire: () => [] },
     // Le bandeau du contrat vendeur : rien a lire par defaut, un test le declenche.
     { methode: 'GET', motif: /^\/contenus\/boutiques\/[^/]+\/contrat-vendeur$/, gestionnaire: () => ({ aLire: false, version: null }) },
     // La cloche du client et de l'espace vendeur : rien de nouveau par defaut, un test en remplit.

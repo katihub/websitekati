@@ -6,6 +6,7 @@ import { ErreurApi, api, apiDisponible } from '@/lib/api'
 import { formatPrice } from '@/lib/format'
 import { useAccount } from '@/lib/account'
 import { shopWhatsapp, whatsappHref } from '@/lib/comptoirs'
+import { usePaymentOperators } from '@/lib/payment-operators'
 
 /**
  * PAYER SA COMMANDE DEPUIS SON TELEPHONE.
@@ -118,6 +119,10 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
   const whatsapp = shopWhatsapp(useAccount().pointsVente)
   const [telephone, setTelephone] = useState('')
   const [operateur, setOperateur] = useState<'' | 'mtn' | 'orange'>('')
+  const operators = usePaymentOperators()
+  const operateurEffectif = operateur && operators.active.includes(operateur)
+    ? operateur
+    : operators.active.length === 1 ? operators.active[0] : ''
   const [etat, setEtat] = useState<Etat>(
     commande.resteAPayer <= 0 ? { phase: 'paye' } : { phase: 'saisie' },
   )
@@ -190,7 +195,7 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
           corps: {
             reference: commande.reference,
             telephone,
-            ...(operateur ? { operateur } : {}),
+            ...(operateurEffectif ? { operateur: operateurEffectif } : {}),
           },
           jetonSuivi: jeton ?? undefined,
         },
@@ -199,7 +204,7 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
     } catch (erreur) {
       setEtat({ phase: 'echec', message: expliquer(erreur) })
     }
-  }, [etat.phase, commande.reference, telephone, operateur, jeton])
+  }, [etat.phase, commande.reference, telephone, operateurEffectif, jeton])
 
   if (!apiDisponible) {
     return (
@@ -273,17 +278,17 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
             <legend className="t-label text-ink-2">Opérateur</legend>
             <div className="flex flex-wrap gap-2">
               {([
-                ['', 'Détecter automatiquement'],
-                ['mtn', 'MTN Mobile Money'],
-                ['orange', 'Orange Money'],
-              ] as const).map(([valeur, libelle]) => (
+                ...(operators.active.length === 2 ? [['', 'Détecter automatiquement'] as const] : []),
+                ...(operators.active.includes('mtn') ? [['mtn', 'MTN Mobile Money'] as const] : []),
+                ...(operators.active.includes('orange') ? [['orange', 'Orange Money'] as const] : []),
+              ]).map(([valeur, libelle]) => (
                 <button
                   key={valeur || 'auto'}
                   type="button"
                   onClick={() => setOperateur(valeur)}
-                  aria-pressed={operateur === valeur}
+                  aria-pressed={operateurEffectif === valeur}
                   className={`press min-h-11 rounded-pill border px-3.5 text-micro transition-colors duration-[var(--t-fast)] ${
-                    operateur === valeur
+                    operateurEffectif === valeur
                       ? 'border-secondary bg-secondary text-on-surface'
                       : 'border-rule text-ink-2 hover:bg-space'
                   }`}
@@ -296,6 +301,8 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
               Laissez sur automatique : le préfixe du numéro suffit à choisir.
             </p>
           </fieldset>
+
+          {operators.none ? <p className="rounded-well border border-warn bg-paper p-3 text-small text-ink">Les paiements Orange Money et MTN MoMo sont temporairement indisponibles.</p> : null}
 
           {etat.phase === 'echec' ? (
             <div className="rounded-well border border-warn bg-paper p-3">
@@ -318,7 +325,7 @@ export function PaiementMobile({ commande, jeton = null }: { commande: Commande;
 
           <button
             type="submit"
-            disabled={etat.phase === 'envoi' || telephone.trim().length < 9}
+            disabled={operators.loading || operators.none || etat.phase === 'envoi' || telephone.trim().length < 9}
             className="press min-h-12 rounded-control bg-secondary text-on-surface transition-colors duration-[var(--t-fast)] hover:bg-secondary hover:text-on-surface disabled:pointer-events-none disabled:opacity-30"
           >
             {etat.phase === 'envoi' ? 'Envoi de la demande…' : `Payer ${formatPrice(reste)}`}

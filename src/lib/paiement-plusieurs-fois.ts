@@ -50,7 +50,7 @@ export interface PlanEchelonnement {
   clotureLe: string | null
   motifCloture: string | null
   creeLe: string
-  boutique: { nom: string; slug: string }
+  boutique: { nom: string; slug: string; ville: string | null }
   produit: { nom: string; slug: string; image: string | null; offreId: string }
   livraisonsPossibles?: { modes: DeliveryMode[]; villes: string[] }
   regles: { mode: 'libre' | 'tranches_fixes'; nombreTranches: number | null; versementMinFcfa: number; dureeJours: number }

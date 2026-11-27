@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { api } from '@/lib/api'
 import type { DeliveryMode } from '@/lib/modes-livraison'
+import type { TarifAgenceTrajet } from '@/lib/marketplace-checkout'
 
 /**
  * LA GRILLE DES FRAIS DE LIVRAISON, LUE POUR LES AFFICHER AVANT LA COMMANDE.
@@ -26,10 +27,16 @@ export function fraisBoutique(tarifs: readonly TarifLivraison[], quartierId: str
 
 export function useTarifsLivraison() {
   const [tarifs, setTarifs] = useState<TarifLivraison[] | null>(null)
+  const [tarifsAgence, setTarifsAgence] = useState<TarifAgenceTrajet[] | null>(null)
   const [erreur, setErreur] = useState('')
   const charger = useCallback(async () => {
     try {
-      setTarifs(await api<TarifLivraison[]>('/marketplace/livraison/tarifs', { anonyme: true }))
+      const [domicile, agence] = await Promise.all([
+        api<TarifLivraison[]>('/marketplace/livraison/tarifs', { anonyme: true }),
+        api<TarifAgenceTrajet[]>('/marketplace/livraison/tarifs-agence', { anonyme: true }),
+      ])
+      setTarifs(domicile)
+      setTarifsAgence(agence)
       setErreur('')
     } catch {
       setErreur('Les frais de livraison ne peuvent pas être calculés pour le moment.')
@@ -39,5 +46,5 @@ export function useTarifsLivraison() {
     const minuterie = window.setTimeout(() => void charger(), 0)
     return () => window.clearTimeout(minuterie)
   }, [charger])
-  return { tarifs, erreur, recharger: charger }
+  return { tarifs, tarifsAgence, erreur, recharger: charger }
 }

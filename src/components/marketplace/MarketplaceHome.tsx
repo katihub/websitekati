@@ -11,6 +11,7 @@ import { MarketplaceCategoryMenu } from './MarketplaceCategoryMenu'
 import { DerniersArrivages } from './DerniersArrivages'
 import { MarketplaceHeroCarousel } from './MarketplaceHeroCarousel'
 import { PromosCarrousel } from './PromosCarrousel'
+import { AccueilMediaRail } from './AccueilMediaRail'
 import { MarquesAccueil } from './MarquesAccueil'
 import { ProductCard } from './ProductCardAccueil'
 import { ProductCarouselAccueil } from './ProductCarouselAccueil'
@@ -155,6 +156,18 @@ const PROMOS_KATIMARKET: PublishedBanner[] = [
   },
 ]
 const ORDRE_PROMOS_ACCUEIL = ['katihub-alimentation', 'katihub-beaute', 'katihub-bricolage', 'katihub-mode', 'katihub-electromenager', 'katihub-electronique', 'katihub-informatique', 'katihub-bien-etre', 'katihub-energie', 'katihub-securite'] as const
+const MEDIAS_ACCUEIL_PAR_DEFAUT: PublishedBanner[] = [
+  {
+    ...PROMOS_KATIMARKET[5]!,
+    id: 'media-accueil-electronique',
+    emplacement: 'media_accueil',
+  },
+  {
+    ...PROMOS_KATIMARKET[3]!,
+    id: 'media-accueil-mode',
+    emplacement: 'media_accueil',
+  },
+]
 function SectionHead({ title, href, label = <MarketplaceText id="viewAll" /> }: { title: ReactNode; href: string; label?: ReactNode }) {
   return <header className={styles.sectionHead}><h2>{title}</h2><Link href={href}>{label}<span>→</span></Link></header>
 }
@@ -192,12 +205,14 @@ export async function MarketplaceHome() {
       .filter((promo): promo is PublishedBanner => promo !== undefined)
       .filter((promo) => !bannieres.promos.some((publiee) => String(publiee.id) === String(promo.id))),
   ]
+  const mediasAccueil = bannieres.mediasAccueil.length ? bannieres.mediasAccueil : MEDIAS_ACCUEIL_PAR_DEFAUT
   return <div className={styles.page}>
     <div className={`${styles.shell} ${styles.commerceGrid}`}>
       <MarketplaceCategoryMenu rayons={rayonsMenu} />
       <div className={styles.centerStage}>
         <MarketplaceHeroCarousel bannieres={piecesDuPanel(bannieres.principales)} />
         <PromosCarrousel promos={promosAccueil} afficherLibelles={!bannieres.promos.length} />
+        <AccueilMediaRail medias={mediasAccueil} />
       </div>
       <aside className={styles.promoRail} aria-label="Publicité et engagements KatiMarket">
         <PubAccueil pubs={bannieres.pubsAccueil} />

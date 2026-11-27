@@ -11,6 +11,8 @@ import { useLocalites } from '@/lib/localites'
 import { LIBELLE_MODE, livraisonADomicile, type DeliveryMode } from '@/lib/modes-livraison'
 import { memoriserSuivi, useJetonSuivi } from '@/lib/suivi'
 import { useMarketplaceLanguage } from '@/lib/language'
+import { fraisAgencePourTrajet } from '@/lib/marketplace-checkout'
+import { useTarifsLivraison } from '@/components/marketplace/checkout/useTarifsLivraison'
 
 /**
  * UN DEVIS MARKETPLACE, VU PAR SON CLIENT.
@@ -36,6 +38,7 @@ export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { refer
   const { open: ouvrirCompte } = useAccount()
   const router = useRouter()
   const localites = useLocalites()
+  const { tarifsAgence } = useTarifsLivraison()
   // Sans compte : le jeton du lien, ou celui garde par ce navigateur ; `undefined` tant qu'il n'est pas resolu.
   const jeton = useJetonSuivi(reference, jetonUrl, sansCompte)
   const base = sansCompte ? `/marketplace/devis/sans-compte/${encodeURIComponent(reference)}` : `/marketplace/devis/${encodeURIComponent(reference)}`
@@ -80,6 +83,8 @@ export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { refer
   const villes = aDomicile ? communes : [...new Set([...localites.map((l) => l.ville), ...choisies.flatMap((p) => p.livraison.villes)])]
   const enAgence = choisies.some((p) => modeDe(p) === 'agence')
   const ville = villes.includes(adresse.ville) ? adresse.ville : villes[0] ?? ''
+  const villeLocalite = localites.find(localite => localite.ville.toLocaleLowerCase('fr') === ville.toLocaleLowerCase('fr')) ?? null
+  const trajetDe = (partie: PartieDevis) => fraisAgencePourTrajet(tarifsAgence ?? [], partie.boutique.ville, ville, partie.totalFcfa)
   const totalRetenu = choisies.reduce((s, p) => s + p.totalFcfa, 0)
 
   if (connexion) {
@@ -114,6 +119,8 @@ export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { refer
     if (aDomicile && (adresse.quartier.trim().length < 2 || adresse.repere.trim().length < 3)) return setMessage({ type: 'erreur', texte: 'Indiquez un quartier et un repère précis pour la livraison.' })
     const sansNote = choisies.find((p) => modeDe(p) === 'agence' && (notesAgence[p.id] ?? '').trim().length < 3)
     if (sansNote) return setMessage({ type: 'erreur', texte: `Précisez l’agence de voyage où ${sansNote.boutique.nom} doit déposer votre colis.` })
+    const sansTrajet = choisies.find((partie) => modeDe(partie) === 'agence' && !trajetDe(partie))
+    if (sansTrajet) return setMessage({ type: 'erreur', texte: `Aucun tarif agence actif de ${sansTrajet.boutique.ville ?? 'la ville de la boutique'} vers ${ville}.` })
     if (!telephone) return setMessage({ type: 'erreur', texte: 'Indiquez un numéro camerounais valide, commençant par 6.' })
     verrou.current = true; setEnvoi(true); setMessage(null)
     try {
@@ -122,8 +129,13 @@ export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { refer
         ...acces,
         corps: {
           partieIds: choisies.map((p) => p.id),
-          livraisons: choisies.map((p) => ({ boutiqueId: p.boutiqueId, mode: modeDe(p), ...(modeDe(p) === 'agence' ? { noteAgence: notesAgence[p.id]!.trim() } : {}) })),
-          adresse: { ville, ...(aDomicile ? { quartier: adresse.quartier.trim(), repere: adresse.repere.trim() } : {}), telephoneDestinataire: telephone },
+          livraisons: choisies.map((p) => {
+            const mode = modeDe(p)
+            if (mode !== 'agence') return { boutiqueId: p.boutiqueId, mode }
+            const trajet = trajetDe(p)!
+            return { boutiqueId: p.boutiqueId, mode, noteAgence: notesAgence[p.id]!.trim(), villeDepartId: trajet.villeDepartId, villeArriveeId: trajet.villeArriveeId }
+          }),
+          adresse: { ville, ...(enAgence && villeLocalite ? { villeId: villeLocalite.id } : {}), ...(aDomicile ? { quartier: adresse.quartier.trim(), repere: adresse.repere.trim() } : {}), telephoneDestinataire: telephone },
         },
       })
       if (resultat.jetonCommande) memoriserSuivi(resultat.commande, resultat.jetonCommande)
@@ -203,11 +215,12 @@ export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { refer
           </select>
           {modeDe(partie) === 'agence' && choisies.some((p) => p.id === partie.id) ? <label className="w-full text-small font-semibold">Agence de voyage choisie
             <input value={notesAgence[partie.id] ?? ''} onChange={(event) => setNotesAgence({ ...notesAgence, [partie.id]: event.currentTarget.value })} maxLength={500} className="mt-1 block min-h-11 w-full rounded-control border border-rule bg-surface px-3 text-small font-normal" placeholder="Ex. Général Express, gare de Bafoussam" />
+            <small className="mt-1 block font-normal text-ink-3">Départ verrouillé : {partie.boutique.ville ?? 'ville boutique indisponible'} · arrivée : {ville || 'à choisir'}{trajetDe(partie) ? ` · ${trajetDe(partie)!.tauxBps / 100} %` : ' · trajet indisponible'}</small>
           </label> : null}
         </div>)}
       </fieldset>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-small font-semibold">Ville de livraison
+        <label className="text-small font-semibold">{enAgence ? 'Ville d’arrivée' : 'Ville de livraison'}
           <select value={ville} onChange={(event) => setAdresse({ ...adresse, ville: event.currentTarget.value })} className="mt-1 block min-h-11 w-full rounded-control border border-rule bg-surface px-3 text-small font-normal" disabled={!villes.length}>
             {villes.length ? villes.map((v) => <option key={v} value={v}>{v}</option>) : <option value="">Aucune ville commune</option>}
           </select>
@@ -227,7 +240,7 @@ export function DetailDevis({ reference, sansCompte = false, jetonUrl }: { refer
       </p> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-small text-ink-2">Total retenu : <b className="t-num text-ink">{fcfa(totalRetenu)}</b> · {enAgence ? 'l’expédition en agence se paie en totalité à la commande.' : 'un acompte sera demandé, le solde à la livraison.'}</p>
-        <button type="submit" disabled={envoi || !choisies.length} className="press min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Création de la commande…' : 'Accepter et commander'}</button>
+        <button type="submit" disabled={envoi || !choisies.length || choisies.some(partie => modeDe(partie) === 'agence' && !trajetDe(partie))} className="press min-h-11 rounded-control bg-secondary px-5 text-small font-bold text-on-surface disabled:opacity-50">{envoi ? 'Création de la commande…' : 'Accepter et commander'}</button>
       </div>
     </form> : null}
     {message && !(devis.statut === 'ouvert' && acceptables.length) ? <p role={message.type === 'erreur' ? 'alert' : 'status'} className="text-small text-ink-2">{message.texte}</p> : null}

@@ -23,6 +23,8 @@ const B2 = '00000000-0000-4000-8000-0000000000b2'
 const O1 = '00000000-0000-4000-8000-0000000000f1'
 const O2 = '00000000-0000-4000-8000-0000000000f2'
 const JETON = 'jeton-signe-de-la-commande'
+const VILLE_DOUALA = '00000000-0000-4000-8000-0000000000d1'
+const VILLE_KRIBI = '00000000-0000-4000-8000-0000000000d3'
 
 const offre = (id: string, boutique: string, nom: string, prix: number, modes: string[], adresseRetrait: string | null = null) => ({
   id, titre: nom, prixFcfa: prix, disponible: 10, modesLivraison: modes, villesLivraison: ['Douala'], delaiMaxJours: 3,
@@ -38,6 +40,9 @@ async function panier(page: import('@playwright/test').Page) {
     .quand('GET', /^\/marketplace\/livraison\/tarifs$/, [
       { quartierId: '00000000-0000-4000-8000-0000000000a1', quartier: 'Akwa', ville: 'Douala', mode: 'katihub', montantFcfa: 2_000, gratuitDesFcfa: null },
       { quartierId: '00000000-0000-4000-8000-0000000000a1', quartier: 'Akwa', ville: 'Douala', mode: 'vendeur', montantFcfa: 1_500, gratuitDesFcfa: null },
+    ])
+    .quand('GET', /^\/marketplace\/livraison\/tarifs-agence$/, [
+      { villeDepartId: VILLE_DOUALA, villeArriveeId: VILLE_KRIBI, villeDepart: 'Douala', villeArrivee: 'Kribi', tauxBps: 500 },
     ])
   await page.addInitScript(([o1, o2, b1, b2]) => {
     localStorage.setItem('nowtech.panier.v1', JSON.stringify([
@@ -55,7 +60,7 @@ test('sans compte : retrait gratuit, agence avec sa note et le paiement complet,
     .quand('POST', /^\/marketplace\/commandes\/sans-compte$/, { id: 'c1', reference: 'CM-INV123', jeton: JETON })
     .quand('GET', /^\/marketplace\/commandes\/sans-compte\/CM-INV123$/, (requete: Request) => requete.headers()['x-jeton-suivi'] === JETON
       ? {
-          id: 'c1', reference: 'CM-INV123', statut: 'soumise', totalFermeTtc: 175_000, fraisLivraison: 17_500, acompteDu: 192_500, acompteRecu: 0, resteAPayer: 192_500,
+          id: 'c1', reference: 'CM-INV123', statut: 'soumise', totalFermeTtc: 175_000, fraisLivraison: 1_250, acompteDu: 176_250, acompteRecu: 0, resteAPayer: 176_250,
           modePaiementMarketplace: 'complet', assuranceFcfa: 0, installationFcfa: 0, katiUtilises: 0, remiseKatiFcfa: 0,
           sousCommandes: [
             { reference: 'CM-INV123-1', boutiqueId: B1, boutique: { nom: 'TechMall', slug: 'techmall' }, totalNetProduits: 150_000, modeLivraison: 'retrait', noteAgence: null, lignes: [{ offreTitreCapture: 'Téléphone', quantite: 1, totalNetFcfa: 150_000 }] },
@@ -72,9 +77,10 @@ test('sans compte : retrait gratuit, agence avec sa note et le paiement complet,
   await page.locator(`input[name="delivery-${B1}"]`).nth(1).check()
   await expect(page.getByTestId(`frais-${B1}-retrait`)).toHaveText('gratuit')
   await expect(page.getByText('À retirer : Akwa, rue Joss, face Total, Douala.')).toBeVisible()
-  // Digital en agence : 10 % du total produits, et tout se paie maintenant.
+  // Digital en agence : le taux du trajet s'applique a sa sous-commande, et tout se paie maintenant.
+  await page.getByLabel('Ville d’arrivée').selectOption(VILLE_KRIBI)
   await page.locator(`input[name="delivery-${B2}"]`).nth(1).check()
-  await expect(page.getByTestId('frais-livraison')).toHaveText(/17[\s  ]500 FCFA/)
+  await expect(page.getByTestId('frais-livraison')).toHaveText(/1[\s  ]250 FCFA/)
   await expect(page.getByTestId('complet-impose')).toBeVisible()
   await expect(page.getByLabel(/Un acompte maintenant/)).toBeDisabled()
   await expect(page.getByTestId('a-payer-livraison')).toHaveText('Rien à régler au livreur.')
@@ -100,8 +106,8 @@ test('sans compte : retrait gratuit, agence avec sa note et le paiement complet,
 
   const [envoi] = simulee.appelsVers('POST', /^\/marketplace\/commandes\/sans-compte$/)
   expect(envoi!.corps).toMatchObject({
-    livraisons: [{ boutiqueId: B1, mode: 'retrait' }, { boutiqueId: B2, mode: 'agence', noteAgence: 'Général Express, Bafoussam' }],
-    adresse: { ville: 'Douala', telephoneDestinataire: '+237 677 12 34 56' },
+    livraisons: [{ boutiqueId: B1, mode: 'retrait' }, { boutiqueId: B2, mode: 'agence', noteAgence: 'Général Express, Bafoussam', villeDepartId: VILLE_DOUALA, villeArriveeId: VILLE_KRIBI }],
+    adresse: { ville: 'Kribi', villeId: VILLE_KRIBI, telephoneDestinataire: '+237 677 12 34 56' },
     modePaiement: 'complet', nom: 'Awa Ngono', telephone: '+237 677 12 34 56', courriel: 'awa@exemple.cm',
   })
   expect((envoi!.corps as { adresse: object }).adresse).not.toHaveProperty('quartier')

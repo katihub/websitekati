@@ -6,6 +6,7 @@ import { normalisePhone } from '@/lib/account'
 import { api, ErreurApi } from '@/lib/api'
 import { formatPrice } from '@/lib/format'
 import type { PlanEchelonnement } from '@/lib/paiement-plusieurs-fois'
+import { usePaymentOperators } from '@/lib/payment-operators'
 
 const ATTENTE_MAX_MS = 180_000
 
@@ -23,7 +24,11 @@ export function PaiementVersement({ plan, versement, montantFcfa, libelle, onRec
   onAnnuler?: () => void
 }) {
   const [telephone, setTelephone] = useState('')
-  const [operateur, setOperateur] = useState('')
+  const [operateur, setOperateur] = useState<'' | 'orange' | 'mtn'>('')
+  const operators = usePaymentOperators()
+  const operateurEffectif = operateur && operators.active.includes(operateur)
+    ? operateur
+    : operators.active.length === 1 ? operators.active[0] : ''
   const [envoi, setEnvoi] = useState(false)
   const [attente, setAttente] = useState<{ transId: string; depuis: number } | null>(null)
   const [erreur, setErreur] = useState('')
@@ -58,7 +63,7 @@ export function PaiementVersement({ plan, versement, montantFcfa, libelle, onRec
     if (!numero) return setErreur('Indiquez un numéro camerounais valide commençant par 6.')
     verrou.current = true; setEnvoi(true); setErreur('')
     try {
-      const reponse = await api<{ transId: string }>('/paiements/echelonnement/direct', { methode: 'POST', corps: { reference: versement, telephone: numero, ...(operateur ? { operateur } : {}) } })
+      const reponse = await api<{ transId: string }>('/paiements/echelonnement/direct', { methode: 'POST', corps: { reference: versement, telephone: numero, ...(operateurEffectif ? { operateur: operateurEffectif } : {}) } })
       setAttente({ transId: reponse.transId, depuis: Date.now() })
     } catch (cause) {
       verrou.current = false
@@ -82,11 +87,16 @@ export function PaiementVersement({ plan, versement, montantFcfa, libelle, onRec
       <input type="tel" required autoComplete="tel" value={telephone} placeholder="6 77 12 34 56" onChange={(e) => setTelephone(e.target.value)} className="min-h-11 rounded-control border border-rule bg-surface px-3 text-small text-ink"/>
     </label>
     <fieldset className="mt-3 flex flex-wrap gap-3 text-micro text-ink-2"><legend className="mb-1">Opérateur</legend>
-      {[['', 'Automatique'], ['orange', 'Orange Money'], ['mtn', 'MTN Mobile Money']].map(([valeur, nom]) => <label key={valeur} className="inline-flex items-center gap-1"><input type="radio" name="operateur" checked={operateur === valeur} onChange={() => setOperateur(valeur)}/>{nom}</label>)}
+      {([
+        ...(operators.active.length === 2 ? [['', 'Automatique'] as const] : []),
+        ...(operators.active.includes('orange') ? [['orange', 'Orange Money'] as const] : []),
+        ...(operators.active.includes('mtn') ? [['mtn', 'MTN Mobile Money'] as const] : []),
+      ]).map(([valeur, nom]) => <label key={valeur} className="inline-flex items-center gap-1"><input type="radio" name="operateur" checked={operateurEffectif === valeur} onChange={() => setOperateur(valeur)}/>{nom}</label>)}
     </fieldset>
+    {operators.none ? <p className="mt-3 text-small text-warn" role="status">Les paiements Orange Money et MTN MoMo sont temporairement indisponibles.</p> : null}
     {erreur ? <p className="mt-3 text-small text-warn" role="alert">{erreur}</p> : null}
     <div className="mt-4 flex flex-wrap items-center gap-3">
-      <button disabled={envoi} className="press fill inline-flex min-h-11 items-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface [--fill-to:var(--secondary)] disabled:opacity-60">
+      <button disabled={envoi || operators.loading || operators.none} className="press fill inline-flex min-h-11 items-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface [--fill-to:var(--secondary)] disabled:opacity-60">
         {envoi ? 'Demande en cours…' : `Payer ${formatPrice(montantFcfa)}`}
       </button>
       {onAnnuler ? <button type="button" onClick={onAnnuler} className="text-micro text-ink-3 underline underline-offset-2">Changer le montant</button> : null}

@@ -7,6 +7,8 @@ import { formatPrice } from '@/lib/format'
 import { quartiersDe, useLocalites } from '@/lib/localites'
 import { DESCRIPTION_MODE, LIBELLE_MODE, livraisonADomicile, type DeliveryMode } from '@/lib/modes-livraison'
 import type { PlanEchelonnement, VersementPrepare } from '@/lib/paiement-plusieurs-fois'
+import { fraisAgencePourTrajet } from '@/lib/marketplace-checkout'
+import { useTarifsLivraison } from '@/components/marketplace/checkout/useTarifsLivraison'
 
 const champ = 'min-h-11 rounded-control border border-rule bg-surface px-3 text-small text-ink'
 
@@ -17,6 +19,7 @@ const champ = 'min-h-11 rounded-control border border-rule bg-surface px-3 text-
  */
 export function ChoixLivraisonPlan({ plan, onPrepare }: { plan: PlanEchelonnement; onPrepare: (resultat: VersementPrepare) => void }) {
   const localites = useLocalites()
+  const { tarifsAgence } = useTarifsLivraison()
   const modes = plan.livraisonsPossibles?.modes?.length ? plan.livraisonsPossibles.modes : (['katihub'] as DeliveryMode[])
   const [mode, setMode] = useState<DeliveryMode>(modes[0]!)
   const villes = [...new Set([...localites.map((l) => l.ville), ...(plan.livraisonsPossibles?.villes ?? [])])]
@@ -31,13 +34,21 @@ export function ChoixLivraisonPlan({ plan, onPrepare }: { plan: PlanEchelonnemen
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState('')
   const aDomicile = livraisonADomicile(mode)
+  const villeLocalite = localites.find(localite => localite.ville.toLocaleLowerCase('fr') === villeChoisie.toLocaleLowerCase('fr')) ?? null
+  const trajetAgence = mode === 'agence'
+    ? fraisAgencePourTrajet(tarifsAgence ?? [], plan.boutique.ville, villeChoisie, plan.totalProduitsFcfa)
+    : null
 
   const corps = () => {
     const quartier = quartiers.find((q) => q.id === quartierId)
     return {
       mode,
-      ...(mode === 'agence' && noteAgence.trim() ? { noteAgence: noteAgence.trim() } : {}),
-      adresse: { ville: villeChoisie, telephoneDestinataire: telephone.trim(), ...(aDomicile ? { quartier: quartier?.nom ?? '', quartierId, repere: repere.trim() } : {}) },
+      ...(mode === 'agence' && noteAgence.trim() && trajetAgence ? {
+        noteAgence: noteAgence.trim(),
+        villeDepartId: trajetAgence.villeDepartId,
+        villeArriveeId: trajetAgence.villeArriveeId,
+      } : {}),
+      adresse: { ville: villeChoisie, ...(mode === 'agence' && villeLocalite ? { villeId: villeLocalite.id } : {}), telephoneDestinataire: telephone.trim(), ...(aDomicile ? { quartier: quartier?.nom ?? '', quartierId, repere: repere.trim() } : {}) },
     }
   }
   const reinitialiser = () => setFrais(null)
@@ -87,16 +98,30 @@ export function ChoixLivraisonPlan({ plan, onPrepare }: { plan: PlanEchelonnemen
       {aDomicile ? <label className="flex flex-col gap-1 text-micro text-ink-2 sm:col-span-2">Repère
         <input required minLength={3} maxLength={240} value={repere} placeholder="Ex. face à la pharmacie…" onChange={(e) => setRepere(e.target.value)} className={champ}/>
       </label> : null}
-      {mode === 'agence' ? <label className="flex flex-col gap-1 text-micro text-ink-2 sm:col-span-2">Agence de voyage (et sa ville)
-        <input required minLength={3} maxLength={200} value={noteAgence} onChange={(e) => { setNoteAgence(e.target.value); reinitialiser() }} className={champ}/>
-      </label> : null}
+      {mode === 'agence' ? <>
+        <label className="flex flex-col gap-1 text-micro text-ink-2">Ville de départ
+          <select required disabled value={localites.find(localite => localite.ville.toLocaleLowerCase('fr') === plan.boutique.ville?.toLocaleLowerCase('fr'))?.id ?? ''} className={champ}>
+            <option value="">Ville boutique indisponible</option>
+            {localites.filter(localite => localite.ville.toLocaleLowerCase('fr') === plan.boutique.ville?.toLocaleLowerCase('fr')).map(localite => <option key={localite.id} value={localite.id}>{localite.ville}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-micro text-ink-2">Ville d’arrivée
+          <select required value={villeLocalite?.id ?? ''} onChange={(e) => { setVille(localites.find(localite => localite.id === e.target.value)?.ville ?? ''); reinitialiser() }} className={champ}>
+            <option value="" disabled>Choisissez…</option>{localites.map(localite => <option key={localite.id} value={localite.id}>{localite.ville}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-micro text-ink-2 sm:col-span-2">Agence de voyage
+          <input required minLength={3} maxLength={200} value={noteAgence} onChange={(e) => { setNoteAgence(e.target.value); reinitialiser() }} className={champ}/>
+        </label>
+        {!trajetAgence ? <p className="text-small text-warn sm:col-span-2">Aucun tarif actif de {plan.boutique.ville ?? 'la ville de la boutique'} vers {villeChoisie || 'la ville choisie'}.</p> : null}
+      </> : null}
       <label className="flex flex-col gap-1 text-micro text-ink-2 sm:col-span-2">Téléphone à joindre
         <input type="tel" required minLength={9} maxLength={20} value={telephone} placeholder="6 77 12 34 56" onChange={(e) => setTelephone(e.target.value)} className={champ}/>
       </label>
     </div>
     {frais !== null ? <p className="text-small text-ink" data-testid="frais-livraison-plan">Frais de livraison : <b className="t-num">{frais ? formatPrice(frais) : 'gratuits'}</b></p> : null}
     {erreur ? <p className="text-small text-warn" role="alert">{erreur}</p> : null}
-    <button disabled={envoi} className="press fill inline-flex min-h-11 items-center justify-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface [--fill-to:var(--secondary)] disabled:opacity-60">
+    <button disabled={envoi || (mode === 'agence' && !trajetAgence)} className="press fill inline-flex min-h-11 items-center justify-center rounded-control bg-secondary px-5 text-small font-bold text-on-surface [--fill-to:var(--secondary)] disabled:opacity-60">
       {envoi ? 'Un instant…' : frais === null ? 'Calculer les frais' : frais ? `Confirmer et payer ${formatPrice(frais)}` : 'Confirmer et créer ma commande'}
     </button>
   </form>

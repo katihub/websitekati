@@ -10,7 +10,7 @@ import { avecRetour, useIci } from '@/lib/retour'
 import { useAccount, normalisePhone } from '@/lib/account'
 import { enregistrerAdresse, libelleAdresse, useCarnetAdresses } from '@/lib/carnet-adresses'
 import { quartiersDe, useLocalites } from '@/lib/localites'
-import { checkedTotal, estimatedDeposit, groupDeliveries, livrableDans, type DeliveryGroup, type MarketplaceOrder } from '@/lib/marketplace-checkout'
+import { checkedTotal, estimatedDeposit, fraisAgencePourTrajet, groupDeliveries, livrableDans, type DeliveryGroup, type MarketplaceOrder } from '@/lib/marketplace-checkout'
 import { DESCRIPTION_MODE, LIBELLE_MODE, livraisonADomicile, type DeliveryMode } from '@/lib/modes-livraison'
 import { usePolitiqueKati } from '@/lib/kati'
 import { estimerReglement, montantAssurance } from '@/lib/reglement'
@@ -68,7 +68,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   const count = lines.reduce((sum, line) => sum + line.qty, 0)
   const localites = useLocalites()
   const carnet = useCarnetAdresses(Boolean(session))
-  const { tarifs, erreur: tarifsErreur, recharger: rechargerTarifs } = useTarifsLivraison()
+  const { tarifs, tarifsAgence, erreur: tarifsErreur, recharger: rechargerTarifs } = useTarifsLivraison()
   const [address, setAddress] = useState({ ville: '', quartier: '', quartierId: '', repere: '', telephoneDestinataire: '' })
   const [adresseChoisie, setAdresseChoisie] = useState<string>('')
   const [garderAdresse, setGarderAdresse] = useState(true)
@@ -93,6 +93,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
     ? { ville: enregistree.ville, quartier: enregistree.quartier ?? '', repere: enregistree.repere ?? '', telephoneDestinataire: enregistree.telephoneDestinataire ?? address.telephoneDestinataire }
     : address
   const ville = adresse.ville || villes[0] || ''
+  const villeLocalite = localites.find(localite => localite.ville.toLocaleLowerCase('fr') === ville.toLocaleLowerCase('fr')) ?? null
   const quartiers = quartiersDe(localites, ville)
   const quartierSelectionne = quartiers.find(quartier => quartier.id === address.quartierId
     || quartier.nom.toLocaleLowerCase('fr') === adresse.quartier.trim().toLocaleLowerCase('fr'))
@@ -104,7 +105,13 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   /** Les frais de la boutique dans ce mode ; `null` s'il n'est pas proposable ici, avec la raison. */
   function feeFor(group: DeliveryGroup, mode: DeliveryMode): { fee: number | null; raison: string } {
     if (mode === 'retrait') return group.adresseRetrait ? { fee: 0, raison: '' } : { fee: null, raison: 'adresse de retrait à venir' }
-    if (mode === 'agence') return { fee: 0, raison: '' }
+    if (mode === 'agence') {
+      if (!tarifsAgence) return { fee: null, raison: 'chargement du tarif du trajet…' }
+      if (!group.ville) return { fee: null, raison: 'ville de la boutique non renseignée' }
+      if (!villeLocalite) return { fee: null, raison: 'choisissez une ville d’arrivée dans la liste' }
+      const trajet = fraisAgencePourTrajet(tarifsAgence, group.ville, ville, groupTotal(group))
+      return trajet ? { fee: trajet.fraisFcfa, raison: '' } : { fee: null, raison: `aucun tarif actif de ${group.ville} vers ${ville}` }
+    }
     if (livraisonADomicile(mode) && !livrableDans(group, ville)) return { fee: null, raison: `non proposée à ${ville}` }
     if (livraisonADomicile(mode) && !quartierId) return { fee: null, raison: 'choisissez un quartier avec un tarif' }
     if (!tarifs) return { fee: null, raison: '…' }
@@ -120,8 +127,7 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
   const aDomicile = groups.some(group => livraisonADomicile(deliveryMode(group)))
   const quartierNecessaire = aDomicile || quartiers.length > 0
   const enAgence = groups.some(group => deliveryMode(group) === 'agence')
-  const fraisAgence = enAgence ? Math.ceil(total / 10) : 0
-  const fees = groupFees.every(fee => fee !== null) ? groupFees.reduce<number>((sum, fee) => sum + (fee ?? 0), fraisAgence) : null
+  const fees = groupFees.every(fee => fee !== null) ? groupFees.reduce<number>((sum, fee) => sum + (fee ?? 0), 0) : null
   const blocked = loading || Boolean(serviceError) || !lines.length || checked.some(item => item.issue) || groups.some(group => !group.modes.length) || !Number.isSafeInteger(total) || limitsExceeded || fees === null
 
   // Les choix de reglement : l'assurance est decochee par defaut, le client la coche s'il la veut ; l'agence impose le paiement complet.
@@ -173,10 +179,19 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
       lignes: lines.map(line => ({ offreId: line.offerId, quantite: line.qty })),
       livraisons: groups.map(group => {
         const mode = deliveryMode(group)
-        return { boutiqueId: group.id, mode, ...(mode === 'agence' ? { noteAgence: notesAgence[group.id]!.trim() } : {}) }
+        if (mode !== 'agence') return { boutiqueId: group.id, mode }
+        const trajet = fraisAgencePourTrajet(tarifsAgence ?? [], group.ville, ville, groupTotal(group))!
+        return {
+          boutiqueId: group.id,
+          mode,
+          noteAgence: notesAgence[group.id]!.trim(),
+          villeDepartId: trajet.villeDepartId,
+          villeArriveeId: trajet.villeArriveeId,
+        }
       }),
       adresse: {
         ville,
+        ...(enAgence && villeLocalite ? { villeId: villeLocalite.id } : {}),
         ...(aDomicile ? { quartier: adresse.quartier.trim(), quartierId, repere: adresse.repere.trim() } : {}),
         telephoneDestinataire,
       },
@@ -271,9 +286,22 @@ export function MarketplaceCheckout({ selectedKeys }: { selectedKeys: string[] |
           <fieldset><legend>Mode de livraison</legend>{group.modes.length ? group.modes.map(mode => {
             const { fee, raison } = feeFor(group, mode)
             return <label key={mode} data-unavailable={fee === null}><input type="radio" name={`delivery-${group.id}`} disabled={fee === null || pending} checked={deliveryMode(group) === mode} onChange={() => setModes({ ...modes, [group.id]: mode })}/><span>{LIBELLE_MODE[mode]} · <b data-testid={`frais-${group.id}-${mode}`}>{fee === null ? raison : fee ? money(fee) : mode === 'retrait' ? 'gratuit' : 'offerte'}</b>
-              <small>{mode === 'agence' ? 'Frais uniques affichés au récapitulatif : 10 % du total produits. Paiement complet à la commande.' : mode === 'retrait' && group.adresseRetrait ? `À retirer : ${group.adresseRetrait}${group.ville ? `, ${group.ville}` : ''}.` : livraisonADomicile(mode) ? `Livraison sous ${Math.max(...group.lines.map(item => delaiLivraisonMarketplace(item.offer?.delaiMaxJours)))} jours maximum.` : DESCRIPTION_MODE[mode]}</small></span></label>
+              <small>{mode === 'agence'
+                ? group.ville && villeLocalite && fraisAgencePourTrajet(tarifsAgence ?? [], group.ville, ville, groupTotal(group))
+                  ? `${group.ville} → ${ville} · ${fraisAgencePourTrajet(tarifsAgence ?? [], group.ville, ville, groupTotal(group))!.tauxBps / 100} % · paiement complet à la commande.`
+                  : raison
+                : mode === 'retrait' && group.adresseRetrait ? `À retirer : ${group.adresseRetrait}${group.ville ? `, ${group.ville}` : ''}.` : livraisonADomicile(mode) ? `Livraison sous ${Math.max(...group.lines.map(item => delaiLivraisonMarketplace(item.offer?.delaiMaxJours)))} jours maximum.` : DESCRIPTION_MODE[mode]}</small></span></label>
           }) : <p className={styles.warning}>Aucun mode commun pour ces articles.</p>}
-          {deliveryMode(group) === 'agence' ? <label className={styles.noteAgence}>Agence de voyage choisie<textarea required minLength={3} maxLength={500} rows={2} value={notesAgence[group.id] ?? ''} placeholder="Ex. Général Express, gare routière de Bafoussam" data-testid={`note-agence-${group.id}`} onChange={event => setNotesAgence({ ...notesAgence, [group.id]: event.target.value })}/></label> : null}
+          {group.modes.includes('agence') ? <div className={styles.fields}>
+            <label>Ville de départ<select required value={localites.find(localite => localite.ville.toLocaleLowerCase('fr') === group.ville?.toLocaleLowerCase('fr'))?.id ?? ''} disabled><option value="">Ville de la boutique indisponible</option>{localites.filter(localite => localite.ville.toLocaleLowerCase('fr') === group.ville?.toLocaleLowerCase('fr')).map(localite => <option key={localite.id} value={localite.id}>{localite.ville}</option>)}</select></label>
+            <label>Ville d’arrivée<select required value={villeLocalite?.id ?? ''} disabled={Boolean(enregistree) || pending} onChange={event => {
+              const selection = localites.find(localite => localite.id === event.target.value)
+              setAddress({ ...address, ville: selection?.ville ?? '', quartier: '', quartierId: '' })
+            }}><option value="" disabled>Choisissez…</option>{localites.map(localite => <option key={localite.id} value={localite.id}>{localite.ville}</option>)}</select></label>
+          </div> : null}
+          {deliveryMode(group) === 'agence' ? <>
+            <label className={styles.noteAgence}>Agence de voyage choisie<textarea required minLength={3} maxLength={500} rows={2} value={notesAgence[group.id] ?? ''} placeholder="Ex. Général Express, gare routière centrale" data-testid={`note-agence-${group.id}`} onChange={event => setNotesAgence({ ...notesAgence, [group.id]: event.target.value })}/></label>
+          </> : null}
           {tarifs && group.modes.length && group.modes.every(mode => feeFor(group, mode).fee === null) ? <p className={styles.warning}>Cette boutique ne livre pas encore à {ville}.</p> : null}</fieldset>
         </div>) : null}
       </section>

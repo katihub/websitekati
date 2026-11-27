@@ -17,6 +17,19 @@ export interface LiveOffer {
 export interface LiveProduct { nom: string; slug: string; categorieId?: string | null; offres: LiveOffer[] }
 export interface CheckedLine { line: CartLine; offer: LiveOffer | null; issue: string | null; categorieId: string | null }
 export interface DeliveryGroup { id: string; name: string; lines: CheckedLine[]; modes: DeliveryMode[]; ville: string | null; adresseRetrait: string | null }
+export interface TarifAgenceTrajet {
+  villeDepartId: string
+  villeArriveeId: string
+  villeDepart: string
+  villeArrivee: string
+  tauxBps: number
+}
+export interface FraisAgenceTrajet {
+  fraisFcfa: number
+  villeDepartId: string
+  villeArriveeId: string
+  tauxBps: number
+}
 export interface MarketplaceOrder {
   reference: string; statut: string; totalFermeTtc: number; fraisLivraison: number
   acompteDu: number; acompteRecu: number; resteAPayer: number
@@ -60,4 +73,24 @@ export function estimatedDeposit(total: number): number {
 }
 export function checkedTotal(checked: CheckedLine[]): number {
   return checked.reduce((sum, item) => sum + (item.offer?.prixFcfa ?? item.line.price) * item.line.qty, 0)
+}
+
+export function fraisAgencePourTrajet(
+  tarifs: readonly TarifAgenceTrajet[],
+  villeDepart: string | null,
+  villeArrivee: string,
+  totalProduitsFcfa: number,
+): FraisAgenceTrajet | null {
+  const depart = villeDepart?.trim().toLocaleLowerCase('fr')
+  const arrivee = villeArrivee.trim().toLocaleLowerCase('fr')
+  if (!depart || !arrivee || !Number.isSafeInteger(totalProduitsFcfa) || totalProduitsFcfa <= 0) return null
+  const tarif = tarifs.find(candidate =>
+    candidate.villeDepart.toLocaleLowerCase('fr') === depart
+    && candidate.villeArrivee.toLocaleLowerCase('fr') === arrivee)
+  return tarif ? {
+    fraisFcfa: Math.ceil((totalProduitsFcfa * tarif.tauxBps) / 10_000),
+    villeDepartId: tarif.villeDepartId,
+    villeArriveeId: tarif.villeArriveeId,
+    tauxBps: tarif.tauxBps,
+  } : null
 }

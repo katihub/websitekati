@@ -62,7 +62,7 @@ function rubriques({ assurance, kati }: ConditionsServices): Rubrique[] {
         { titre: 'Kati Express', texte: 'Un livreur KatiMarket vous apporte la commande à domicile. Vous la recevez contre un code personnel : personne d’autre ne la récupère.' },
         { titre: 'Livraison par la boutique', texte: 'La boutique vous livre avec ses propres livreurs.' },
         { titre: 'Retrait gratuit en boutique', texte: 'Passez chercher la commande quand elle est prête : la boutique vous envoie un code de retrait valable 7 jours. Aucun frais de livraison.' },
-        { titre: 'Expédition en agence', texte: 'La boutique dépose le colis à l’agence de voyage de votre choix. Les frais représentent 10 % de la valeur de la commande, et tout se règle à la commande.', href: '/livraison-retours', action: 'Livraison et retours' },
+        { titre: 'Expédition en agence', texte: 'La boutique dépose le colis à l’agence de voyage de votre choix. Les frais dépendent du trajet entre la ville de la boutique et votre ville d’arrivée, et tout se règle à la commande.', href: '/livraison-retours', action: 'Livraison et retours' },
       ],
     },
     {
